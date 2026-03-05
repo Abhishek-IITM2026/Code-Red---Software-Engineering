@@ -1,0 +1,852 @@
+{
+  "version": "1.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "detailLevel": "All",
+  "tablePositions": [
+    {
+      "name": "role",
+      "schemaName": "public",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "name": "role_users",
+      "schemaName": "public",
+      "x": 320,
+      "y": 0
+    },
+    {
+      "name": "users",
+      "schemaName": "public",
+      "x": 648,
+      "y": 0
+    },
+    {
+      "name": "admins",
+      "schemaName": "public",
+      "x": 976,
+      "y": 0
+    },
+    {
+      "name": "faculty",
+      "schemaName": "public",
+      "x": 0,
+      "y": 2508
+    },
+    {
+      "name": "students",
+      "schemaName": "public",
+      "x": 0,
+      "y": 176
+    },
+    {
+      "name": "parents",
+      "schemaName": "public",
+      "x": 320,
+      "y": 176
+    },
+    {
+      "name": "classes",
+      "schemaName": "public",
+      "x": 648,
+      "y": 464
+    },
+    {
+      "name": "class_enrollments",
+      "schemaName": "public",
+      "x": 976,
+      "y": 208
+    },
+    {
+      "name": "subjects",
+      "schemaName": "public",
+      "x": 1296,
+      "y": 464
+    },
+    {
+      "name": "subject_faculty",
+      "schemaName": "public",
+      "x": 339.755859375,
+      "y": 2508
+    },
+    {
+      "name": "attendance",
+      "schemaName": "public",
+      "x": 320,
+      "y": 648
+    },
+    {
+      "name": "attendance_summary",
+      "schemaName": "public",
+      "x": 0,
+      "y": 2074
+    },
+    {
+      "name": "examinations",
+      "schemaName": "public",
+      "x": 976,
+      "y": 456
+    },
+    {
+      "name": "exam_participations",
+      "schemaName": "public",
+      "x": 1296,
+      "y": 744
+    },
+    {
+      "name": "marks",
+      "schemaName": "public",
+      "x": 0,
+      "y": 1016
+    },
+    {
+      "name": "performance_analytics",
+      "schemaName": "public",
+      "x": 320,
+      "y": 1016
+    },
+    {
+      "name": "fee_structures",
+      "schemaName": "public",
+      "x": 648,
+      "y": 1304
+    },
+    {
+      "name": "fee_payments",
+      "schemaName": "public",
+      "x": 976,
+      "y": 1016
+    },
+    {
+      "name": "fee_communications",
+      "schemaName": "public",
+      "x": 1296,
+      "y": 984
+    },
+    {
+      "name": "schedules",
+      "schemaName": "public",
+      "x": 0,
+      "y": 1416
+    },
+    {
+      "name": "events",
+      "schemaName": "public",
+      "x": 320,
+      "y": 1576
+    },
+    {
+      "name": "notifications",
+      "schemaName": "public",
+      "x": 648,
+      "y": 1704
+    },
+    {
+      "name": "notification_batches",
+      "schemaName": "public",
+      "x": 976,
+      "y": 1480
+    },
+    {
+      "name": "ai_summaries",
+      "schemaName": "public",
+      "x": 1296,
+      "y": 1384
+    }
+  ],
+  "tableGroupCollapseStates": [],
+  "stickyNoteLayouts": [],
+  "referencePaths": [
+    {
+      "firstFieldNames": [
+        "id"
+      ],
+      "firstTableName": "users",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "user_id"
+      ],
+      "secondTableName": "role_users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "id"
+      ],
+      "firstTableName": "role",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "user_id"
+      ],
+      "secondTableName": "role_users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "admins",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "faculty",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "students",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "parents",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "parents",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_teacher_id"
+      ],
+      "firstTableName": "classes",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "faculty",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "class_enrollments",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "class_enrollments",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "teacher_id"
+      ],
+      "firstTableName": "subject_faculty",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "faculty",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "subject_faculty",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "subject_faculty",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "attendance",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "attendance",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "attendance",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "marked_by"
+      ],
+      "firstTableName": "attendance",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "attendance_summary",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "attendance_summary",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "examinations",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "examinations",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "created_by"
+      ],
+      "firstTableName": "examinations",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "examination_id"
+      ],
+      "firstTableName": "exam_participations",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "examinations",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "exam_participations",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "examination_id"
+      ],
+      "firstTableName": "marks",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "examinations",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "marks",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "marks",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "entered_by"
+      ],
+      "firstTableName": "marks",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "performance_analytics",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "performance_analytics",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "performance_analytics",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "fee_structures",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "fee_payments",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "fee_structure_id"
+      ],
+      "firstTableName": "fee_payments",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "fee_structures",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "received_by"
+      ],
+      "firstTableName": "fee_payments",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "student_id"
+      ],
+      "firstTableName": "fee_communications",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "student_id"
+      ],
+      "secondTableName": "students",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "parent_id"
+      ],
+      "firstTableName": "fee_communications",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "parents",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "created_by"
+      ],
+      "firstTableName": "fee_communications",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "schedules",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "subject_id"
+      ],
+      "firstTableName": "schedules",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "subjects",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "teacher_id"
+      ],
+      "firstTableName": "schedules",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "faculty",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "class_id"
+      ],
+      "firstTableName": "events",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "created_by"
+      ],
+      "firstTableName": "events",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "user_id"
+      ],
+      "firstTableName": "notifications",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "target_class_id"
+      ],
+      "firstTableName": "notification_batches",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "classes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "created_by"
+      ],
+      "firstTableName": "notification_batches",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "users",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    }
+  ]
+}
