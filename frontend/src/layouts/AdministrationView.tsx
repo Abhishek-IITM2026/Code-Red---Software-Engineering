@@ -9,9 +9,9 @@ import type { RootState, AppDispatch } from "../app/store";
 import type { ThemeType } from "../theme/themes";
 
 const navItems = [
-  { label: "Home", href: "/parent/dashboard" },
-  { label: "Attendance", href: "/parent/attendance-updates" },
-  { label: "Performance", href: "/parent/performance-reports" },
+  { label: "Home", href: "/administration/dashboard" },
+  { label: "Students", href: "/administration/manage-students" },
+  { label: "Reports", href: "/administration/generate-reports" },
 ];
 
 const themeOptions: { value: ThemeType; label: string }[] = [
@@ -21,21 +21,23 @@ const themeOptions: { value: ThemeType; label: string }[] = [
 ];
 
 const sidebarLinks = [
-  { label: "Dashboard", href: "/parent/dashboard", icon: "📊" },
-  { label: "Attendance Updates", href: "/parent/attendance-updates", icon: "✅" },
-  { label: "Performance Reports", href: "/parent/performance-reports", icon: "📈" },
-  { label: "Fee Details", href: "/parent/fee-details", icon: "💰" },
-  { label: "Communication", href: "/parent/communication", icon: "💬" },
+  { label: "Dashboard", href: "/administration/dashboard", icon: "📊" },
+  { label: "Manage Students", href: "/administration/manage-students", icon: "👥" },
+  { label: "Generate Reports", href: "/administration/generate-reports", icon: "📈" },
+  { label: "Promote Students", href: "/administration/promote-students", icon: "⬆️" },
+  { label: "Attendance Reports", href: "/administration/attendance-reports", icon: "✅" },
+  { label: "Performance Trends", href: "/administration/performance-trends", icon: "📊" },
+  { label: "Exam Participation", href: "/administration/exam-participation", icon: "📝" },
 ];
 
-const ParentView = function () {
+const AdministrationView = function () {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const currentTheme = useSelector((state: RootState) => state.theme.theme);
   const user = useSelector((state: RootState) => state.auth.user);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleThemeChange = (e: ChangeEvent<HTMLSelectElement>) => {
     dispatch(setTheme(e.target.value as ThemeType));
   };
 
@@ -78,11 +80,11 @@ const ParentView = function () {
           <div className="mb-6 p-4 bg-[var(--bg)] rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold text-lg">
-                {user?.firstName?.charAt(0) || "P"}
+                {user?.firstName?.charAt(0) || "A"}
               </div>
               <div>
                 <p className="font-semibold">{user?.firstName} {user?.lastName}</p>
-                <p className="text-sm text-[var(--text)]/70">Parent</p>
+                <p className="text-sm text-[var(--text)]/70">Administrator</p>
               </div>
             </div>
           </div>
@@ -148,9 +150,9 @@ const ParentView = function () {
         </main>
       </div>
 
-      <Footer copyright={`© ${new Date().getFullYear()} CodeRed Parent Portal`} />
+      <Footer copyright={`© ${new Date().getFullYear()} CodeRed Admin Portal`} />
     </div>
   );
 };
 
-export default ParentView;
+export default AdministrationView;

@@ -1,16 +1,17 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import App from "../App";
 import AuthView from "../layouts/AuthView";
-import Login from "../features/auth/components/Login";
-import Register from "../features/auth/components/Register";
 import StudentView from "../layouts/StudentView";
 import FacultyView from "../layouts/FacultyView";
 import ParentView from "../layouts/ParentView";
-import DirectorView from "../layouts/DirectorView";
+import AdministrationView from "../layouts/AdministrationView";
 
-// Children Routes for diffent roles
-import studentRoutes from "../routes/student"; 
-
+// Children Routes for different roles
+import studentRoutes from "../routes/student.routes";
+import authRoutes from "../routes/auth.routes";
+import facultyRoutes from "../routes/faculty.routes";
+import parentRoutes from "../routes/parent.routes";
+import administrationRoutes from "../routes/administration.routes";
 
 
 
@@ -20,18 +21,13 @@ const router = createBrowserRouter([
     element: <App/>,
     children:[
       {
+        path: "/",
+        element: <Navigate to="/auth/login" replace />
+      },
+      {
         path: "auth",
         element: <AuthView />,
-        children:[
-          {
-            path: "/auth/login",
-            element: <Login/>,
-          },
-          {
-            path: "/auth/register",
-            element: <Register/>,
-          }
-        ]
+        children:authRoutes
       },
       {
         path: "/student",
@@ -40,15 +36,18 @@ const router = createBrowserRouter([
       },
       {
         path: "/faculty",
-        element: <FacultyView />
+        element: <FacultyView />,
+        children: facultyRoutes
       },
       {
         path: "/parent",
-        element: <ParentView />
+        element: <ParentView />,
+        children: parentRoutes
       },
       {
-        path: "/director",
-        element: <DirectorView />
+        path: "/administration",
+        element: <AdministrationView />,
+        children: administrationRoutes
       },
       
     ]
@@ -56,4 +55,4 @@ const router = createBrowserRouter([
 ]);
 
 
-export default router
+export default router;
