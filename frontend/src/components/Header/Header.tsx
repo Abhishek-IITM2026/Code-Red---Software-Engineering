@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FiSearch, FiMenu, FiX } from 'react-icons/fi';
 // import './Header.css';
 
 interface NavItem {
@@ -71,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({
                 type="submit"
                 className="px-4 py-2 bg-[var(--primary)] text-white rounded-r-lg hover:opacity-90 transition"
               >
-                Search
+                <FiSearch className="w-5 h-5" />
               </button>
             </form>
           )}
@@ -116,18 +117,11 @@ const Header: React.FC<HeaderProps> = ({
             className="md:hidden p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {isMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
+            {isMenuOpen ? (
+              <FiX className="w-6 h-6" />
+            ) : (
+              <FiMenu className="w-6 h-6" />
+            )}
           </button>
         </div>
       </div>
@@ -164,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
                   type="submit"
                   className="px-4 py-2 bg-[var(--primary)] text-white rounded-r-lg"
                 >
-                  Search
+                  <FiSearch className="w-5 h-5" />
                 </button>
               </form>
             )}

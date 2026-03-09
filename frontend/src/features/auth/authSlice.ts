@@ -44,7 +44,7 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
       localStorage.setItem("user", JSON.stringify(data.user));
 
       return data as AuthResponse;
-    } catch (error) {
+    } catch {
       return rejectWithValue("An error occurred during login");
     }
   }
@@ -72,7 +72,7 @@ export const register = createAsyncThunk<AuthResponse, RegisterData>(
       localStorage.setItem("user", JSON.stringify(data.user));
 
       return data as AuthResponse;
-    } catch (error) {
+    } catch {
       return rejectWithValue("An error occurred during registration");
     }
   }

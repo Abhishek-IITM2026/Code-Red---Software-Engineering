@@ -1,10 +1,7 @@
 import { useState, type FormEventHandler } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
-import { register, clearError } from "../authSlice";
-import type { RootState, AppDispatch } from "../../../app/store";
-
-
+import { FiUser, FiMail, FiLock, FiUserPlus } from "react-icons/fi";
+import { useRegisterMutation } from "../../../app/hooks";
 
 const Register = function () {
   const [email, setEmail] = useState("");
@@ -13,23 +10,21 @@ const Register = function () {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("student");
 
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-
-  const { isLoading, error } = useSelector(
-    (state: RootState) => state.auth
-  );
+  
+  // Use RTK Query mutation hook
+  const [register, { isLoading, error }] = useRegisterMutation();
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    dispatch(clearError());
 
-    const result = await dispatch(
-      register({ email, password, firstName, lastName, role })
-    );
-
-    if (register.fulfilled.match(result)) {
+    try {
+      await register({ email, password, firstName, lastName, role }).unwrap();
+      // Successful registration - navigate to dashboard
       navigate("/dashboard");
+    } catch (err) {
+      // Error is handled by the mutation hook
+      console.error("Registration failed:", err);
     }
   };
 
@@ -43,78 +38,96 @@ const Register = function () {
               <label htmlFor="firstName" className="block text-sm font-medium mb-1">
                 First Name
               </label>
-              <input
-                type="text"
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
-              />
+              <div className="relative">
+                <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="lastName" className="block text-sm font-medium mb-1">
                 Last Name
               </label>
-              <input
-                type="text"
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
-              />
+              <div className="relative">
+                <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
+                />
+              </div>
             </div>
           </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email
             </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
-            />
+            <div className="relative">
+              <FiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium mb-1">
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
-            />
+            <div className="relative">
+              <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="role" className="block text-sm font-medium mb-1">
               Role
             </label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
-            >
-              <option value="student">Student</option>
-              <option value="faculty">Faculty</option>
-              <option value="parent">Parent</option>
-            </select>
+            <div className="relative">
+              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] bg-[var(--bg)] text-[var(--text)]"
+              >
+                <option value="student">Student</option>
+                <option value="faculty">Faculty</option>
+                <option value="parent">Parent</option>
+              </select>
+            </div>
           </div>
           {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
+            <p className="text-red-500 text-sm text-center">
+              {error.data?.message || "Registration failed. Please try again."}
+            </p>
           )}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[var(--primary)] text-white py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+            className="w-full bg-[var(--primary)] text-white py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            <FiUserPlus className="w-5 h-5" />
             {isLoading ? "Registering..." : "Register"}
           </button>
         </form>

@@ -5,12 +5,13 @@ import PromoteStudents from "../pages/administration/PromoteStudents";
 import ViewConsolidatedAttendanceReports from "../pages/administration/ViewConsolidatedAttendanceReports";
 import MonitorPerformanceTrends from "../pages/administration/MonitorPerformanceTrends";
 import ViewExamParticipationReports from "../pages/administration/ViewExamParticipationReports";
+import InventoryManagement from "../pages/administration/InventoryManagement";
 
 
 const administrationRoutes = [
     {
         path: "/administration/dashboard",
-        element: <AdministrationDashboard />
+        element: <AdministrationDashboard />,
     },
     {
         path: "/administration/manage-students",
@@ -35,6 +36,10 @@ const administrationRoutes = [
     {
         path: "/administration/exam-participation",
         element: <ViewExamParticipationReports />
+    },
+    {
+        path: "/administration/inventory-management",
+        element: <InventoryManagement />
     }
 ]
 

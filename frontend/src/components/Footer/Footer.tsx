@@ -1,3 +1,5 @@
+import { FiInfo, FiShield, FiFileText, FiMessageCircle } from 'react-icons/fi';
+
 interface FooterProps {
   copyright?: string;
 }
@@ -10,10 +12,22 @@ const Footer = ({ copyright = "" }: FooterProps) => {
           {copyright || `© ${new Date().getFullYear()} Your App. All rights reserved.`}
         </p>
         <div className="flex gap-4 text-sm">
-          <a href="/about" className="hover:text-[var(--primary)] transition">About</a>
-          <a href="/privacy" className="hover:text-[var(--primary)] transition">Privacy</a>
-          <a href="/terms" className="hover:text-[var(--primary)] transition">Terms</a>
-          <a href="/contact" className="hover:text-[var(--primary)] transition">Contact</a>
+          <a href="/about" className="hover:text-[var(--primary)] transition flex items-center gap-1">
+            <FiInfo className="w-4 h-4" />
+            About
+          </a>
+          <a href="/privacy" className="hover:text-[var(--primary)] transition flex items-center gap-1">
+            <FiShield className="w-4 h-4" />
+            Privacy
+          </a>
+          <a href="/terms" className="hover:text-[var(--primary)] transition flex items-center gap-1">
+            <FiFileText className="w-4 h-4" />
+            Terms
+          </a>
+          <a href="/contact" className="hover:text-[var(--primary)] transition flex items-center gap-1">
+            <FiMessageCircle className="w-4 h-4" />
+            Contact
+          </a>
         </div>
       </div>
     </footer>

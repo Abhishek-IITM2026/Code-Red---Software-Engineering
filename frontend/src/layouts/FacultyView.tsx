@@ -1,6 +1,7 @@
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import { FiGrid, FiCheckCircle, FiFileText, FiTrendingUp, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import Header from "../components/Header/Header";
 import Footer from "../components/Footer/Footer";
 import { setTheme } from "../theme/themeSlice";
@@ -21,10 +22,10 @@ const themeOptions: { value: ThemeType; label: string }[] = [
 ];
 
 const sidebarLinks = [
-  { label: "Dashboard", href: "/faculty/dashboard", icon: "📊" },
-  { label: "Record Attendance", href: "/faculty/record-attendance", icon: "✅" },
-  { label: "Update Marks", href: "/faculty/update-marks", icon: "📝" },
-  { label: "Student Performance", href: "/faculty/student-performance", icon: "📈" },
+  { label: "Dashboard", href: "/faculty/dashboard", icon: FiGrid },
+  { label: "Record Attendance", href: "/faculty/record-attendance", icon: FiCheckCircle },
+  { label: "Update Marks", href: "/faculty/update-marks", icon: FiFileText },
+  { label: "Student Performance", href: "/faculty/student-performance", icon: FiTrendingUp },
 ];
 
 const FacultyView = function () {
@@ -57,13 +58,9 @@ const FacultyView = function () {
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
           {isSidebarOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <FiX className="w-6 h-6" />
           ) : (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <FiMenu className="w-6 h-6" />
           )}
         </button>
 
@@ -99,7 +96,7 @@ const FacultyView = function () {
                     : "hover:bg-[var(--primary)]/10"
                 }`}
               >
-                <span>{link.icon}</span>
+                <link.icon className="w-5 h-5" />
                 <span>{link.label}</span>
               </Link>
             ))}
@@ -127,7 +124,7 @@ const FacultyView = function () {
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition"
             >
-              <span>🚪</span>
+              <FiLogOut className="w-5 h-5" />
               <span>Logout</span>
             </button>
           </div>
