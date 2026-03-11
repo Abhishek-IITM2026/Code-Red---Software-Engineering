@@ -1,73 +1,162 @@
-# React + TypeScript + Vite
+# School Management System - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive React-based frontend for a comprehensive school management system with role-based authentication, theming, and customization options.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Role-based Access**: Separate portals for Students, Faculty, Parents, and Administrators
+- **Theme System**: 6 built-in themes (Light, Dark, Ocean, Professional, Modern, Classic)
+- **Customization**: Personalize border radius, shadows, card backgrounds, and more
+- **Responsive Design**: Mobile-first approach with adaptive layouts
+- **Modern Stack**: Built with React 19, TypeScript, Redux Toolkit, and Tailwind CSS
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 19.2.0 | UI Framework |
+| TypeScript | 5.9.3 | Type Safety |
+| Redux Toolkit | 2.11.2 | State Management |
+| Tailwind CSS | 4.2.1 | Styling |
+| React Router DOM | 7.13.1 | Routing |
+| React Icons | 5.6.0 | Icon Library |
+| Vite | 7.3.1 | Build Tool |
 
-## Expanding the ESLint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 18+ 
+- npm 9+
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+5. **Preview production build:**
+   ```bash
+   npm run preview
+   ```
+
+## Environment Variables
+
+Create a `.env` file in the `frontend` directory with the following variables:
+
+```env
+VITE_APP_NAME=CIOM
+VITE_APP_LOGO=C
+VITE_APP_TAGLINE=Empowering Education
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+| Variable | Description | Default |
+|----------|-------------|---------|
+| VITE_APP_NAME | Application name displayed in header | CodeRed |
+| VITE_APP_LOGO | Logo character/letter | C |
+| VITE_APP_TAGLINE | Tagline displayed below logo | (empty) |
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Demo Credentials
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Use these credentials to test different portals:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Student | student@demo.com | password |
+| Faculty | faculty@demo.com | password |
+| Parent | parent@demo.com | password |
+| Admin | admin@demo.com | password |
+
+## Project Structure
+
 ```
+frontend/
+├── src/
+│   ├── app/                 # Redux store and routing
+│   ├── components/         # Reusable UI components
+│   │   └── common/         # Common components
+│   ├── features/           # Feature-based modules
+│   │   ├── auth/           # Authentication
+│   │   ├── student/        # Student portal
+│   │   ├── faculty/        # Faculty portal
+│   │   ├── parent/         # Parent portal
+│   │   ├── administration/ # Admin portal
+│   │   └── Home/           # Landing page
+│   ├── theme/              # Theme system
+│   └── services/           # API services
+├── public/                 # Static assets
+├── index.html
+├── package.json
+├── vite.config.ts
+└── tailwind.config.js
+```
+
+## Customization
+
+### Theme System
+
+The app includes 6 pre-built themes:
+- **Light** - Clean white/gray design
+- **Dark** - Dark mode with slate tones
+- **Ocean** - Blue/teal color scheme
+- **Professional** - Conservative business look
+- **Modern** - Purple/violet accent colors
+- **Classic** - Warm amber/brown tones
+
+### Appearance Settings
+
+In the Preferences panel, users can customize:
+- Card border radius (0px to Pill shape)
+- Button border radius
+- Input border radius
+- Container padding
+- Shadow intensity (None, Light, Medium, Heavy)
+- Card background color
+
+All settings are persisted in localStorage.
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| npm run dev | Start development server |
+| npm run build | Build for production |
+| npm run preview | Preview production build |
+| npm run lint | Run ESLint |
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## API Integration
+
+The frontend uses RTK Query for API calls. To connect to a backend:
+
+1. Update API base URLs in src/services/api/
+2. Configure authentication endpoints in src/features/auth/
+3. Set up proper CORS settings on your backend
+
+## License
+
+This project is for educational/demonstration purposes.
+
+## Support
+
+For issues or questions, please refer to the project documentation or contact the development team.
