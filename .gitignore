@@ -1,0 +1,44 @@
+# ==============================
+# Backend Environment
+# ==============================
+backend/.benv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*.egg-info/
+backend/.env
+backend/.env.local
+backend/.env.*.local
+backend/venv/
+backend/.venv/
+
+# ==============================
+# Frontend Environment
+# ==============================
+frontend/logs
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ==============================
+# Editor directories and files
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
