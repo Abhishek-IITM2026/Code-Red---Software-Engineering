@@ -1,9 +1,17 @@
+import ScheduleView from '../../administration/components/ScheduleView';
+
 const ViewSchedule = function() {
+    // In a real app, this would come from the auth state/user context
+    const studentClassId = '10';
+    const studentSectionId = '10-A';
+
     return (
-        <div>
-            <h1>View Schedule Page</h1>
-        </div>
-    )
-}
+        <ScheduleView 
+            userRole="student" 
+            classId={studentClassId} 
+            sectionId={studentSectionId}
+        />
+    );
+};
 
 export default ViewSchedule;

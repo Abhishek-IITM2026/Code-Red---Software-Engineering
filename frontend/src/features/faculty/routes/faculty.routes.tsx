@@ -7,7 +7,8 @@ import MarkAttendance from "../pages/MarkAttendance";
 import RecordAttendance from "../pages/RecordAttendance";
 import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2 } from "react-icons/fi";
+import FacultySchedule from "../pages/FacultySchedule";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar } from "react-icons/fi";
 
 export interface FacultyRouteConfig {
   name: string;
@@ -73,6 +74,13 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <ClassStudents />,
     icon: FiUsers,
     description: "View students in your classes"
+  },
+  {
+    name: "My Schedule",
+    path: "/faculty/schedule",
+    element: <FacultySchedule />,
+    icon: FiCalendar,
+    description: "View your teaching schedule"
   }
 ];
 

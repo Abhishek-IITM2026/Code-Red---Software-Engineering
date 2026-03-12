@@ -38,7 +38,7 @@ const HomeLayout = () => {
               <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center text-white font-bold text-xl">
                 C
               </div>
-              <span className="text-xl font-bold text-[var(--primary)]">CodeRed</span>
+              <span className="text-xl font-bold text-[var(--primary)]">CIOM</span>
             </Link>
 
             {/* Desktop Navigation */}

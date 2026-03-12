@@ -7,7 +7,8 @@ import ViewConsolidatedAttendanceReports from "../pages/ViewConsolidatedAttendan
 import ViewExamParticipationReports from "../pages/ViewExamParticipationReports";
 import InventoryDashboard from "../pages/Inventory/InventoryDashboard";
 import RequestManagement from "../pages/Inventory/RequestManagement";
-import { FiGrid, FiFileText, FiPackage, FiUsers, FiTrendingUp, FiArrowUpCircle, FiCheckSquare, FiBarChart2, FiShoppingCart } from "react-icons/fi";
+import ScheduleManagement from "../pages/ScheduleManagement";
+import { FiGrid, FiFileText, FiPackage, FiUsers, FiTrendingUp, FiArrowUpCircle, FiCheckSquare, FiBarChart2, FiShoppingCart, FiCalendar } from "react-icons/fi";
 
 export interface AdminRouteConfig {
   name: string;
@@ -80,6 +81,13 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <RequestManagement />,
     icon: FiShoppingCart,
     description: "Review faculty material requests"
+  },
+  {
+    name: "Class Schedule",
+    path: "/administration/schedule",
+    element: <ScheduleManagement />,
+    icon: FiCalendar,
+    description: "Manage class lecture schedules"
   }
 ];
 
