@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FiAward, FiTrendingUp, FiTrendingDown, FiMinus, FiFilter } from "react-icons/fi";
-import { Card, Table, Button, Input, Select } from "../../../components/common";
+import { FiAward, FiTrendingUp, FiTrendingDown, FiMinus } from "react-icons/fi";
+import { Card, Table, Search } from "../../../components/common";
 
 interface MarksRecord {
   id: string;
@@ -35,16 +35,31 @@ const gradeConfig: Record<string, { color: string; bg: string; label: string }> 
 
 const StudentMarks = function() {
   const [marks] = useState<MarksRecord[]>(mockMarks);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState<string>("");
-  const [examFilter, setExamFilter] = useState<string>("");
+  const [filteredMarks, setFilteredMarks] = useState<MarksRecord[]>(mockMarks);
 
-  const filteredMarks = marks.filter(record => {
-    const matchesSearch = record.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = !subjectFilter || record.subject === subjectFilter;
-    const matchesExam = !examFilter || record.examType === examFilter;
-    return matchesSearch && matchesSubject && matchesExam;
-  });
+  const searchConfig = {
+    fields: [
+      { key: 'subject', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' },
+      { key: 'examType', label: 'Exam Type', type: 'select' as const,
+        options: [
+          { value: 'Unit Test 1', label: 'Unit Test 1' },
+          { value: 'Mid Term', label: 'Mid Term' },
+          { value: 'Final Exam', label: 'Final Exam' }
+        ]
+      }
+    ],
+    placeholder: 'Search marks...',
+    showAdvancedToggle: true,
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = marks.filter(record => {
+        const matchesSubject = !values.subject || 
+          record.subject.toLowerCase().includes(values.subject.toLowerCase());
+        const matchesExam = !values.examType || record.examType === values.examType;
+        return matchesSubject && matchesExam;
+      });
+      setFilteredMarks(filtered);
+    }
+  };
 
   const subjects = [...new Set(marks.map(r => r.subject))];
   const examTypes = [...new Set(marks.map(r => r.examType))];
@@ -173,42 +188,8 @@ const StudentMarks = function() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card padding="small" hover={false}>
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[200px]">
-            <Input
-              placeholder="Search by subject..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="w-48">
-            <select
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            >
-              <option value="">All Subjects</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
-          </div>
-          <div className="w-48">
-            <select
-              value={examFilter}
-              onChange={(e) => setExamFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            >
-              <option value="">All Exams</option>
-              {examTypes.map(exam => (
-                <option key={exam} value={exam}>{exam}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </Card>
+      {/* Search & Filters */}
+      <Search config={searchConfig} />
 
       {/* Marks Table */}
       <Table

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { FiMenu, FiX, FiSettings, FiHome, FiBook, FiAward, FiCalendar, FiFileText, FiDownload, FiChevronRight, FiChevronLeft, FiLogOut } from "react-icons/fi";
+import { FiMenu, FiX, FiSettings, FiHome, FiBook, FiAward, FiCalendar, FiFileText, FiDownload, FiChevronRight, FiChevronLeft, FiLogOut, FiUser } from "react-icons/fi";
 import { logout } from "../../auth/store/authSlice";
 import type { RootState, AppDispatch } from "../../../app/store";
 import { Preferences, Button } from "../../../components/common";
@@ -10,14 +10,20 @@ const appName = import.meta.env.VITE_APP_NAME || "CIOM";
 const appLogo = import.meta.env.VITE_APP_LOGO || "C";
 const appTagline = import.meta.env.VITE_APP_TAGLINE || "";
 
+// Sidebar links - only main pages, not dynamic routes
 const sidebarLinks = [
   { label: "Dashboard", href: "/student/dashboard", icon: FiHome },
   { label: "Attendance", href: "/student/attendance", icon: FiBook },
   { label: "Marks", href: "/student/marks", icon: FiAward },
   { label: "Schedule", href: "/student/schedule", icon: FiCalendar },
+  { label: "Subjects", href: "/student/subjects", icon: FiBook },
   { label: "Assignments", href: "/student/assignments", icon: FiFileText },
   { label: "Study Materials", href: "/student/materials", icon: FiDownload },
+  { label: "My Profile", href: "/profile", icon: FiUser },
 ];
+
+// Filter routes to exclude dynamic routes (those with : in path)
+const mainRoutes = sidebarLinks.filter(link => !link.href.includes(":"));
 
 const navItems = [
   { label: "Home", href: "/student/dashboard" },
@@ -92,7 +98,10 @@ const StudentLayout = function () {
                 onClick={() => setIsPreferencesOpen(true)}
                 title="Settings"
               />
-              <div className="hidden md:flex items-center gap-3">
+              <Link
+                to="/profile"
+                className="hidden md:flex items-center gap-3 hover:bg-[var(--secondary)] px-2 py-1 rounded-lg transition"
+              >
                 <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm">
                   {user?.firstName?.charAt(0) || "S"}
                 </div>
@@ -100,7 +109,7 @@ const StudentLayout = function () {
                   <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">Student</p>
                 </div>
-              </div>
+              </Link>
               <Button
                 variant="ghost"
                 size="small"
@@ -160,7 +169,7 @@ const StudentLayout = function () {
 
           {/* Navigation */}
           <nav className="space-y-1 px-4">
-            {sidebarLinks.map((link) => (
+            {sidebarLinks.filter(link => !link.href.includes(":")).map((link) => (
               <Link
                 key={link.href}
                 to={link.href}

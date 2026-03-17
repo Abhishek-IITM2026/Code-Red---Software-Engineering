@@ -5,6 +5,8 @@ export interface User {
   lastName: string;
   role: string;
   token?: string;
+  profilePicture?: string;
+  phone?: string;
 }
 
 export interface LoginCredentials {

@@ -1,8 +1,26 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Search } from "../../../components/common";
 import { performanceSubjects } from "../data.ts";
 
 const ParentPerformance = function() {
   const navigate = useNavigate();
+  const [filteredSubjects, setFilteredSubjects] = useState(performanceSubjects);
+
+  const searchConfig = {
+    fields: [
+      { key: 'name', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' }
+    ],
+    placeholder: 'Search subjects...',
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = performanceSubjects.filter(subject => {
+        const matchesName = !values.name || 
+          subject.name.toLowerCase().includes(values.name.toLowerCase());
+        return matchesName;
+      });
+      setFilteredSubjects(filtered);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -16,8 +34,11 @@ const ParentPerformance = function() {
         </p>
       </div>
 
+      {/* Search */}
+      <Search config={searchConfig} />
+
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {performanceSubjects.map((subject) => (
+        {filteredSubjects.map((subject) => (
           <button
             key={subject.id}
             type="button"

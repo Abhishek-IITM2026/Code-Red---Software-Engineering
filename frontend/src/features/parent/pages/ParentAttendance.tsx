@@ -1,6 +1,25 @@
+import { useState } from "react";
+import { Search } from "../../../components/common";
 import { attendanceRows, childProfile } from "../data.ts";
 
 const ParentAttendance = function() {
+  const [filteredRows, setFilteredRows] = useState(attendanceRows);
+
+  const searchConfig = {
+    fields: [
+      { key: 'subject', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' }
+    ],
+    placeholder: 'Search attendance...',
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = attendanceRows.filter(row => {
+        const matchesSubject = !values.subject || 
+          row.subject.toLowerCase().includes(values.subject.toLowerCase());
+        return matchesSubject;
+      });
+      setFilteredRows(filtered);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +41,7 @@ const ParentAttendance = function() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {attendanceRows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr key={row.subject}>
                   <td className="px-6 py-4 text-slate-700">{row.subject}</td>
                   <td className="px-6 py-4 text-slate-700">{row.attended}</td>

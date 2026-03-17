@@ -6,6 +6,7 @@ import StudentLayout from "../features/student/layout/StudentLayout";
 import FacultyLayout from "../features/faculty/layout/FacultyLayout";
 import ParentLayout from "../features/parent/layout/ParentLayout";
 import AdministrationLayout from "../features/administration/layout/AdministrationLayout";
+import Profile from "../features/auth/pages/Profile";
 
 // Children Routes for different roles
 import homeRoutes from "../features/Home/routes/home.routes";
@@ -87,6 +88,22 @@ const router = createBrowserRouter([
           path: route.path,
           element: route.element
         }))
+      },
+      
+      // Profile Route (Protected - accessible to all authenticated users)
+      {
+        path: "/profile",
+        element: (
+          <ProtectedRoute>
+            <AuthLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "",
+            element: <Profile />
+          }
+        ]
       },
       
       // Student Routes (Protected)

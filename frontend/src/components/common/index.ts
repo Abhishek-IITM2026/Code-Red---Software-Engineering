@@ -6,6 +6,7 @@ import Table from './Table';
 import Preferences from './Preferences.tsx';
 import Filter from './Filter';
 import ProtectedRoute, { useRoleRedirect } from './ProtectedRoute';
+import Search, { type SearchProps, type SearchField, type SearchConfig } from './Search';
 
 export {
   Button,
@@ -20,7 +21,8 @@ export {
   Preferences,
   Filter,
   ProtectedRoute,
-  useRoleRedirect
+  useRoleRedirect,
+  Search
 };
 
 // Re-export types
@@ -30,4 +32,5 @@ export type { CardProps } from './Card';
 export type { InputProps } from './Input';
 export type { SelectProps, SelectOption } from './Select';
 export type { FilterOption } from './Filter';
-export type {PreferencesProps} from './Preferences.tsx'
+export type {PreferencesProps} from './Preferences.tsx';
+export type { SearchProps, SearchField, SearchConfig } from './Search';

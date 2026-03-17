@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { FiLogOut, FiMenu, FiX, FiSettings, FiChevronRight, FiChevronLeft } from "react-icons/fi";
+import { FiLogOut, FiMenu, FiX, FiSettings, FiChevronRight, FiChevronLeft, FiUser } from "react-icons/fi";
 import { logout } from "../../auth/store/authSlice";
 import type { RootState, AppDispatch } from "../../../app/store";
 import { Preferences, Button } from "../../../components/common";
@@ -91,8 +91,16 @@ const FacultyLayout = function () {
                 {!isCollapsed && <span>{link.name}</span>}
               </Link>
             ))}
+            <Link to="/profile" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${location.pathname === "/profile" ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "My Profile" : undefined}>
+              <FiUser className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && <span>My Profile</span>}
+            </Link>
           </nav>
           <div className={`mt-6 px-4 ${isCollapsed ? 'px-2' : ''}`}>
+            <Link to="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${location.pathname === "/profile" ? "bg-[var(--primary)] text-white" : "text-[var(--text-secondary)] hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "My Profile" : undefined}>
+              <FiUser className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && <span>My Profile</span>}
+            </Link>
             <Link to="/" className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--secondary)] transition ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "Back to Home" : undefined}>
               <FiChevronRight className="w-5 h-5 rotate-180 flex-shrink-0" />
               {!isCollapsed && <span>Back to Home</span>}

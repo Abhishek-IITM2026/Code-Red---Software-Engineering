@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FiFileText, FiClock, FiCheckCircle, FiAlertCircle, FiDownload, FiUpload } from "react-icons/fi";
-import { Card, Table, Button, Input } from "../../../components/common";
+import { Card, Table, Button, Search } from "../../../components/common";
 
 interface Assignment {
   id: string;
@@ -72,15 +72,35 @@ const statusColors = {
 
 const StudentAssignments = function() {
   const [assignments] = useState<Assignment[]>(mockAssignments);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>(mockAssignments);
 
-  const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assignment.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = !statusFilter || assignment.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const searchConfig = {
+    fields: [
+      { key: 'title', label: 'Assignment', type: 'text' as const, placeholder: 'Search by title...' },
+      { key: 'subject', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' },
+      { key: 'status', label: 'Status', type: 'select' as const,
+        options: [
+          { value: 'pending', label: 'Pending' },
+          { value: 'submitted', label: 'Submitted' },
+          { value: 'overdue', label: 'Overdue' },
+          { value: 'graded', label: 'Graded' }
+        ]
+      }
+    ],
+    placeholder: 'Search assignments...',
+    showAdvancedToggle: true,
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = assignments.filter(assignment => {
+        const matchesTitle = !values.title || 
+          assignment.title.toLowerCase().includes(values.title.toLowerCase());
+        const matchesSubject = !values.subject || 
+          assignment.subject.toLowerCase().includes(values.subject.toLowerCase());
+        const matchesStatus = !values.status || assignment.status === values.status;
+        return matchesTitle && matchesSubject && matchesStatus;
+      });
+      setFilteredAssignments(filtered);
+    }
+  };
 
   const columns = [
     { 
@@ -153,26 +173,10 @@ const StudentAssignments = function() {
           <h1 className="text-2xl font-bold text-[var(--text)]">Assignments</h1>
           <p className="text-[var(--text-secondary)] mt-1">View and submit your assignments</p>
         </div>
-        <div className="flex gap-3">
-          <Input
-            placeholder="Search assignments..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="submitted">Submitted</option>
-            <option value="overdue">Overdue</option>
-            <option value="graded">Graded</option>
-          </select>
-        </div>
       </div>
+
+      {/* Search & Filters */}
+      <Search config={searchConfig} />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

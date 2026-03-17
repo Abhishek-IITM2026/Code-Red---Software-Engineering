@@ -8,7 +8,8 @@ import RecordAttendance from "../pages/RecordAttendance";
 import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
 import FacultySchedule from "../pages/FacultySchedule";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar } from "react-icons/fi";
+import AssessmentBuilder from "../pages/AssessmentBuilder";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle } from "react-icons/fi";
 
 export interface FacultyRouteConfig {
   name: string;
@@ -81,6 +82,13 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultySchedule />,
     icon: FiCalendar,
     description: "View your teaching schedule"
+  },
+  {
+    name: "Assessment Builder",
+    path: "/faculty/assessment-builder",
+    element: <AssessmentBuilder />,
+    icon: FiPlusCircle,
+    description: "Create AI-powered assessments"
   }
 ];
 

@@ -1,6 +1,16 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../../app/store';
 import type { LoginCredentials, RegisterData, AuthResponse, User } from '../types';
+import type {
+  SendOTPRequest,
+  VerifyOTPRequest,
+  OTPResponse,
+  UpdateProfileRequest,
+  UpdateProfilePictureRequest,
+  ChangePasswordRequest,
+  ProfileUpdateResponse,
+  PasswordChangeResponse,
+} from '../types/profile';
 
 export const authApi = createApi({
   reducerPath: 'authApi',
@@ -78,6 +88,195 @@ export const authApi = createApi({
         return response;
       },
     }),
+
+    // Send OTP for verification
+    sendOTP: builder.mutation<OTPResponse, SendOTPRequest>({
+      queryFn: async (data, { getState }) => {
+        try {
+          const response = await fetch('http://localhost:3000/api/auth/otp/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          return { data: result };
+        } catch {
+          // Mock OTP generation
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const expiresAt = Date.now() + 5 * 60 * 1000;
+          
+          // Store mock OTP in sessionStorage
+          sessionStorage.setItem(`otp_${data.email}`, JSON.stringify({ otp, expiresAt }));
+          console.log(`Mock OTP for ${data.email}: ${otp}`); // For testing
+          
+          return {
+            data: {
+              success: true,
+              message: `OTP sent to ${data.email} (Check console for mock OTP)`,
+              expiresAt: new Date(expiresAt).toISOString(),
+            } as OTPResponse,
+          };
+        }
+      },
+    }),
+
+    // Verify OTP
+    verifyOTP: builder.mutation<OTPResponse, VerifyOTPRequest>({
+      queryFn: async (data) => {
+        try {
+          const response = await fetch('http://localhost:3000/api/auth/otp/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          return { data: result };
+        } catch {
+          // Mock OTP verification
+          const stored = sessionStorage.getItem(`otp_${data.email}`);
+          if (!stored) {
+            return { error: { status: 400, data: { message: 'No OTP found. Please request a new OTP.' } } };
+          }
+          
+          const { otp, expiresAt } = JSON.parse(stored);
+          
+          if (Date.now() > expiresAt) {
+            sessionStorage.removeItem(`otp_${data.email}`);
+            return { error: { status: 400, data: { message: 'OTP has expired. Please request a new one.' } } };
+          }
+          
+          if (otp !== data.otp) {
+            return { error: { status: 400, data: { message: 'Invalid OTP. Please try again.' } } };
+          }
+          
+          // OTP verified successfully
+          sessionStorage.removeItem(`otp_${data.email}`);
+          
+          return { data: { success: true, message: 'OTP verified successfully' } as OTPResponse };
+        }
+      },
+    }),
+
+    // Update Profile (after OTP verification)
+    updateProfile: builder.mutation<ProfileUpdateResponse, UpdateProfileRequest>({
+      queryFn: async (data, { getState }) => {
+        const state = getState() as { auth: { user: User | null; token: string | null } };
+        const currentUser = state.auth.user;
+        
+        if (!currentUser) {
+          return { error: { status: 401, data: { message: 'Not authenticated' } } };
+        }
+
+        try {
+          const response = await fetch('http://localhost:3000/api/auth/profile/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.auth.token}`,
+            },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          return { data: result };
+        } catch {
+          // Mock profile update
+          const updatedUser: User = {
+            ...currentUser,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+          };
+          
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          return {
+            data: {
+              success: true,
+              message: 'Profile updated successfully',
+              user: updatedUser,
+            } as ProfileUpdateResponse,
+          };
+        }
+      },
+    }),
+
+    // Update Profile Picture (after OTP verification)
+    updateProfilePicture: builder.mutation<ProfileUpdateResponse, UpdateProfilePictureRequest>({
+      queryFn: async (data, { getState }) => {
+        const state = getState() as { auth: { user: User | null; token: string | null } };
+        const currentUser = state.auth.user;
+        
+        if (!currentUser) {
+          return { error: { status: 401, data: { message: 'Not authenticated' } } };
+        }
+
+        try {
+          const response = await fetch('http://localhost:3000/api/auth/profile/picture', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.auth.token}`,
+            },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          return { data: result };
+        } catch {
+          // Mock profile picture update
+          const updatedUser: User = {
+            ...currentUser,
+            profilePicture: data.profilePicture,
+          };
+          
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          return {
+            data: {
+              success: true,
+              message: 'Profile picture updated successfully',
+              user: updatedUser,
+            } as ProfileUpdateResponse,
+          };
+        }
+      },
+    }),
+
+    // Change Password (after OTP verification)
+    changePassword: builder.mutation<PasswordChangeResponse, ChangePasswordRequest>({
+      queryFn: async (data, { getState }) => {
+        const state = getState() as { auth: { user: User | null; token: string | null } };
+        
+        if (!state.auth.user) {
+          return { error: { status: 401, data: { message: 'Not authenticated' } } };
+        }
+
+        try {
+          const response = await fetch('http://localhost:3000/api/auth/profile/change-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.auth.token}`,
+            },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          return { data: result };
+        } catch {
+          // Mock password change - for demo, just succeed
+          return {
+            data: {
+              success: true,
+              message: 'Password changed successfully',
+            } as PasswordChangeResponse,
+          };
+        }
+      },
+    }),
   }),
 });
 
@@ -88,6 +287,11 @@ export const {
   useLogoutMutation,
   useGetCurrentUserQuery,
   useRefreshTokenMutation,
+  useSendOTPMutation,
+  useVerifyOTPMutation,
+  useUpdateProfileMutation,
+  useUpdateProfilePictureMutation,
+  useChangePasswordMutation,
 } = authApi;
 
 export default authApi;

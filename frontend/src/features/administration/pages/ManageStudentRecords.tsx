@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FiSearch } from "react-icons/fi";
+import { Search } from "../../../components/common";
 import { initialStudents } from "./adminData";
 
 const fieldClass =
@@ -6,6 +8,7 @@ const fieldClass =
 
 const ManageStudentRecords = function(){
   const [students, setStudents] = useState(initialStudents);
+  const [filteredStudents, setFilteredStudents] = useState(initialStudents);
   const [form, setForm] = useState({
     name: "",
     className: "Class 10",
@@ -32,6 +35,39 @@ const ManageStudentRecords = function(){
 
   const handleRemoveStudent = (id: string) => {
     setStudents((current) => current.filter((student) => student.id !== id));
+    setFilteredStudents((current) => current.filter((student) => student.id !== id));
+  };
+
+  const searchConfig = {
+    fields: [
+      { key: 'name', label: 'Student Name', type: 'text' as const, placeholder: 'Search by name...' },
+      { key: 'className', label: 'Class', type: 'select' as const,
+        options: [
+          { value: 'Class 8', label: 'Class 8' },
+          { value: 'Class 9', label: 'Class 9' },
+          { value: 'Class 10', label: 'Class 10' }
+        ]
+      },
+      { key: 'section', label: 'Section', type: 'select' as const,
+        options: [
+          { value: 'A', label: 'Section A' },
+          { value: 'B', label: 'Section B' },
+          { value: 'C', label: 'Section C' }
+        ]
+      }
+    ],
+    placeholder: 'Search students...',
+    showAdvancedToggle: true,
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = students.filter(student => {
+        const matchesName = !values.name || 
+          student.name.toLowerCase().includes(values.name.toLowerCase());
+        const matchesClass = !values.className || student.className === values.className;
+        const matchesSection = !values.section || student.section === values.section;
+        return matchesName && matchesClass && matchesSection;
+      });
+      setFilteredStudents(filtered);
+    }
   };
 
   return (
@@ -102,6 +138,9 @@ const ManageStudentRecords = function(){
           </div>
         </div>
 
+        {/* Search */}
+        <Search config={searchConfig} />
+
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
@@ -115,7 +154,7 @@ const ManageStudentRecords = function(){
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {students.map((student) => (
+                {filteredStudents.map((student) => (
                   <tr key={student.id}>
                     <td className="px-6 py-4 text-slate-700">{student.id}</td>
                     <td className="px-6 py-4 text-slate-700">{student.name}</td>

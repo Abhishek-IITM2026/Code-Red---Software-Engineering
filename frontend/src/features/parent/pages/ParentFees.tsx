@@ -1,7 +1,34 @@
+import { useState } from "react";
+import { Search } from "../../../components/common";
 import { feeTransactions } from "../data.ts";
 
 const ParentFees = function() {
-  const pendingFee = feeTransactions.find((item) => item.status === "Pending");
+  const [filteredTransactions, setFilteredTransactions] = useState(feeTransactions);
+  const pendingFee = filteredTransactions.find((item) => item.status === "Pending");
+
+  const searchConfig = {
+    fields: [
+      { key: 'month', label: 'Month', type: 'text' as const, placeholder: 'Search by month...' },
+      { key: 'status', label: 'Status', type: 'select' as const,
+        options: [
+          { value: 'Paid', label: 'Paid' },
+          { value: 'Pending', label: 'Pending' },
+          { value: 'Overdue', label: 'Overdue' }
+        ]
+      }
+    ],
+    placeholder: 'Search fees...',
+    showAdvancedToggle: true,
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = feeTransactions.filter(item => {
+        const matchesMonth = !values.month || 
+          item.month.toLowerCase().includes(values.month.toLowerCase());
+        const matchesStatus = !values.status || item.status === values.status;
+        return matchesMonth && matchesStatus;
+      });
+      setFilteredTransactions(filtered);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -24,6 +51,9 @@ const ParentFees = function() {
           </button>
         </div>
 
+        {/* Search */}
+        <Search config={searchConfig} />
+
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
@@ -36,7 +66,7 @@ const ParentFees = function() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {feeTransactions.map((item) => (
+                {filteredTransactions.map((item) => (
                   <tr key={item.month}>
                     <td className="px-6 py-4 text-slate-700">{item.month}</td>
                     <td className="px-6 py-4 text-slate-700">{item.amount}</td>
