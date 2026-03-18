@@ -135,39 +135,61 @@ const Profile: React.FC = () => {
     { id: 'picture' as TabType, label: 'Profile Picture', icon: FaCamera },
     { id: 'password' as TabType, label: 'Change Password', icon: FaLock },
   ];
+  const roleLabel = user?.role ? `${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` : 'User';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="overflow-hidden rounded-3xl bg-[var(--secondary)] shadow-sm ring-1 ring-[var(--text)]/10">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">Account Settings</h1>
-            <p className="text-blue-100">Manage your profile and security settings</p>
+          <div className="bg-gradient-to-r from-[var(--primary)] to-sky-700 px-6 py-6 md:px-8">
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-white/70">
+                  Faculty Profile
+                </p>
+                <h1 className="mt-2 text-3xl font-bold text-white">Account Settings</h1>
+                <p className="mt-2 max-w-2xl text-sm text-white/80 md:text-base">
+                  Manage your profile, security settings, and account picture without leaving the faculty workspace.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 rounded-2xl bg-white/12 px-4 py-3 backdrop-blur-sm">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-lg font-bold text-[var(--primary)]">
+                  {user?.firstName?.charAt(0) || "F"}
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-white">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-sm text-white/80">{roleLabel}</p>
+                  <p className="text-xs text-white/65">{user?.email}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Messages */}
           {successMessage && (
-            <div className="mx-6 mt-4 p-3 bg-green-50 text-green-700 rounded-md">
+            <div className="mx-6 mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 md:mx-8">
               {successMessage}
             </div>
           )}
           {errorMessage && (
-            <div className="mx-6 mt-4 p-3 bg-red-50 text-red-700 rounded-md">
+            <div className="mx-6 mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 md:mx-8">
               {errorMessage}
             </div>
           )}
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 px-6 py-4 md:px-8">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
                   activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? 'bg-[var(--primary)] text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -177,7 +199,7 @@ const Profile: React.FC = () => {
           </div>
 
           {/* Content */}
-          <div className="p-6">
+          <div className="bg-white p-6 md:p-8">
             {/* Profile Info Tab */}
             {activeTab === 'profile' && (
               <form onSubmit={handleProfileSubmit} className="space-y-6">
@@ -391,7 +413,6 @@ const Profile: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
 
       {/* OTP Modal */}
       <OTPModal

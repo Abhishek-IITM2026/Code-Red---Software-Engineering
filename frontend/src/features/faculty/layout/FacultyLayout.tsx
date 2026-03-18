@@ -10,6 +10,7 @@ import facultyRoutes from "../routes/faculty.routes";
 const appName = import.meta.env.VITE_APP_NAME || "CIOM";
 const appLogo = import.meta.env.VITE_APP_LOGO || "C";
 const appTagline = import.meta.env.VITE_APP_TAGLINE || "";
+const facultyProfilePath = "/faculty/profile";
 
 const FacultyLayout = function () {
   const location = useLocation();
@@ -22,6 +23,9 @@ const FacultyLayout = function () {
   const handleLogout = () => {
     dispatch(logout());
   };
+
+  const primaryLinks = facultyRoutes.filter((route) => route.path !== facultyProfilePath);
+  const isProfileRoute = location.pathname === facultyProfilePath;
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)]">
@@ -50,13 +54,16 @@ const FacultyLayout = function () {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="small" icon={<FiSettings className="w-4 h-4" />} onClick={() => setIsPreferencesOpen(true)} title="Settings" />
-              <div className="hidden md:flex items-center gap-3">
+              <Link
+                to={facultyProfilePath}
+                className="hidden md:flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-[var(--secondary)]"
+              >
                 <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm">{user?.firstName?.charAt(0) || "F"}</div>
                 <div>
                   <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">Faculty</p>
                 </div>
-              </div>
+              </Link>
               <Button variant="ghost" size="small" onClick={handleLogout} title="Logout" className="text-red-500 hover:bg-red-50"><FiLogOut className="w-4 h-4" /></Button>
             </div>
           </div>
@@ -85,19 +92,15 @@ const FacultyLayout = function () {
             </div>
           </div>
           <nav className="space-y-1 px-4">
-            {facultyRoutes.map((link) => (
+            {primaryLinks.map((link) => (
               <Link key={link.path} to={link.path} onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${location.pathname === link.path ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? link.name : undefined}>
                 <link.icon className="w-5 h-5 flex-shrink-0" />
                 {!isCollapsed && <span>{link.name}</span>}
               </Link>
             ))}
-            <Link to="/profile" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${location.pathname === "/profile" ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "My Profile" : undefined}>
-              <FiUser className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span>My Profile</span>}
-            </Link>
           </nav>
           <div className={`mt-6 px-4 ${isCollapsed ? 'px-2' : ''}`}>
-            <Link to="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${location.pathname === "/profile" ? "bg-[var(--primary)] text-white" : "text-[var(--text-secondary)] hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "My Profile" : undefined}>
+            <Link to={facultyProfilePath} onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${isProfileRoute ? "bg-[var(--primary)] text-white" : "text-[var(--text-secondary)] hover:bg-[var(--secondary)]"} ${isCollapsed ? 'justify-center px-2' : ''}`} title={isCollapsed ? "My Profile" : undefined}>
               <FiUser className="w-5 h-5 flex-shrink-0" />
               {!isCollapsed && <span>My Profile</span>}
             </Link>

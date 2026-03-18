@@ -42,7 +42,7 @@ const ParentPerformance = function() {
           <button
             key={subject.id}
             type="button"
-            onClick={() => navigate(`/parent/performance/${subject.id}`)}
+            onClick={() => navigate(`/parent/subject-report/${subject.id}`)}
             className="rounded-2xl bg-white p-6 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-1 hover:shadow-lg"
           >
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">

@@ -5,12 +5,12 @@ import AssessmentBuilderSteps from '../components/AssessmentBuilder/AssessmentBu
 const AssessmentBuilder: React.FC = () => {
   return (
     <AssessmentBuilderProvider>
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-0">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
             Assessment Builder
           </p>
-          <h2 className="mt-2 text-3xl font-bold">Create AI-Powered Assessment</h2>
+          <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Create AI-Powered Assessment</h2>
           <p className="mt-1 text-[var(--text-secondary)]">
             Follow the steps below to create and publish an assessment to your students
           </p>

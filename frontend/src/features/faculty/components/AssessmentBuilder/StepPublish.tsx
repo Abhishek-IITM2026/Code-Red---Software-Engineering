@@ -8,6 +8,9 @@ import Input from '../../../../components/common/Input';
 const StepPublish: React.FC = () => {
   const { state, updateConfig, goToStep, reset, setError } = useAssessmentBuilder();
   const { config } = state;
+  const classLabel = config.classSection
+    ? `${config.className} - Section ${config.classSection}`
+    : config.className;
 
   const [saveAssessment, { isLoading: isSaving }] = useSaveAssessmentMutation();
   const [publishAssessment, { isLoading: isPublishing }] = usePublishAssessmentMutation();
@@ -122,7 +125,7 @@ const StepPublish: React.FC = () => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">Class:</span>
-              <span className="font-medium text-[var(--text)]">{config.className}</span>
+              <span className="font-medium text-[var(--text)]">{classLabel}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">Subject:</span>
@@ -153,6 +156,13 @@ const StepPublish: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 7: Finalize and publish</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Finalize the assessment paper details for {classLabel} in {config.subjectName}, then save the draft or publish it to students.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -161,7 +171,7 @@ const StepPublish: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Final step: Review and publish
+          Final step: Review and publish for <span className="font-semibold text-[var(--text)]">{classLabel}</span>
         </p>
       </div>
 
@@ -175,7 +185,7 @@ const StepPublish: React.FC = () => {
           <div className="flex items-center gap-2">
             <FiUsers className="w-4 h-4 text-[var(--text-secondary)]" />
             <span className="text-[var(--text-secondary)]">Class:</span>
-            <span className="font-medium text-[var(--text)]">{config.className}</span>
+            <span className="font-medium text-[var(--text)]">{classLabel}</span>
           </div>
           <div className="flex items-center gap-2">
             <FiFileText className="w-4 h-4 text-[var(--text-secondary)]" />

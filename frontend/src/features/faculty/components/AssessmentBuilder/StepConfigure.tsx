@@ -1,12 +1,15 @@
 import React from 'react';
-import { FiSettings, FiChevronLeft, FiInfo } from 'react-icons/fi';
+import { FiChevronLeft, FiInfo } from 'react-icons/fi';
 import { useAssessmentBuilder } from '../../context/AssessmentBuilderContext';
 import Button from '../../../../components/common/Button';
 import Input from '../../../../components/common/Input';
 
 const StepConfigure: React.FC = () => {
-  const { updateConfig, state, goToStep, setGenerating } = useAssessmentBuilder();
+  const { updateConfig, state, goToStep } = useAssessmentBuilder();
   const { config } = state;
+  const classLabel = config.classSection
+    ? `${config.className} - Section ${config.classSection}`
+    : config.className;
 
   const handleBack = () => {
     goToStep('materials', 3);
@@ -39,6 +42,13 @@ const StepConfigure: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 4: Configure the paper</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Define the structure of the assessment paper for {classLabel} in {config.subjectName}. Set total marks, number of questions, difficulty, and optional AI instructions before moving to generation.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -47,7 +57,9 @@ const StepConfigure: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Configuring: <span className="font-semibold text-[var(--text)]">{config.subjectName}</span>
+          Configuring: <span className="font-semibold text-[var(--text)]">{classLabel}</span>
+          {' > '}
+          <span className="font-semibold text-[var(--text)]">{config.subjectName}</span>
         </p>
       </div>
 
@@ -162,7 +174,7 @@ const StepConfigure: React.FC = () => {
             onClick={handleGenerate}
             disabled={totalQuestions === 0 || config.totalMarks === 0}
           >
-            Generate Questions
+            Continue to Generate
           </Button>
         </div>
       </div>

@@ -7,6 +7,9 @@ import Button from '../../../../components/common/Button';
 const StepMaterials: React.FC = () => {
   const { setMaterials, state, goToStep } = useAssessmentBuilder();
   const { subjectId, selectedMaterials } = state.config;
+  const classLabel = state.config.classSection
+    ? `${state.config.className} - Section ${state.config.classSection}`
+    : state.config.className;
 
   const { data: materials = [], isLoading, error } = useGetSubjectMaterialsQuery(subjectId || '', {
     skip: !subjectId,
@@ -35,7 +38,7 @@ const StepMaterials: React.FC = () => {
   };
 
   const handleContinue = () => {
-    if (selectedMaterials.length > 0) {
+    if (selectedMaterials.length > 0 || materials.length === 0) {
       goToStep('configure', 4);
     }
   };
@@ -60,7 +63,14 @@ const StepMaterials: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 3: Select source materials</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Choose the notes, units, or files that the assessment paper should be based on. Continue to Step 4 after reviewing your material selection.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -69,7 +79,7 @@ const StepMaterials: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Selected: <span className="font-semibold text-[var(--text)]">{state.config.className}</span>
+          Selected: <span className="font-semibold text-[var(--text)]">{classLabel}</span>
           {' > '}
           <span className="font-semibold text-[var(--text)]">{state.config.subjectName}</span>
         </p>
@@ -161,7 +171,7 @@ const StepMaterials: React.FC = () => {
               onClick={handleContinue}
               disabled={selectedMaterials.length === 0}
             >
-              Continue ({selectedMaterials.length} selected)
+              Continue to Configure ({selectedMaterials.length} selected)
             </Button>
           </div>
         </>

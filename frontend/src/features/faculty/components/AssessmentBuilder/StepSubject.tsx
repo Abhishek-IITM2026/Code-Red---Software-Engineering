@@ -7,6 +7,9 @@ import Button from '../../../../components/common/Button';
 const StepSubject: React.FC = () => {
   const { setSubject, state, goToStep } = useAssessmentBuilder();
   const { classId } = state.config;
+  const classLabel = state.config.classSection
+    ? `${state.config.className} - Section ${state.config.classSection}`
+    : state.config.className;
   
   const { data: subjects = [], isLoading, error } = useGetClassSubjectsQuery(classId || '', {
     skip: !classId,
@@ -40,7 +43,14 @@ const StepSubject: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 2: Select subject</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Choose the subject for the selected class-section. After you select it, the builder moves to Step 3 so you can choose source materials for the paper.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -49,7 +59,7 @@ const StepSubject: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Selected: <span className="font-semibold text-[var(--text)]">{state.config.className}</span>
+          Selected: <span className="font-semibold text-[var(--text)]">{classLabel}</span>
         </p>
       </div>
 

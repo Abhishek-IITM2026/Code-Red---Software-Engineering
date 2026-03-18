@@ -36,6 +36,7 @@ export interface AssessmentConfig {
   // Step 1 & 2: Class and Subject
   classId: string | null;
   className: string;
+  classSection: string;
   subjectId: string | null;
   subjectName: string;
   
@@ -85,7 +86,7 @@ interface AssessmentBuilderState {
 
 type AssessmentBuilderAction =
   | { type: 'SET_STEP'; payload: { step: AssessmentBuilderStep; stepNumber: number } }
-  | { type: 'SET_CLASS'; payload: { classId: string; className: string } }
+  | { type: 'SET_CLASS'; payload: { classId: string; className: string; classSection: string } }
   | { type: 'SET_SUBJECT'; payload: { subjectId: string; subjectName: string } }
   | { type: 'SET_MATERIALS'; payload: Material[] }
   | { type: 'UPDATE_CONFIG'; payload: Partial<AssessmentConfig> }
@@ -98,6 +99,7 @@ type AssessmentBuilderAction =
 const initialConfig: AssessmentConfig = {
   classId: null,
   className: '',
+  classSection: '',
   subjectId: null,
   subjectName: '',
   selectedMaterials: [],
@@ -146,6 +148,7 @@ function assessmentBuilderReducer(
           ...state.config,
           classId: action.payload.classId,
           className: action.payload.className,
+          classSection: action.payload.classSection,
           subjectId: null,
           subjectName: '',
           selectedMaterials: [],
@@ -173,8 +176,6 @@ function assessmentBuilderReducer(
           ...state.config,
           selectedMaterials: action.payload,
         },
-        currentStep: 'configure',
-        stepNumber: 4,
       };
     case 'UPDATE_CONFIG':
       return {
@@ -191,8 +192,6 @@ function assessmentBuilderReducer(
           ...state.config,
           questions: action.payload,
         },
-        currentStep: 'modify',
-        stepNumber: 6,
       };
     case 'SET_LOADING':
       return {
@@ -220,7 +219,7 @@ interface AssessmentBuilderContextType {
   state: AssessmentBuilderState;
   dispatch: React.Dispatch<AssessmentBuilderAction>;
   goToStep: (step: AssessmentBuilderStep, stepNumber: number) => void;
-  setClass: (classId: string, className: string) => void;
+  setClass: (classId: string, className: string, classSection?: string) => void;
   setSubject: (subjectId: string, subjectName: string) => void;
   setMaterials: (materials: Material[]) => void;
   updateConfig: (config: Partial<AssessmentConfig>) => void;
@@ -242,8 +241,8 @@ export function AssessmentBuilderProvider({ children }: { children: ReactNode })
     dispatch({ type: 'SET_STEP', payload: { step, stepNumber } });
   };
 
-  const setClass = (classId: string, className: string) => {
-    dispatch({ type: 'SET_CLASS', payload: { classId, className } });
+  const setClass = (classId: string, className: string, classSection = '') => {
+    dispatch({ type: 'SET_CLASS', payload: { classId, className, classSection } });
   };
 
   const setSubject = (subjectId: string, subjectName: string) => {

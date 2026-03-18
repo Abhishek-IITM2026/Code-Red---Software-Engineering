@@ -1,89 +1,54 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiBook, FiFileText, FiDownload, FiClock, FiCheckCircle, FiEdit, FiEye } from "react-icons/fi";
-import { Card, Button } from "../../../components/common";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  FiArrowLeft,
+  FiBook,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiDownload,
+  FiFileText,
+  FiPlayCircle,
+} from "react-icons/fi";
+import { Button } from "../../../components/common";
+import { studentSubjectContent, type SubjectAssignment, type SubjectMaterial } from "../data/subjectContent";
 
-interface Chapter {
-  id: string;
-  title: string;
-  description: string;
-  weeklyTopics: { week: string; topic: string }[];
-}
-
-interface Material {
-  id: string;
-  title: string;
-  type: "notes" | "video" | "pdf" | "worksheet";
-  week: string;
-  uploadedAt: string;
-}
-
-interface Assignment {
-  id: string;
-  title: string;
-  type: "objective" | "subjective" | "mcq" | "mixed";
-  week: string;
-  dueDate: string;
-  status: "pending" | "submitted" | "graded";
-  marks?: number;
-  totalMarks: number;
-}
-
-const subjectsData: Record<string, { chapters: Chapter[]; materials: Material[]; assignments: Assignment[] }> = {
-  Mathematics: {
-    chapters: [
-      { id: "ch1", title: "Algebra Fundamentals", description: "Basic algebraic expressions and equations", weeklyTopics: [{ week: "Week 1", topic: "Introduction to Algebra" }, { week: "Week 2", topic: "Linear Equations" }] },
-      { id: "ch2", title: "Quadratic Equations", description: "Solving quadratic equations", weeklyTopics: [{ week: "Week 3", topic: "Factorization" }, { week: "Week 4", topic: "Quadratic Formula" }] },
-      { id: "ch3", title: "Coordinate Geometry", description: "Cartesian coordinate system", weeklyTopics: [{ week: "Week 5", topic: "Distance Formula" }, { week: "Week 6", topic: "Section Formula" }] },
-    ],
-    materials: [
-      { id: "m1", title: "Algebra Basics - Chapter 1", type: "notes", week: "Week 1", uploadedAt: "2024-01-15" },
-      { id: "m2", title: "Practice Problems Set", type: "worksheet", week: "Week 2", uploadedAt: "2024-01-22" },
-      { id: "m3", title: "Quadratic Equations Notes", type: "pdf", week: "Week 3", uploadedAt: "2024-01-29" },
-      { id: "m4", title: "Coordinate Geometry Video", type: "video", week: "Week 5", uploadedAt: "2024-02-12" },
-    ],
-    assignments: [
-      { id: "a1", title: "Algebra Practice", type: "mixed", week: "Week 2", dueDate: "2024-02-01", status: "graded", marks: 85, totalMarks: 100 },
-      { id: "a2", title: "Quadratic Equations Test", type: "objective", week: "Week 4", dueDate: "2024-02-15", status: "submitted", totalMarks: 100 },
-      { id: "a3", title: "Geometry Assignment", type: "subjective", week: "Week 6", dueDate: "2024-02-28", status: "pending", totalMarks: 50 },
-    ],
-  },
-  Physics: {
-    chapters: [
-      { id: "ch1", title: "Kinematics", description: "Motion in one dimension", weeklyTopics: [{ week: "Week 1", topic: "Speed and Velocity" }, { week: "Week 2", topic: "Acceleration" }] },
-      { id: "ch2", title: "Laws of Motion", description: "Newton's three laws", weeklyTopics: [{ week: "Week 3", topic: "First Law" }, { week: "Week 4", topic: "Second Law" }] },
-    ],
-    materials: [
-      { id: "m1", title: "Kinematics Notes", type: "notes", week: "Week 1", uploadedAt: "2024-01-15" },
-      { id: "m2", title: "Newton's Laws Summary", type: "pdf", week: "Week 3", uploadedAt: "2024-01-29" },
-    ],
-    assignments: [
-      { id: "a1", title: "Kinematics Quiz", type: "mcq", week: "Week 2", dueDate: "2024-02-05", status: "graded", marks: 90, totalMarks: 100 },
-    ],
-  },
-  Chemistry: {
-    chapters: [
-      { id: "ch1", title: "Atomic Structure", description: "Fundamentals of atom", weeklyTopics: [{ week: "Week 1", topic: "Bohr Model" }, { week: "Week 2", topic: "Electronic Configuration" }] },
-      { id: "ch2", title: "Chemical Bonding", description: "Types of bonds", weeklyTopics: [{ week: "Week 3", topic: "Ionic Bonding" }, { week: "Week 4", topic: "Covalent Bonding" }] },
-    ],
-    materials: [
-      { id: "m1", title: "Atomic Structure Notes", type: "notes", week: "Week 1", uploadedAt: "2024-01-15" },
-    ],
-    assignments: [
-      { id: "a1", title: "Atomic Structure MCQ", type: "mcq", week: "Week 2", dueDate: "2024-02-10", status: "pending", totalMarks: 25 },
-    ],
-  },
+const materialTypeStyles: Record<SubjectMaterial["type"], string> = {
+  notes: "bg-sky-100 text-sky-700",
+  video: "bg-rose-100 text-rose-700",
+  pdf: "bg-violet-100 text-violet-700",
+  worksheet: "bg-amber-100 text-amber-700",
 };
 
-type TabType = "chapters" | "materials" | "assignments";
+const assignmentTypeStyles: Record<SubjectAssignment["type"], string> = {
+  objective: "bg-purple-100 text-purple-700",
+  subjective: "bg-blue-100 text-blue-700",
+  mcq: "bg-green-100 text-green-700",
+  mixed: "bg-orange-100 text-orange-700",
+};
+
+const assignmentStatusStyles: Record<SubjectAssignment["status"], string> = {
+  pending: "bg-amber-100 text-amber-700",
+  submitted: "bg-blue-100 text-blue-700",
+  graded: "bg-emerald-100 text-emerald-700",
+};
+
+const validSections = ["chapters", "resources", "tasks"] as const;
+type SubjectSection = (typeof validSections)[number];
 
 const SubjectDetails = () => {
-  const { subjectName } = useParams<{ subjectName: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>("chapters");
-  const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
+  const { subjectName, section } = useParams<{ subjectName: string; section: string }>();
+  const decodedSubjectName = subjectName ? decodeURIComponent(subjectName) : "";
+  const subject = decodedSubjectName ? studentSubjectContent[decodedSubjectName] : null;
+  const activeSection: SubjectSection = validSections.includes((section ?? "") as SubjectSection)
+    ? (section as SubjectSection)
+    : "chapters";
 
-  const subject = subjectName ? subjectsData[subjectName] : null;
+  const sectionLinks: Array<{ id: SubjectSection; label: string; icon: typeof FiBook }> = [
+    { id: "chapters", label: "Chapters", icon: FiBook },
+    { id: "resources", label: "Study Resources", icon: FiDownload },
+    { id: "tasks", label: "Assessments and Tasks", icon: FiFileText },
+  ];
 
   if (!subject) {
     return (
@@ -91,228 +56,245 @@ const SubjectDetails = () => {
         <Button variant="ghost" onClick={() => navigate("/student/subjects")} icon={<FiArrowLeft />}>
           Back to Subjects
         </Button>
-        <Card className="p-8 text-center">
-          <FiBook className="w-12 h-12 text-[var(--text-secondary)] mx-auto mb-4" />
-          <p className="text-[var(--text-secondary)]">Subject not found</p>
-        </Card>
+        <div className="rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
+          <FiBook className="mx-auto h-12 w-12 text-slate-400" />
+          <p className="mt-4 text-slate-500">This subject could not be found.</p>
+        </div>
       </div>
     );
   }
 
-  const getMaterialIcon = (type: Material["type"]) => {
-    switch (type) {
-      case "video": return "🎬";
-      case "pdf": return "📄";
-      case "worksheet": return "📝";
-      default: return "📚";
-    }
-  };
-
-  const getAssignmentTypeBadge = (type: Assignment["type"]) => {
-    const colors = {
-      objective: "bg-purple-100 text-purple-700",
-      subjective: "bg-blue-100 text-blue-700",
-      mcq: "bg-green-100 text-green-700",
-      mixed: "bg-orange-100 text-orange-700",
-    };
-    const labels = { objective: "Objective", subjective: "Subjective", mcq: "MCQ", mixed: "Mixed" };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[type]}`}>{labels[type]}</span>;
-  };
-
-interface Question {
-  id: string;
-  text: string;
-  type: "mcq" | "objective" | "subjective";
-  options?: string[];
-  correctAnswer?: string | number;
-  marks: number;
-}
-
-interface AssignmentDetail extends Assignment {
-  questions: Question[];
-  instructions: string;
-}
- 
-const getAssignmentDetails = (subjectName: string, assignmentId: string): AssignmentDetail | null => {
-  const subject = subjectsData[subjectName];
-  if (!subject) return null;
-  
-  const assignment = subject.assignments.find(a => a.id === assignmentId);
-  if (!assignment) return null;
-
-  // Generate sample questions based on assignment type
-  const questionTypes = assignment.type === "mcq" ? ["mcq"] : 
-                         assignment.type === "objective" ? ["objective"] :
-                         assignment.type === "subjective" ? ["subjective"] : ["mcq", "objective", "subjective"];
-
-  const questions: Question[] = Array.from({ length: 5 }, (_, i) => ({
-    id: `q${i + 1}`,
-    text: `Sample question ${i + 1}: This is a ${questionTypes[i % questionTypes.length]} question related to the topic covered in this assignment. Please provide your answer accordingly.`,
-    type: questionTypes[i % questionTypes.length] as "mcq" | "objective" | "subjective",
-    options: questionTypes[i % questionTypes.length] === "mcq" ? [
-      `Option A - First choice for question ${i + 1}`,
-      `Option B - Second choice for question ${i + 1}`,
-      `Option C - Third choice for question ${i + 1}`,
-      `Option D - Fourth choice for question ${i + 1}`
-    ] : undefined,
-    correctAnswer: questionTypes[i % questionTypes.length] === "mcq" ? i % 4 : undefined,
-    marks: assignment.type === "mcq" ? 2 : assignment.type === "objective" ? 5 : 10
-  }));
-
-  return {
-    ...assignment,
-    questions,
-    instructions: "Read each question carefully and answer to the best of your ability. For MCQ questions, select the correct option. For objective questions, provide brief answers. For subjective questions, write detailed explanations."
-  };
-};
-
-const getStatusBadge = (status: Assignment["status"]) => {
-    const config = {
-      pending: { bg: "bg-amber-100", text: "text-amber-700", icon: <FiClock className="w-3 h-3" /> },
-      submitted: { bg: "bg-blue-100", text: "text-blue-700", icon: <FiEdit className="w-3 h-3" /> },
-      graded: { bg: "bg-green-100", text: "text-green-700", icon: <FiCheckCircle className="w-3 h-3" /> },
-    };
-    const c = config[status];
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${c.bg} ${c.text}`}>
-        {c.icon} {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
+  const pendingAssignments = subject.assignments.filter((assignment) => assignment.status === "pending").length;
+  const latestMaterial = subject.materials[subject.materials.length - 1];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="small" onClick={() => navigate("/student/subjects")} icon={<FiArrowLeft />} />
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">{subjectName}</h1>
-          <p className="text-[var(--text-secondary)]">
-            {subject.chapters.length} Chapters • {subject.materials.length} Materials • {subject.assignments.length} Assignments
-          </p>
+    <div className="space-y-8">
+      <section className="rounded-3xl bg-[var(--secondary)] p-6 shadow-sm ring-1 ring-[var(--text)]/10 md:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <Button variant="ghost" size="small" onClick={() => navigate("/student/subjects")} icon={<FiArrowLeft />}>
+              Back to Subjects
+            </Button>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
+              {subject.code}
+            </p>
+            <h1 className="mt-3 text-3xl font-bold md:text-4xl">{subject.name}</h1>
+            <p className="mt-3 max-w-3xl text-[var(--text-secondary)]">{subject.description}</p>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm text-[var(--text-secondary)]">
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-200">
+                Teacher: {subject.teacher}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-200">
+                {subject.progressLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <p className="text-sm text-slate-500">Chapters</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{subject.chapters.length}</p>
+            </div>
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <p className="text-sm text-slate-500">Resources</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{subject.materials.length}</p>
+            </div>
+            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <p className="text-sm text-slate-500">Pending tasks</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{pendingAssignments}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="flex gap-2 border-b border-[var(--border)]">
-        {[
-          { id: "chapters", label: "Chapters", icon: FiBook },
-          { id: "materials", label: "Study Materials", icon: FiDownload },
-          { id: "assignments", label: "Assignments", icon: FiFileText },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id as TabType); setSelectedChapter(null); }}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition ${
-              activeTab === tab.id
-                ? "border-[var(--primary)] text-[var(--primary)]"
-                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span className="font-medium">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+        <div className="grid gap-2 md:grid-cols-3">
+          {sectionLinks.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => navigate(`/student/subjects/${encodeURIComponent(subject.name)}/${item.id}`)}
+              className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                activeSection === item.id
+                  ? "bg-[var(--primary)] text-white"
+                  : "text-slate-600 hover:bg-[var(--secondary)] hover:text-[var(--primary)]"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      {activeTab === "chapters" && (
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {subject.chapters.map((chapter) => (
-              <Card 
-                key={chapter.id} 
-                className={`p-4 cursor-pointer transition ${selectedChapter === chapter.id ? 'ring-2 ring-[var(--primary)]' : ''}`}
-                onClick={() => setSelectedChapter(selectedChapter === chapter.id ? null : chapter.id)}
-              >
-                <h3 className="font-semibold text-[var(--text)]">{chapter.title}</h3>
-                <p className="text-sm text-[var(--text-secondary)] mt-1">{chapter.description}</p>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {chapter.weeklyTopics.map((t, i) => (
-                    <span key={i} className="text-xs px-2 py-1 bg-[var(--secondary)] text-[var(--text-secondary)] rounded">
-                      {t.week}: {t.topic}
-                    </span>
+      {activeSection === "chapters" && (
+        <section className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-[var(--primary)]/10 p-3 text-[var(--primary)]">
+              <FiBook className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-[var(--text)]">Chapters</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Full subject content with chapter headings, detailed descriptions, and week-wise focus areas.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {subject.chapters.map((chapter, index) => (
+              <div key={chapter.id} className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
+                      Chapter {index + 1}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">{chapter.title}</h3>
+                    <p className="mt-3 text-sm font-medium text-slate-700">{chapter.summary}</p>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{chapter.description}</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 lg:w-72">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Weekly Flow
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {chapter.weeklyTopics.map((topic) => (
+                        <div key={`${chapter.id}-${topic.week}`} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                          <p className="text-sm font-semibold text-slate-900">{topic.week}</p>
+                          <p className="mt-1 text-sm text-slate-700">{topic.topic}</p>
+                          <p className="mt-1 text-xs text-slate-500">{topic.focus}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                  {chapter.headings.map((heading) => (
+                    <div key={heading.title} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                      <h4 className="text-base font-semibold text-slate-900">{heading.title}</h4>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{heading.content}</p>
+                    </div>
                   ))}
                 </div>
-              </Card>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {activeSection === "resources" && (
+        <section className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+              <FiDownload className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-[var(--text)]">Study Resources</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Notes, videos, worksheets, and PDFs for this subject.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {subject.materials.map((material) => (
+              <div key={material.id} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">{material.title}</h3>
+                    <p className="mt-1 text-sm text-slate-500">{material.week} • {material.uploadedAt}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${materialTypeStyles[material.type]}`}>
+                    {material.type}
+                  </span>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-600">{material.description}</p>
+              </div>
             ))}
           </div>
 
-          {selectedChapter && (
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-[var(--text)] mb-4">Weekly Breakdown</h3>
-              <div className="space-y-3">
-                {subject.chapters.find(c => c.id === selectedChapter)?.weeklyTopics.map((topic, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-[var(--secondary)] rounded-lg">
-                    <FiBook className="w-5 h-5 text-[var(--primary)]" />
-                    <div>
-                      <p className="font-medium text-[var(--text)]">{topic.week}</p>
-                      <p className="text-sm text-[var(--text-secondary)]">{topic.topic}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {activeTab === "materials" && (
-        <div className="space-y-4">
-          {Array.from(new Set(subject.materials.map(m => m.week))).map((week) => (
-            <div key={week}>
-              <h3 className="text-lg font-semibold text-[var(--text)] mb-3">{week}</h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                {subject.materials.filter(m => m.week === week).map((material) => (
-                  <Card key={material.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl">{getMaterialIcon(material.type)}</span>
-                        <div>
-                          <h4 className="font-medium text-[var(--text)]">{material.title}</h4>
-                          <p className="text-xs text-[var(--text-secondary)] capitalize">{material.type} • {material.uploadedAt}</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="small" icon={<FiDownload className="w-4 h-4" />} />
-                    </div>
-                  </Card>
-                ))}
+          {latestMaterial && (
+            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
+                  <FiPlayCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Latest upload</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {latestMaterial.title} • {latestMaterial.week} • {latestMaterial.uploadedAt}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{latestMaterial.description}</p>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        </section>
       )}
 
-      {activeTab === "assignments" && (
-        <div className="space-y-4">
-          {subject.assignments.map((assignment) => (
-            <Card key={assignment.id} className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-[var(--text)]">{assignment.title}</h3>
-                    {getAssignmentTypeBadge(assignment.type)}
+      {activeSection === "tasks" && (
+        <section className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+              <FiFileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-[var(--text)]">Assessments and Tasks</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Subject-wise assessments and assignment tasks for this subject.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {subject.assignments.map((assignment) => (
+              <div key={assignment.id} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-lg font-semibold text-slate-900">{assignment.title}</h3>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${assignmentTypeStyles[assignment.type]}`}>
+                        {assignment.type}
+                      </span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${assignmentStatusStyles[assignment.status]}`}>
+                        {assignment.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">{assignment.description}</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                      <span className="inline-flex items-center gap-2">
+                        <FiCalendar className="h-4 w-4" />
+                        Due {assignment.dueDate}
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <FiClock className="h-4 w-4" />
+                        {assignment.week}
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <FiCheckCircle className="h-4 w-4" />
+                        {assignment.marks !== undefined ? `${assignment.marks}/${assignment.totalMarks}` : `${assignment.totalMarks} marks`}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)]">
-                    <span className="flex items-center gap-1"><FiClock className="w-4 h-4" /> Due: {assignment.dueDate}</span>
-                    <span>{assignment.week}</span>
-                    {assignment.marks !== undefined && (
-                      <span className="text-[var(--primary)] font-medium">{assignment.marks}/{assignment.totalMarks} marks</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {getStatusBadge(assignment.status)}
-                  <Button 
-                    variant="primary" 
-                    size="small" 
-                    icon={assignment.status === "pending" ? <FiEdit className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                    onClick={() => navigate(`/student/assignments/${assignment.id}?subject=${subjectName}&title=${encodeURIComponent(assignment.title)}&type=${assignment.type}`)}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/student/assignments/${assignment.id}?subject=${encodeURIComponent(subject.name)}&title=${encodeURIComponent(assignment.title)}&type=${assignment.type}`
+                      )
+                    }
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
                   >
-                    {assignment.status === "pending" ? "Start" : assignment.status === "submitted" ? "View" : "View Result"}
-                  </Button>
+                    {assignment.status === "pending" ? "Open Task" : assignment.status === "submitted" ? "View Submission" : "View Result"}
+                  </button>
                 </div>
               </div>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

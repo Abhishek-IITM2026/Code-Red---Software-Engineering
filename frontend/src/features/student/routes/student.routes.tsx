@@ -1,13 +1,13 @@
 import StudentDashboard from "../pages/StudentDashboard";
+import StudentLeave from "../pages/StudentLeave";
 import ViewSchedule from "../pages/ViewSchedule";
-import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiDownload } from "react-icons/fi";
+import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiUser, FiClock } from "react-icons/fi";
 import StudentAttendance from "../pages/StudentAttendance";
 import StudentMarks from "../pages/StudentMarks";
-import StudentMaterials from "../pages/StudentMaterials";
 import StudentSubjects from "../pages/StudentSubjects";
 import SubjectDetails from "../pages/SubjectDetails";
-import StudentAssignments from "../pages/StudentAssignments";
 import AssignmentDetails from "../pages/AssignmentDetails";
+import Profile from "../../auth/pages/Profile";
 
 export interface RouteConfig {
   name: string;
@@ -48,17 +48,10 @@ const studentRoutes: RouteConfig[] = [
   },
   {
     name: "Subject Details",
-    path: "/student/subjects/:subjectName",
+    path: "/student/subjects/:subjectName/:section",
     element: <SubjectDetails />,
     icon: FiBook,
     description: "View subject details"
-  },
-  {
-    name: "Assignments",
-    path: "/student/assignments",
-    element: <StudentAssignments />,
-    icon: FiFileText,
-    description: "View and submit assignments"
   },
   {
     name: "Assignment Details",
@@ -75,11 +68,18 @@ const studentRoutes: RouteConfig[] = [
     description: "View class timetable"
   },
   {
-    name: "Study Materials",
-    path: "/student/materials",
-    element: <StudentMaterials />,
-    icon: FiDownload,
-    description: "Access study resources"
+    name: "Apply Leave",
+    path: "/student/leave",
+    element: <StudentLeave />,
+    icon: FiClock,
+    description: "Submit leave requests to administration"
+  },
+  {
+    name: "My Profile",
+    path: "/student/profile",
+    element: <Profile />,
+    icon: FiUser,
+    description: "Manage your student profile"
   }
 ];
 

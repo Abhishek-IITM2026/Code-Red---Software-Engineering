@@ -1,4 +1,5 @@
 import FacultyDashboard from "../pages/FacultyDashboard";
+import FacultyLeave from "../pages/FacultyLeave";
 import FacultyClasses from "../pages/FacultyClasses";
 import FacultyAttendance from "../pages/FacultyAttendance";
 import FacultyAssessments from "../pages/FacultyAssessments";
@@ -9,7 +10,8 @@ import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
 import FacultySchedule from "../pages/FacultySchedule";
 import AssessmentBuilder from "../pages/AssessmentBuilder";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle } from "react-icons/fi";
+import Profile from "../../auth/pages/Profile";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock } from "react-icons/fi";
 
 export interface FacultyRouteConfig {
   name: string;
@@ -84,11 +86,25 @@ const facultyRoutes: FacultyRouteConfig[] = [
     description: "View your teaching schedule"
   },
   {
+    name: "Apply Leave",
+    path: "/faculty/leave",
+    element: <FacultyLeave />,
+    icon: FiClock,
+    description: "Submit leave requests to administration"
+  },
+  {
     name: "Assessment Builder",
     path: "/faculty/assessment-builder",
     element: <AssessmentBuilder />,
     icon: FiPlusCircle,
     description: "Create AI-powered assessments"
+  },
+  {
+    name: "My Profile",
+    path: "/faculty/profile",
+    element: <Profile />,
+    icon: FiUser,
+    description: "Manage your faculty profile"
   }
 ];
 

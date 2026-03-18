@@ -8,6 +8,9 @@ import Input from '../../../../components/common/Input';
 const StepModify: React.FC = () => {
   const { state, setQuestions, updateConfig, goToStep, setError } = useAssessmentBuilder();
   const { config } = state;
+  const classLabel = config.classSection
+    ? `${config.className} - Section ${config.classSection}`
+    : config.className;
   
   const [modifyQuestions, { isLoading }] = useModifyQuestionsMutation();
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -81,6 +84,13 @@ const StepModify: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 6: Review and modify</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Review the generated paper for {classLabel} in {config.subjectName}. Edit, add, or delete questions until the assessment matches the required format.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -89,7 +99,7 @@ const StepModify: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Modify or review your questions
+          Modify or review your questions for <span className="font-semibold text-[var(--text)]">{config.subjectName}</span>
         </p>
       </div>
 

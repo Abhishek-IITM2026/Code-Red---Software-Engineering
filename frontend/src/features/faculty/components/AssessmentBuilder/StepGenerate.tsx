@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { FiZap, FiChevronLeft, FiRefreshCw, FiCheck } from 'react-icons/fi';
-import { useAssessmentBuilder, type Question } from '../../context/AssessmentBuilderContext';
+import { useAssessmentBuilder } from '../../context/AssessmentBuilderContext';
 import { useGenerateQuestionsMutation } from '../../api/assessmentApi';
 import Button from '../../../../components/common/Button';
 
 const StepGenerate: React.FC = () => {
   const { state, setQuestions, goToStep, setError } = useAssessmentBuilder();
   const { config } = state;
+  const classLabel = config.classSection
+    ? `${config.className} - Section ${config.classSection}`
+    : config.className;
   
   const [generateQuestions, { isLoading }] = useGenerateQuestionsMutation();
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'success'>('idle');
@@ -49,9 +52,17 @@ const StepGenerate: React.FC = () => {
 
   // If we already have questions from a previous generation, show them
   const hasQuestions = config.questions.length > 0;
+  const showGeneratedQuestions = hasQuestions && generationStatus !== 'generating';
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 5: Generate questions</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Generate the first draft of the assessment paper for {classLabel} in {config.subjectName}. Review the generated draft here before continuing to modification.
+        </p>
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleBack}
@@ -61,7 +72,9 @@ const StepGenerate: React.FC = () => {
           <FiChevronLeft className="w-5 h-5" />
         </button>
         <p className="text-[var(--text-secondary)]">
-          Generating for: <span className="font-semibold text-[var(--text)]">{config.subjectName}</span>
+          Generating for: <span className="font-semibold text-[var(--text)]">{classLabel}</span>
+          {' > '}
+          <span className="font-semibold text-[var(--text)]">{config.subjectName}</span>
         </p>
       </div>
 
@@ -120,7 +133,7 @@ const StepGenerate: React.FC = () => {
         </div>
       )}
 
-      {generationStatus === 'success' && hasQuestions && (
+      {showGeneratedQuestions && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[var(--success)]">

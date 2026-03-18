@@ -2,14 +2,13 @@ import React from 'react';
 import { FiBook, FiUsers, FiChevronRight } from 'react-icons/fi';
 import { useAssessmentBuilder, type ClassInfo } from '../../context/AssessmentBuilderContext';
 import { useGetFacultyClassesQuery } from '../../api/assessmentApi';
-import Button from '../../../../components/common/Button';
 
 const StepClass: React.FC = () => {
   const { setClass, state } = useAssessmentBuilder();
   const { data: classes = [], isLoading, error } = useGetFacultyClassesQuery();
 
   const handleSelectClass = (classItem: ClassInfo) => {
-    setClass(classItem.id, classItem.name);
+    setClass(classItem.id, classItem.name, classItem.section);
   };
 
   if (isLoading) {
@@ -29,10 +28,13 @@ const StepClass: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-[var(--text-secondary)] mb-4">
-        Select the class for which you want to create an assessment
-      </p>
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+        <h5 className="text-sm font-semibold text-[var(--text)]">Step 1: Select class and section</h5>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Choose the class-section for which you want to build the assessment paper. Once selected, the builder redirects to Step 2 to choose the subject.
+        </p>
+      </div>
 
       {classes.length === 0 ? (
         <div className="text-center py-8">
