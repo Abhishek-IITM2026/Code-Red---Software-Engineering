@@ -2,19 +2,34 @@ import { useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
   FiBarChart2,
+  FiBookOpen,
   FiBriefcase,
   FiCalendar,
   FiCheckSquare,
   FiClock,
   FiCreditCard,
+  FiDollarSign,
   FiFileText,
   FiGrid,
   FiPackage,
+  FiShield,
   FiTrendingUp,
   FiUsers,
 } from "react-icons/fi";
 
 const quickActions = [
+  {
+    title: "Course Management",
+    description: "Create upcoming courses for students and publish them to parent and student portals.",
+    path: "/administration/course-management",
+    icon: FiBookOpen,
+  },
+  {
+    title: "Authority Control",
+    description: "Assign who can approve leave, admissions, staff onboarding, and promotions.",
+    path: "/administration/authority-management",
+    icon: FiShield,
+  },
   {
     title: "Student Records",
     description: "Manage admissions, section alignment, and student profiles.",
@@ -44,6 +59,12 @@ const quickActions = [
     description: "Review salary, increments, and payout history for each staff member.",
     path: "/administration/financial-records",
     icon: FiCreditCard,
+  },
+  {
+    title: "Salary Slips",
+    description: "Open month-wise salary slips with leave deductions and overtime additions.",
+    path: "/administration/salary-slips",
+    icon: FiDollarSign,
   },
   {
     title: "Leave Management",

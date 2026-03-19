@@ -29,6 +29,7 @@ const sidebarLinks = [
   { label: "Dashboard", href: "/student/dashboard", icon: FiHome },
   { label: "Attendance", href: "/student/attendance", icon: FiCheckCircle },
   { label: "Marks", href: "/student/marks", icon: FiAward },
+  { label: "Courses", href: "/student/upcoming-courses", icon: FiCalendar },
   { label: "Schedule", href: "/student/schedule", icon: FiCalendar },
   { label: "Subjects", href: "/student/subjects", icon: FiBook },
   { label: "Apply Leave", href: "/student/leave", icon: FiClock },
@@ -39,6 +40,7 @@ const topNavItems = [
   { label: "Subjects", href: "/student/subjects" },
   { label: "Attendance", href: "/student/attendance" },
   { label: "Marks", href: "/student/marks" },
+  { label: "Courses", href: "/student/upcoming-courses" },
 ];
 
 const StudentLayout = function () {

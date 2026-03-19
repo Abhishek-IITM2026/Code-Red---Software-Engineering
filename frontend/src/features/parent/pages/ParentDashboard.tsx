@@ -1,8 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiAward, FiBookOpen, FiCalendar, FiCheckCircle, FiDollarSign, FiMessageSquare } from "react-icons/fi";
-import { attendanceRows, childProfile, feeTransactions, performanceSubjects } from "../data";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const cards = [
+  {
+    title: "Upcoming Courses",
+    description: "See upcoming courses published for each child by the administration team.",
+    path: "/parent/upcoming-courses",
+    icon: FiCalendar,
+  },
   {
     title: "Attendance",
     description: "Track subject-wise attendance and identify low coverage early.",
@@ -31,7 +38,19 @@ const cards = [
 
 const ParentDashboard = function () {
   const navigate = useNavigate();
+  const {
+    children,
+    selectedChild,
+    selectedChildId,
+    setSelectedChildId,
+    attendanceRows,
+    feeTransactions,
+    performanceSubjects,
+  } = useParentChildren();
   const pendingFee = feeTransactions.find((item) => item.status === "Pending");
+  const topSubject = performanceSubjects.reduce((best, subject) => {
+    return Number.parseInt(subject.score, 10) > Number.parseInt(best.score, 10) ? subject : best;
+  }, performanceSubjects[0]);
 
   return (
     <div className="space-y-8">
@@ -41,9 +60,9 @@ const ParentDashboard = function () {
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
               Parent Dashboard
             </p>
-            <h1 className="mt-3 text-3xl font-bold md:text-4xl">{childProfile.name}</h1>
+            <h1 className="mt-3 text-3xl font-bold md:text-4xl">{selectedChild.name}</h1>
             <p className="mt-3 max-w-3xl text-base text-[var(--text)]/75">
-              Monitor attendance, subject reports, fees, timetable, and communication for {childProfile.className} {childProfile.section} from one parent-friendly workspace.
+              Monitor attendance, subject reports, fees, timetable, communication, and upcoming courses for {selectedChild.className} {selectedChild.section} from one parent-friendly workspace.
             </p>
           </div>
 
@@ -65,8 +84,8 @@ const ParentDashboard = function () {
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Top Subject</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{performanceSubjects[2]?.score}</p>
-            <p className="mt-1 text-sm text-slate-600">{performanceSubjects[2]?.name}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{topSubject?.score}</p>
+            <p className="mt-1 text-sm text-slate-600">{topSubject?.name}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Fee Status</p>
@@ -75,6 +94,12 @@ const ParentDashboard = function () {
           </div>
         </div>
       </section>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
@@ -112,7 +137,7 @@ const ParentDashboard = function () {
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Strongest subject</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">Chemistry</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{topSubject?.name}</p>
             </div>
             <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Reports available</p>
@@ -120,7 +145,7 @@ const ParentDashboard = function () {
             </div>
             <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Next review area</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">Physics</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{performanceSubjects[1]?.name || "General Review"}</p>
             </div>
           </div>
         </div>

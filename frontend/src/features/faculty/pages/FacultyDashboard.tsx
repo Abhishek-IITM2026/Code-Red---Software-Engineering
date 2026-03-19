@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { FiArrowRight, FiBarChart2, FiBook, FiCalendar, FiCheckCircle, FiClock, FiFileText } from "react-icons/fi";
+import { FiArrowRight, FiBarChart2, FiBook, FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText } from "react-icons/fi";
 
 const quickActions = [
   {
@@ -31,6 +31,12 @@ const quickActions = [
     description: "Submit leave requests and track admin approval from your portal.",
     path: "/faculty/leave",
     icon: FiClock,
+  },
+  {
+    title: "Salary Slip",
+    description: "Review monthly salary based on leave, payable days, and overtime hours.",
+    path: "/faculty/salary-slip",
+    icon: FiDollarSign,
   },
 ];
 

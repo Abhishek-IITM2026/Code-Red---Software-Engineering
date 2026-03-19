@@ -1,4 +1,6 @@
 import AdministrationDashboard from "../pages/AdministrationDashboard";
+import AuthorityManagement from "../pages/AuthorityManagement";
+import CourseManagement from "../pages/CourseManagement";
 import FinancialRecords from "../pages/FinancialRecords";
 import GenerateReports from "../pages/GenerateReports";
 import LeaveManagement from "../pages/LeaveManagement";
@@ -11,18 +13,23 @@ import ViewExamParticipationReports from "../pages/ViewExamParticipationReports"
 import InventoryDashboard from "../pages/Inventory/InventoryDashboard";
 import RequestManagement from "../pages/Inventory/RequestManagement";
 import ScheduleManagement from "../pages/ScheduleManagement";
+import SalarySlips from "../pages/SalarySlips";
+import AdminMySalarySlip from "../pages/AdminMySalarySlip";
 import Profile from "../../auth/pages/Profile";
 import {
   FiArrowUpCircle,
   FiBarChart2,
   FiBriefcase,
   FiCalendar,
+  FiBookOpen,
   FiCheckSquare,
   FiClock,
   FiCreditCard,
+  FiDollarSign,
   FiFileText,
   FiGrid,
   FiPackage,
+  FiShield,
   FiShoppingCart,
   FiTrendingUp,
   FiUser,
@@ -44,6 +51,20 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <AdministrationDashboard />,
     icon: FiGrid,
     description: "Institute overview and quick actions"
+  },
+  {
+    name: "Authority Control",
+    path: "/administration/authority-management",
+    element: <AuthorityManagement />,
+    icon: FiShield,
+    description: "Assign role-based approval authorities to staff"
+  },
+  {
+    name: "Course Management",
+    path: "/administration/course-management",
+    element: <CourseManagement />,
+    icon: FiBookOpen,
+    description: "Create upcoming courses for students"
   },
   {
     name: "Student Records",
@@ -72,6 +93,20 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <FinancialRecords />,
     icon: FiCreditCard,
     description: "Review staff salary and increment records"
+  },
+  {
+    name: "Salary Slips",
+    path: "/administration/salary-slips",
+    element: <SalarySlips />,
+    icon: FiDollarSign,
+    description: "Review monthly salary slips with leave and overtime impact"
+  },
+  {
+    name: "My Salary Slip",
+    path: "/administration/my-salary-slip",
+    element: <AdminMySalarySlip />,
+    icon: FiDollarSign,
+    description: "Open your ESS-style salary slip with previous-year access"
   },
   {
     name: "Leave Management",

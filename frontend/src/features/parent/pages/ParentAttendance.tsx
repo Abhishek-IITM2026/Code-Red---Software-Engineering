@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "../../../components/common";
-import { attendanceRows, childProfile } from "../data.ts";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentAttendance = function() {
+  const { children, selectedChild, selectedChildId, setSelectedChildId, attendanceRows } = useParentChildren();
   const [filteredRows, setFilteredRows] = useState(attendanceRows);
+
+  useEffect(() => {
+    setFilteredRows(attendanceRows);
+  }, [attendanceRows]);
 
   const searchConfig = {
     fields: [
@@ -26,8 +32,16 @@ const ParentAttendance = function() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
           Attendance
         </p>
-        <h2 className="mt-2 text-3xl font-bold">{childProfile.name} Attendance</h2>
+        <h2 className="mt-2 text-3xl font-bold">{selectedChild.name} Attendance</h2>
       </div>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
+
+      <Search config={searchConfig} />
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="overflow-x-auto">
@@ -55,6 +69,6 @@ const ParentAttendance = function() {
       </div>
     </div>
   );
-}
+};
 
-export default  ParentAttendance;
+export default ParentAttendance;

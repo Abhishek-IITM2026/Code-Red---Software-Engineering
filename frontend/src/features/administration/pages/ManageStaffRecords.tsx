@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FiEdit3, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { useMemo, useState } from "react";
+import { FiAlertTriangle, FiEdit3, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { Search } from "../../../components/common";
 import {
   nonTeachingRoles,
@@ -12,6 +12,16 @@ import {
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
+type CustomField = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+type StaffRecordWithMeta = StaffRecord & {
+  customFields: CustomField[];
+};
+
 type StaffForm = {
   name: string;
   employeeCode: string;
@@ -20,7 +30,14 @@ type StaffForm = {
   department: string;
   joiningDate: string;
   phone: string;
+  customFields: CustomField[];
 };
+
+const createCustomField = (): CustomField => ({
+  id: `field-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  label: "",
+  value: "",
+});
 
 const emptyStaffForm: StaffForm = {
   name: "",
@@ -30,12 +47,20 @@ const emptyStaffForm: StaffForm = {
   department: "Mathematics",
   joiningDate: "",
   phone: "",
+  customFields: [],
 };
 
+const initialRecords: StaffRecordWithMeta[] = staffRecords.map((record) => ({
+  ...record,
+  customFields: [],
+}));
+
 const ManageStaffRecords = function () {
-  const [records, setRecords] = useState<StaffRecord[]>(staffRecords);
-  const [filteredRecords, setFilteredRecords] = useState<StaffRecord[]>(staffRecords);
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [records, setRecords] = useState<StaffRecordWithMeta[]>(initialRecords);
+  const [filteredRecords, setFilteredRecords] = useState<StaffRecordWithMeta[]>(initialRecords);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StaffRecordWithMeta | null>(null);
   const [form, setForm] = useState<StaffForm>(emptyStaffForm);
 
   const teachingCount = records.filter((record) => record.category === "Teaching").length;
@@ -44,6 +69,43 @@ const ManageStaffRecords = function () {
   const inactiveCount = records.filter((record) => record.status === "Inactive").length;
 
   const roleOptions = form.category === "Teaching" ? teachingRoles : nonTeachingRoles;
+
+  const customFieldCount = useMemo(
+    () => records.reduce((total, record) => total + record.customFields.length, 0),
+    [records],
+  );
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setForm(emptyStaffForm);
+    setIsFormOpen(true);
+  };
+
+  const openEditModal = (record: StaffRecordWithMeta) => {
+    setEditingId(record.id);
+    setForm({
+      name: record.name,
+      employeeCode: record.employeeCode,
+      category: record.category,
+      roles: record.role.split(", ").filter(Boolean),
+      department: record.department,
+      joiningDate: record.joiningDate,
+      phone: record.phone,
+      customFields: record.customFields.length > 0 ? record.customFields : [],
+    });
+    setIsFormOpen(true);
+  };
+
+  const resetModal = () => {
+    setIsFormOpen(false);
+    setEditingId(null);
+    setForm(emptyStaffForm);
+  };
+
+  const syncFilteredRecords = (nextRecords: StaffRecordWithMeta[]) => {
+    setRecords(nextRecords);
+    setFilteredRecords(nextRecords);
+  };
 
   const handleCategoryChange = (category: "Teaching" | "Non-Teaching") => {
     setForm((current) => ({
@@ -68,7 +130,30 @@ const ManageStaffRecords = function () {
     });
   };
 
-  const handleAddRecord = () => {
+  const handleCustomFieldChange = (fieldId: string, key: "label" | "value", value: string) => {
+    setForm((current) => ({
+      ...current,
+      customFields: current.customFields.map((field) =>
+        field.id === fieldId ? { ...field, [key]: value } : field,
+      ),
+    }));
+  };
+
+  const handleAddCustomField = () => {
+    setForm((current) => ({
+      ...current,
+      customFields: [...current.customFields, createCustomField()],
+    }));
+  };
+
+  const handleRemoveCustomField = (fieldId: string) => {
+    setForm((current) => ({
+      ...current,
+      customFields: current.customFields.filter((field) => field.id !== fieldId),
+    }));
+  };
+
+  const handleSaveRecord = () => {
     if (
       !form.name.trim() ||
       !form.employeeCode.trim() ||
@@ -79,36 +164,42 @@ const ManageStaffRecords = function () {
       return;
     }
 
-    const nextRecords = [
-      {
-        id: `ST-${records.length + 201}`,
-        employeeCode: form.employeeCode,
-        name: form.name,
-        category: form.category,
-        role: form.roles.join(", "),
-        department: form.department,
-        joiningDate: form.joiningDate,
-        phone: form.phone,
-        status: "Active" as const,
-      },
-      ...records,
-    ];
+    const nextRecord: StaffRecordWithMeta = {
+      id: editingId || `ST-${records.length + 201}`,
+      employeeCode: form.employeeCode,
+      name: form.name,
+      category: form.category,
+      role: form.roles.join(", "),
+      department: form.department,
+      joiningDate: form.joiningDate,
+      phone: form.phone,
+      status: editingId
+        ? records.find((record) => record.id === editingId)?.status || "Active"
+        : "Active",
+      customFields: form.customFields.filter((field) => field.label.trim() || field.value.trim()),
+    };
 
-    setRecords(nextRecords);
-    setFilteredRecords(nextRecords);
-    setForm(emptyStaffForm);
-    setIsAddOpen(false);
-  };
+    const nextRecords = editingId
+      ? records.map((record) => (record.id === editingId ? nextRecord : record))
+      : [nextRecord, ...records];
 
-  const handleRemoveRecord = (id: string) => {
-    const nextRecords = records.filter((record) => record.id !== id);
-    setRecords(nextRecords);
-    setFilteredRecords((current) => current.filter((record) => record.id !== id));
+    syncFilteredRecords(nextRecords);
+    resetModal();
   };
 
   const handleStatusChange = (id: string, status: StaffRecord["status"]) => {
-    setRecords((current) => current.map((record) => (record.id === id ? { ...record, status } : record)));
-    setFilteredRecords((current) => current.map((record) => (record.id === id ? { ...record, status } : record)));
+    const nextRecords = records.map((record) => (record.id === id ? { ...record, status } : record));
+    syncFilteredRecords(nextRecords);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const nextRecords = records.filter((record) => record.id !== deleteTarget.id);
+    syncFilteredRecords(nextRecords);
+    setDeleteTarget(null);
   };
 
   const searchConfig = {
@@ -136,11 +227,16 @@ const ManageStaffRecords = function () {
     onSearch: (values: Record<string, string> = {}) => {
       const filtered = records.filter((record) => {
         const term = values.name?.toLowerCase() || "";
+        const customFieldMatch = record.customFields.some(
+          (field) =>
+            field.label.toLowerCase().includes(term) || field.value.toLowerCase().includes(term),
+        );
         const matchesName =
           !term ||
           record.name.toLowerCase().includes(term) ||
           record.employeeCode.toLowerCase().includes(term) ||
-          record.role.toLowerCase().includes(term);
+          record.role.toLowerCase().includes(term) ||
+          customFieldMatch;
         const matchesCategory = !values.category || record.category === values.category;
         const matchesStatus = !values.status || record.status === values.status;
         return matchesName && matchesCategory && matchesStatus;
@@ -158,13 +254,13 @@ const ManageStaffRecords = function () {
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">Administration</p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">Staff Records</h1>
             <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-              Maintain teaching and non-teaching staff records in one register, with clear role classification and quick admin actions.
+              Maintain teaching and non-teaching staff records, edit them in place, and confirm destructive actions before they are removed.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => setIsAddOpen(true)}
+            onClick={openAddModal}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white shadow-sm transition hover:opacity-90"
           >
             <FiPlus className="h-5 w-5" />
@@ -172,7 +268,7 @@ const ManageStaffRecords = function () {
           </button>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Total Staff</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{records.length}</p>
@@ -190,8 +286,8 @@ const ManageStaffRecords = function () {
             <p className="mt-2 text-3xl font-bold text-slate-900">{activeCount}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-500">Inactive Records</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{inactiveCount}</p>
+            <p className="text-sm text-slate-500">Custom Fields</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{customFieldCount}</p>
           </div>
         </div>
       </section>
@@ -200,7 +296,7 @@ const ManageStaffRecords = function () {
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
           <div className="border-b border-slate-200 px-6 py-5">
             <p className="text-lg font-semibold text-slate-900">Teaching and Non-Teaching Register</p>
-            <p className="text-sm text-slate-500">Complete staff visibility with category, role, and employment status.</p>
+            <p className="text-sm text-slate-500">Complete staff visibility with category, role, employment status, and flexible extra fields.</p>
           </div>
 
           <div className="border-b border-slate-200 px-6 py-5">
@@ -210,7 +306,7 @@ const ManageStaffRecords = function () {
               </div>
               <div>
                 <p className="text-lg font-semibold text-slate-900">Search and Filter</p>
-                <p className="text-sm text-slate-500">Find staff by category, status, role, or employee code directly above the list.</p>
+                <p className="text-sm text-slate-500">Find staff by category, status, role, employee code, or custom fields.</p>
               </div>
             </div>
             <div className="mt-6">
@@ -226,6 +322,7 @@ const ManageStaffRecords = function () {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Category</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Role</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Department</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Extra Fields</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Status</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Action</th>
                 </tr>
@@ -246,6 +343,19 @@ const ManageStaffRecords = function () {
                       <p className="text-sm text-slate-500">Joined {record.joiningDate}</p>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {record.customFields.length > 0 ? (
+                          record.customFields.map((field) => (
+                            <span key={field.id} className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                              {field.label}: {field.value}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-slate-400">No extra fields</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <FiEdit3 className="h-4 w-4 text-slate-400" />
                         <select
@@ -260,14 +370,24 @@ const ManageStaffRecords = function () {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRecord(record.id)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
-                      >
-                        <FiTrash2 className="h-4 w-4" />
-                        Remove
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(record)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+                        >
+                          <FiEdit3 className="h-4 w-4" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(record)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                        >
+                          <FiTrash2 className="h-4 w-4" />
+                          Remove
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -298,46 +418,55 @@ const ManageStaffRecords = function () {
                 </div>
 
                 <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                  <p>
-                    <span className="font-medium text-slate-900">Category:</span> {record.category}
-                  </p>
-                  <p>
-                    <span className="font-medium text-slate-900">Role:</span> {record.role}
-                  </p>
-                  <p>
-                    <span className="font-medium text-slate-900">Department:</span> {record.department}
-                  </p>
-                  <p>
-                    <span className="font-medium text-slate-900">Phone:</span> {record.phone}
-                  </p>
+                  <p><span className="font-medium text-slate-900">Category:</span> {record.category}</p>
+                  <p><span className="font-medium text-slate-900">Role:</span> {record.role}</p>
+                  <p><span className="font-medium text-slate-900">Department:</span> {record.department}</p>
+                  <p><span className="font-medium text-slate-900">Phone:</span> {record.phone}</p>
+                  {record.customFields.map((field) => (
+                    <p key={field.id}>
+                      <span className="font-medium text-slate-900">{field.label}:</span> {field.value}
+                    </p>
+                  ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleRemoveRecord(record.id)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
-                >
-                  <FiTrash2 className="h-4 w-4" />
-                  Remove Record
-                </button>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(record)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+                  >
+                    <FiEdit3 className="h-4 w-4" />
+                    Edit Record
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(record)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                    Remove Record
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {isAddOpen && (
+      {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
+          <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">Staff Entry</p>
-                <h2 className="mt-2 text-2xl font-bold text-slate-900">Add Staff Record</h2>
-                <p className="mt-2 text-sm text-slate-500">Create a teaching or non-teaching record with the right role classification.</p>
+                <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                  {editingId ? "Edit Staff Record" : "Add Staff Record"}
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">Update teaching or non-teaching records, assign multiple roles, and add custom fields when needed.</p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsAddOpen(false)}
+                onClick={resetModal}
                 className="rounded-2xl border border-slate-200 p-3 text-slate-500 transition hover:bg-slate-50"
               >
                 <FiX className="h-5 w-5" />
@@ -347,55 +476,31 @@ const ManageStaffRecords = function () {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div>
                 <label className="text-sm font-medium text-slate-700">Staff Name</label>
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  className={fieldClass}
-                  placeholder="Enter staff name"
-                />
+                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className={fieldClass} placeholder="Enter staff name" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Employee Code</label>
-                <input
-                  value={form.employeeCode}
-                  onChange={(event) => setForm((current) => ({ ...current, employeeCode: event.target.value }))}
-                  className={fieldClass}
-                  placeholder="Enter employee code"
-                />
+                <input value={form.employeeCode} onChange={(event) => setForm((current) => ({ ...current, employeeCode: event.target.value }))} className={fieldClass} placeholder="Enter employee code" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Category</label>
-                <select
-                  value={form.category}
-                  onChange={(event) => handleCategoryChange(event.target.value as "Teaching" | "Non-Teaching")}
-                  className={fieldClass}
-                >
+                <select value={form.category} onChange={(event) => handleCategoryChange(event.target.value as "Teaching" | "Non-Teaching")} className={fieldClass}>
                   {staffCategories.map((category) => (
                     <option key={category}>{category}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700">Primary Role Group</label>
-                <p className="mt-2 text-xs text-slate-500">A staff member can be assigned to multiple roles.</p>
-              </div>
-              <div>
                 <label className="text-sm font-medium text-slate-700">Department</label>
-                <input
-                  value={form.department}
-                  onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
-                  className={fieldClass}
-                  placeholder="Enter department"
-                />
+                <input value={form.department} onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))} className={fieldClass} placeholder="Enter department" />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700">Joining Date</label>
-                <input
-                  type="date"
-                  value={form.joiningDate}
-                  onChange={(event) => setForm((current) => ({ ...current, joiningDate: event.target.value }))}
-                  className={fieldClass}
-                />
+                <input type="date" value={form.joiningDate} onChange={(event) => setForm((current) => ({ ...current, joiningDate: event.target.value }))} className={fieldClass} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Phone Number</label>
+                <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className={fieldClass} placeholder="Enter contact number" />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-slate-700">Assign Roles</label>
@@ -418,36 +523,86 @@ const ManageStaffRecords = function () {
                     );
                   })}
                 </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  Selected roles: {form.roles.join(", ")}
-                </p>
+                <p className="mt-3 text-xs text-slate-500">Selected roles: {form.roles.join(", ")}</p>
               </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Phone Number</label>
-                <input
-                  value={form.phone}
-                  onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                  className={fieldClass}
-                  placeholder="Enter contact number"
-                />
+            </div>
+
+            <div className="mt-6 rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-base font-semibold text-slate-900">Custom Fields</p>
+                  <p className="text-sm text-slate-500">Add any extra information like qualification, transport duty, or branch assignment.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddCustomField}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[var(--primary)] ring-1 ring-slate-200 transition hover:bg-slate-100"
+                >
+                  <FiPlus className="h-4 w-4" />
+                  Add New Field
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                {form.customFields.map((field) => (
+                  <div key={field.id} className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 md:grid-cols-[0.9fr_1.1fr_auto]">
+                    <input
+                      value={field.label}
+                      onChange={(event) => handleCustomFieldChange(field.id, "label", event.target.value)}
+                      className={fieldClass.replace("mt-2 ", "")}
+                      placeholder="Field label"
+                    />
+                    <input
+                      value={field.value}
+                      onChange={(event) => handleCustomFieldChange(field.id, "value", event.target.value)}
+                      className={fieldClass.replace("mt-2 ", "")}
+                      placeholder="Field value"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomField(field.id)}
+                      className="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setIsAddOpen(false)}
-                className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
+              <button type="button" onClick={resetModal} className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleAddRecord}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
-              >
+              <button type="button" onClick={handleSaveRecord} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90">
                 <FiPlus className="h-4 w-4" />
-                Save Staff Record
+                {editingId ? "Save Changes" : "Save Staff Record"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-rose-100 p-3 text-rose-700">
+                <FiAlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">Remove Staff Record?</p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  This will remove {deleteTarget.name} from the register. Please confirm before continuing.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+                Cancel
+              </button>
+              <button type="button" onClick={handleConfirmRemove} className="rounded-2xl bg-rose-600 px-5 py-3 font-semibold text-white transition hover:bg-rose-700">
+                Confirm Remove
               </button>
             </div>
           </div>

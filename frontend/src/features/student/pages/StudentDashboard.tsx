@@ -3,6 +3,7 @@ import { FiArrowRight, FiAward, FiBook, FiCalendar, FiCheckCircle, FiClock, FiTr
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 import { studentSubjects } from "../data/subjectContent";
+import { getCoursesForClass } from "../../courses/courseStore";
 
 const quickCards = [
   {
@@ -27,6 +28,13 @@ const quickCards = [
     accent: "bg-amber-100 text-amber-700",
   },
   {
+    title: "Upcoming Courses",
+    description: "Explore newly published courses available for your class.",
+    path: "/student/upcoming-courses",
+    icon: FiCalendar,
+    accent: "bg-cyan-100 text-cyan-700",
+  },
+  {
     title: "Profile",
     description: "Manage account details without leaving the student workspace.",
     path: "/student/profile",
@@ -48,6 +56,7 @@ const StudentDashboard = function () {
   const totalPending = studentSubjects
     .flatMap((subject) => subject.assignments)
     .filter((assignment) => assignment.status === "pending").length;
+  const upcomingCourses = getCoursesForClass("Class 10", "A");
 
   return (
     <div className="space-y-8">
@@ -89,8 +98,8 @@ const StudentDashboard = function () {
             <p className="mt-2 text-3xl font-bold">{totalPending}</p>
           </div>
           <div className="rounded-2xl bg-white/12 p-4 backdrop-blur-sm">
-            <p className="text-sm text-white/75">Next class</p>
-            <p className="mt-2 text-3xl font-bold">9:00 AM</p>
+            <p className="text-sm text-white/75">Upcoming courses</p>
+            <p className="mt-2 text-3xl font-bold">{upcomingCourses.length}</p>
           </div>
         </div>
       </section>
@@ -166,7 +175,7 @@ const StudentDashboard = function () {
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Recommended next step</p>
-              <p className="mt-1">Open Subjects and continue with pending chapter tasks before the next test window.</p>
+              <p className="mt-1">Open Subjects and review the upcoming course list before the next test window.</p>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Leave support</p>

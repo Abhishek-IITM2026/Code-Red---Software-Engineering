@@ -10,8 +10,9 @@ import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
 import FacultySchedule from "../pages/FacultySchedule";
 import AssessmentBuilder from "../pages/AssessmentBuilder";
+import FacultySalarySlip from "../pages/FacultySalarySlip";
 import Profile from "../../auth/pages/Profile";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock } from "react-icons/fi";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign } from "react-icons/fi";
 
 export interface FacultyRouteConfig {
   name: string;
@@ -91,6 +92,13 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultyLeave />,
     icon: FiClock,
     description: "Submit leave requests to administration"
+  },
+  {
+    name: "Salary Slip",
+    path: "/faculty/salary-slip",
+    element: <FacultySalarySlip />,
+    icon: FiDollarSign,
+    description: "Review monthly salary with leave and overtime adjustments"
   },
   {
     name: "Assessment Builder",

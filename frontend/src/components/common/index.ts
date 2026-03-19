@@ -7,6 +7,8 @@ import Preferences from './Preferences.tsx';
 import Filter from './Filter';
 import ProtectedRoute, { useRoleRedirect } from './ProtectedRoute';
 import Search, { type SearchProps, type SearchField, type SearchConfig } from './Search';
+import EmployeeSalaryPortal from './EmployeeSalaryPortal';
+import SalarySlipPanel from './SalarySlipPanel';
 
 export {
   Button,
@@ -22,7 +24,9 @@ export {
   Filter,
   ProtectedRoute,
   useRoleRedirect,
-  Search
+  Search,
+  EmployeeSalaryPortal,
+  SalarySlipPanel
 };
 
 // Re-export types

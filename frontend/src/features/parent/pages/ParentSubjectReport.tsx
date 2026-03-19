@@ -1,10 +1,12 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiBarChart2, FiBookOpen, FiCheckCircle, FiTrendingUp, FiUsers } from "react-icons/fi";
-import { childProfile, performanceSubjects } from "../data.ts";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentSubjectReport = function () {
   const navigate = useNavigate();
   const { subjectId } = useParams();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects } = useParentChildren();
   const subject = performanceSubjects.find((item) => item.id === subjectId);
 
   if (!subjectId) {
@@ -16,7 +18,7 @@ const ParentSubjectReport = function () {
           </p>
           <h1 className="mt-3 text-3xl font-bold md:text-4xl">Subject-wise Academic Reports</h1>
           <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-            Review each subject report for {childProfile.name}, including performance, teacher observations, and syllabus coverage.
+            Review each subject report for {selectedChild.name}, including performance, teacher observations, and syllabus coverage.
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -36,11 +38,17 @@ const ParentSubjectReport = function () {
             <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Current class</p>
               <p className="mt-2 text-3xl font-bold text-slate-900">
-                {childProfile.className} {childProfile.section}
+                {selectedChild.className} {selectedChild.section}
               </p>
             </div>
           </div>
         </section>
+
+        <ChildSelector
+          children={children}
+          selectedChildId={selectedChildId}
+          onChange={setSelectedChildId}
+        />
 
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {performanceSubjects.map((item) => (
@@ -83,7 +91,9 @@ const ParentSubjectReport = function () {
           Subject Report
         </p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">{subject.name}</h1>
-        <p className="mt-3 text-[var(--text)]/75">Teacher: {subject.teacher}</p>
+        <p className="mt-3 text-[var(--text)]/75">
+          {selectedChild.name} • Teacher: {subject.teacher}
+        </p>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -100,6 +110,12 @@ const ParentSubjectReport = function () {
           </div>
         </div>
       </section>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

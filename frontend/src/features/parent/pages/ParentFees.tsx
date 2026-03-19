@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiCreditCard, FiDollarSign, FiSearch } from "react-icons/fi";
 import { Search } from "../../../components/common";
-import { feeTransactions } from "../data.ts";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentFees = function () {
+  const { children, selectedChild, selectedChildId, setSelectedChildId, feeTransactions } = useParentChildren();
   const [filteredTransactions, setFilteredTransactions] = useState(feeTransactions);
   const pendingFee = filteredTransactions.find((item) => item.status === "Pending");
+
+  useEffect(() => {
+    setFilteredTransactions(feeTransactions);
+  }, [feeTransactions]);
 
   const searchConfig = {
     fields: [
@@ -45,7 +51,7 @@ const ParentFees = function () {
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
               Fees
             </p>
-            <h1 className="mt-3 text-3xl font-bold md:text-4xl">Fee Overview</h1>
+            <h1 className="mt-3 text-3xl font-bold md:text-4xl">{selectedChild.name} Fee Overview</h1>
             <p className="mt-3 max-w-3xl text-[var(--text)]/75">
               Track pending dues, review payment history, and keep fee records organized in one place.
             </p>
@@ -75,6 +81,12 @@ const ParentFees = function () {
           </div>
         </div>
       </section>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-6">

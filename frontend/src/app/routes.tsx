@@ -27,7 +27,10 @@ const roleRedirects: Record<string, string> = {
   faculty: "/faculty/dashboard",
   parent: "/parent/dashboard",
   admin: "/administration/dashboard",
-  administration: "/administration/dashboard"
+  administration: "/administration/dashboard",
+  director: "/administration/dashboard",
+  superadmin: "/administration/dashboard",
+  "super admin": "/administration/dashboard",
 };
 
 // Protected Route Component
@@ -155,7 +158,7 @@ const router = createBrowserRouter([
       {
         path: "/administration",
         element: (
-          <ProtectedRoute allowedRoles={["admin", "administration", "superadmin"]}>
+          <ProtectedRoute allowedRoles={["admin", "administration", "superadmin", "super admin", "director"]}>
             <AdministrationLayout />
           </ProtectedRoute>
         ),

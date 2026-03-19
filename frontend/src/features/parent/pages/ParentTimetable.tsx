@@ -1,17 +1,24 @@
 import ScheduleView from '../../administration/components/ScheduleView';
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentTimetable = function() {
-  // In a real app, this would come from the auth state/user context
-  const studentClassId = '10';
-  const studentSectionId = '10-A';
+  const { children, selectedChild, selectedChildId, setSelectedChildId } = useParentChildren();
 
   return (
-    <ScheduleView 
-      userRole="parent" 
-      classId={studentClassId} 
-      sectionId={studentSectionId}
-    />
+    <div className="space-y-6">
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
+      <ScheduleView
+        userRole="parent"
+        classId={selectedChild.classId}
+        sectionId={selectedChild.sectionId}
+      />
+    </div>
   );
-}
+};
 
 export default ParentTimetable;

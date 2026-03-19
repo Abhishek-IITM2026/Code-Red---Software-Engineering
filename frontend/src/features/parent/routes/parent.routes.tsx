@@ -3,6 +3,7 @@ import ParentAttendance from "../pages/ParentAttendance";
 import ParentPerformance from "../pages/ParentPerformance";
 import ParentFees from "../pages/ParentFees";
 import ParentCommunication from "../pages/ParentCommunication";
+import ParentUpcomingCourses from "../pages/ParentUpcomingCourses";
 import ParentSubjectReport from "../pages/ParentSubjectReport";
 import ParentTimetable from "../pages/ParentTimetable";
 import Profile from "../../auth/pages/Profile";
@@ -22,7 +23,14 @@ const parentRoutes: ParentRouteConfig[] = [
     path: "/parent/dashboard",
     element: <ParentDashboard />,
     icon: FiGrid,
-    description: "Overview of your child's progress"
+    description: "Overview of your children's progress"
+  },
+  {
+    name: "Upcoming Courses",
+    path: "/parent/upcoming-courses",
+    element: <ParentUpcomingCourses />,
+    icon: FiCalendar,
+    description: "View upcoming courses for each child"
   },
   {
     name: "Attendance",

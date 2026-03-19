@@ -1,5 +1,6 @@
 import StudentDashboard from "../pages/StudentDashboard";
 import StudentLeave from "../pages/StudentLeave";
+import UpcomingCourses from "../pages/UpcomingCourses";
 import ViewSchedule from "../pages/ViewSchedule";
 import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiUser, FiClock } from "react-icons/fi";
 import StudentAttendance from "../pages/StudentAttendance";
@@ -59,6 +60,13 @@ const studentRoutes: RouteConfig[] = [
     element: <AssignmentDetails />,
     icon: FiFileText,
     description: "View and submit assignment"
+  },
+  {
+    name: "Upcoming Courses",
+    path: "/student/upcoming-courses",
+    element: <UpcomingCourses />,
+    icon: FiCalendar,
+    description: "View upcoming courses for your class"
   },
   {
     name: "Class Schedule",

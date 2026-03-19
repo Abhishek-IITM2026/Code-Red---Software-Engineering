@@ -1,11 +1,17 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { Search } from "../../../components/common";
-import { performanceSubjects } from "../data.ts";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentPerformance = function() {
   const navigate = useNavigate();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects } = useParentChildren();
   const [filteredSubjects, setFilteredSubjects] = useState(performanceSubjects);
+
+  useEffect(() => {
+    setFilteredSubjects(performanceSubjects);
+  }, [performanceSubjects]);
 
   const searchConfig = {
     fields: [
@@ -28,13 +34,18 @@ const ParentPerformance = function() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
           Performance Reports
         </p>
-        <h2 className="mt-2 text-3xl font-bold">Subjects</h2>
+        <h2 className="mt-2 text-3xl font-bold">{selectedChild.name} Subjects</h2>
         <p className="mt-3 max-w-2xl text-[var(--text)]/75">
           Open any subject to view the performance report and syllabus coverage.
         </p>
       </div>
 
-      {/* Search */}
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
+
       <Search config={searchConfig} />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -56,6 +67,6 @@ const ParentPerformance = function() {
       </div>
     </div>
   );
-}
+};
 
-export default  ParentPerformance;
+export default ParentPerformance;

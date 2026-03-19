@@ -197,7 +197,7 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-[var(--text)]">
@@ -301,8 +301,37 @@ const Landing = () => {
                   width="full" 
                   className="mt-6"
                 >
-                  Get Started
+                  {plan.price === "Custom" ? "Contact Sales" : "Choose Plan"}
                 </Button>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-[var(--secondary)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-[var(--text)]">Courses With Price</h2>
+              <p className="mt-3 text-lg text-[var(--text-secondary)]">
+                Compare packages directly from the home page and open the full routed courses page for more detail.
+              </p>
+            </div>
+            <Link to="/courses" className="text-sm font-semibold text-[var(--primary)] hover:underline">
+              Open courses page
+            </Link>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {pricingPlans.map((plan) => (
+              <Card key={plan.name} className="!p-6" hover={true}>
+                <p className="text-xl font-semibold text-[var(--text)]">{plan.name}</p>
+                <p className="mt-4 text-3xl font-bold text-[var(--primary)]">
+                  {plan.price}
+                  <span className="text-base font-medium text-[var(--text-secondary)]">{plan.period}</span>
+                </p>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{plan.description}</p>
               </Card>
             ))}
           </div>
