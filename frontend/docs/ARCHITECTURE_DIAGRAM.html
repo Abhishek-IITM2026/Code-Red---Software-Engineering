@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Architecture Diagram</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#4F46E5',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#4F46E5',
+                lineColor: '#6B7280',
+                secondaryColor: '#F3F4F6',
+                tertiaryColor: '#F9FAFB'
+            },
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            },
+            sequence: {
+                actorMargin: 50,
+                boxMargin: 10
+            }
+        });
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        h1 {
+            color: #111827;
+            border-bottom: 3px solid #4F46E5;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #374151;
+            margin-top: 40px;
+            padding: 10px;
+            background: #e5e7eb;
+            border-radius: 8px;
+        }
+        .diagram-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Frontend Architecture Diagram</h1>
+    <p> UML 2.0 compliant diagrams for the Coaching Institute Management System</p>
+
+    <h2>1. Package Diagram - High-Level Structure</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph TB
+    subgraph APP["src/app"]
+        store["store.ts"]
+        routes["routes.tsx"]
+    end
+
+    subgraph COMPONENTS["src/components"]
+        subgraph COMMON["common/"]
+            Button["Button.tsx"]
+            Card["Card.tsx"]
+            Input["Input.tsx"]
+            Select["Select.tsx"]
+            Table["Table.tsx"]
+            Search["Search.tsx"]
+        end
+    end
+
+    subgraph FEATURES["src/features"]
+        AUTH["auth/"]
+        STUDENT["student/"]
+        FACULTY["faculty/"]
+        PARENT["parent/"]
+        ADMIN["administration/"]
+        HOME["Home/"]
+    end
+
+    APP --> COMPONENTS
+    COMPONENTS --> FEATURES
+    </pre>
+    </div>
+
+    <h2>2. Component Diagram - Feature Module Structure</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+classDiagram
+    class FeatureModule {
+        +api
+        +components
+        +layout
+        +pages
+        +routes
+        +store
+        +types
+    }
+
+    class Auth {
+        +api
+        +pages
+        +routes
+        +services
+        +store
+    }
+
+    class Student {
+        +api
+        +layout
+        +pages
+        +routes
+    }
+
+    FeatureModule <|-- Auth
+    FeatureModule <|-- Student
+    FeatureModule <|-- Faculty
+    FeatureModule <|-- Parent
+    FeatureModule <|-- Administration
+    </pre>
+    </div>
+
+    <h2>3. Route Hierarchy Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph TD
+    Router[Router v6] --> Protected[Protected Route]
+    
+    Protected --> StudentLayout
+    Protected --> FacultyLayout
+    Protected --> ParentLayout
+    Protected --> AdminLayout
+    
+    StudentLayout --> SD[Dashboard]
+    StudentLayout --> SA[Attendance]
+    StudentLayout --> SM[Marks]
+    StudentLayout --> SS[Subjects]
+    SS --> SSubjDet[Subject Details]
+    SSubjDet --> SAssignDet[Assignment Details]
+    
+    FacultyLayout --> FD[Dashboard]
+    FacultyLayout --> FRA[Record Attendance]
+    FacultyLayout --> FM[Enter Marks]
+    FacultyLayout --> FMat[Materials]
+    
+    AdminLayout --> AD[Dashboard]
+    AdminLayout --> AS[Manage Students]
+    AdminLayout --> ASch[Schedule]
+    </pre>
+    </div>
+
+    <h2>4. State Management Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph LR
+    subgraph ReduxStore["Redux Store"]
+        auth[auth slice]
+        studentAPI[Student API]
+        facultyAPI[Faculty API]
+        adminAPI[Admin API]
+    end
+
+    subgraph AuthState["Auth State"]
+        isAuth[isAuthenticated]
+        token[jwt token]
+        user[user object]
+    end
+
+    auth --> AuthState
+    
+    Component --> RTKQ[RTK Query]
+    RTKQ --> Cache[Cache]
+    Cache --> API[API Server]
+    
+    studentAPI -.-> RTKQ
+    facultyAPI -.-> RTKQ
+    adminAPI -.-> RTKQ
+    </pre>
+    </div>
+
+    <h2>5. Route Protection Flow</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+flowchart TD
+    Start([Visit URL]) --> Auth{Authenticated?}
+    Auth -->|No| Login[Redirect Login]
+    Auth -->|Yes| Role{Has Role?}
+    Role -->|No| Dashboard[Redirect Dashboard]
+    Role -->|Yes| Load[Load Layout]
+    Load --> Sidebar[Sidebar]
+    Sidebar --> Header[Header]
+    Header --> Page[Page Content]
+    
+    style Start fill:#4F46E5,color:#fff
+    style Auth fill:#F59E0B,color:#000
+    style Role fill:#F59E0B,color:#000
+    </pre>
+    </div>
+
+    <h2>6. Data Flow Sequence Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant C as Component
+    participant R as RTK Query
+    participant A as API
+
+    U->>C: Interact
+    C->>R: useQuery()
+    R->>R: Check Cache
+    
+    alt Cache Hit
+        R-->>C: Return Cache
+        C-->>U: Display Data
+    else Cache Miss
+        R->>A: Fetch Data
+        A-->>R: Response
+        R->>R: Update Cache
+        R-->>C: Return Data
+        C-->>U: Display Data
+    end
+    
+    alt Mutation
+        C->>R: useMutation()
+        R->>A: POST/PUT/DELETE
+        A-->>R: Confirm
+        R->>R: Invalidate Cache
+        R-->>C: Success
+    end
+    </pre>
+    </div>
+
+    <h2>7. Common Components Class Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+classDiagram
+    class Button {
+        <<interface>>
+        +variant: string
+        +size: string
+        +icon: ReactNode
+        +onClick() void
+        +children: ReactNode
+    }
+
+    class Card {
+        <<interface>>
+        +children: ReactNode
+        +padding: string
+        +hover: boolean
+        +onClick() void
+    }
+
+    class Input {
+        <<interface>>
+        +label: string
+        +error: string
+        +size: string
+        +icon: ReactNode
+        +iconPosition: string
+        +onChange() void
+    }
+
+    class Select {
+        <<interface>>
+        +label: string
+        +options: SelectOption[]
+        +value: string
+        +onChange() void
+    }
+
+    class Table {
+        <<interface>>
+        +columns: TableColumn[]
+        +data: any[]
+        +searchable: boolean
+        +pagination: boolean
+    }
+
+    class Search {
+        <<interface>>
+        +config: SearchConfig
+        +variant: string
+        +onSearch() void
+    }
+
+    class Filter {
+        <<interface>>
+        +options: FilterOption[]
+        +onChange() void
+    }
+    </pre>
+    </div>
+
+    <h2>8. Student Subject Flow Activity Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+flowchart TD
+    Start([Click Subjects]) --> List[Subject List]
+    List --> Click[Click Subject]
+    Click --> Details[Subject Details]
+    
+    Details --> Tab1{Chapters}
+    Tab1 --> Chapters[Show Chapters]
+    Chapters --> Expand[Expand Chapter]
+    
+    Details --> Tab2{Materials}
+    Tab2 --> Materials[Show Materials by Week]
+    
+    Details --> Tab3{Assignments}
+    Tab3 --> AssignList[Assignment List]
+    AssignList --> ViewAssign[View Assignment]
+    ViewAssign --> Questions[Questions Page]
+    Questions --> Fill[Fill Answers]
+    Fill --> Submit[Submit]
+    Submit --> Success[Success]
+    
+    style Start fill:#EC4899,color:#fff
+    style Success fill:#10B981,color:#fff
+    </pre>
+    </div>
+
+    <h2>9. Layout Composition Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph TB
+    subgraph Layouts
+        SL[StudentLayout]
+        FL[FacultyLayout]
+        PL[ParentLayout]
+        AL[AdminLayout]
+    end
+
+    subgraph Shared
+        Header[Header]
+        Sidebar[Sidebar]
+    end
+
+    SL --> Header
+    SL --> Sidebar
+    FL --> Header
+    FL --> Sidebar
+    PL --> Header
+    PL --> Sidebar
+    AL --> Header
+    AL --> Sidebar
+    
+    Header --> Pref[Preferences]
+    Sidebar --> Btn[Button]
+    Sidebar --> Card[Card]
+    Sidebar --> Table[Table]
+    </pre>
+    </div>
+
+    <h2>10. Use Case Diagram by Role</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph TD
+    subgraph Actors
+        Student[Student]
+        Faculty[Faculty]
+        Parent[Parent]
+        Admin[Admin]
+    end
+
+    Student --> ViewDashS[View Dashboard]
+    Student --> ViewAttendS[View Attendance]
+    Student --> ViewMarksS[View Marks]
+    Student --> BrowseSubj[Browse Subjects]
+    Student --> SubmitAssign[Submit Assignment]
+    
+    Faculty --> ViewDashF[View Dashboard]
+    Faculty --> RecordAttend[Record Attendance]
+    Faculty --> EnterMarks[Enter Marks]
+    Faculty --> UploadMat[Upload Materials]
+    
+    Parent --> ViewDashP[View Dashboard]
+    Parent --> ViewChild[Child Attendance]
+    Parent --> ViewPerf[Child Performance]
+    Parent --> PayFees[Pay Fees]
+    
+    Admin --> ViewDashA[View Dashboard]
+    Admin --> ManageStud[Manage Students]
+    Admin --> ManageSch[Manage Schedule]
+    Admin --> GenerateRep[Generate Reports]
+    
+    style Student fill:#4F46E5,color:#fff
+    style Faculty fill:#10B981,color:#fff
+    style Parent fill:#F59E0B,color:#000
+    style Admin fill:#EF4444,color:#fff
+    </pre>
+    </div>
+
+    <h2>11. System Context Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph LR
+    subgraph Users["Users"]
+        S[Student]
+        F[Faculty]
+        P[Parent]
+        A[Admin]
+    end
+
+    subgraph Frontend["Frontend System"]
+        Router[React Router]
+        Store[Redux Store]
+        Layouts[Layouts]
+        Pages[Pages]
+        API[RTK Query]
+    end
+
+    subgraph Backend["Backend System"]
+        REST[REST API]
+        DB[(Database)]
+    end
+
+    S --> Router
+    F --> Router
+    P --> Router
+    A --> Router
+    
+    Router --> Pages
+    Pages --> Store
+    Pages --> API
+    API --> REST
+    REST --> DB
+    
+    style Frontend fill:#4F46E5,color:#fff
+    </pre>
+    </div>
+
+    <h2>12. Deployment Diagram</h2>
+    <div class="diagram-container">
+    <pre class="mermaid">
+graph TB
+    subgraph Client["Browser"]
+        React[React App]
+    end
+
+    subgraph Build["Build Tools"]
+        Vite[Vite]
+        TS[TypeScript]
+        Tailwind[Tailwind]
+    end
+
+    subgraph Server["Server"]
+        API[REST API]
+    end
+
+    subgraph Dev["Development"]
+        DevServer[Vite Dev]
+        HMR[Hot Reload]
+    end
+
+    React -->|HTTP| API
+    Vite --> TS
+    Vite --> Tailwind
+    Vite -->|Prod Build| React
+    DevServer --> HMR
+    HMR -->|Update| React
+    
+    style Client fill:#4F46E5,color:#fff
+    </pre>
+    </div>
+
+    <footer style="margin-top: 40px; padding: 20px; text-align: center; color: #6B7280;">
+        <p>Generated with Mermaid.js | UML 2.0 Compliant Diagrams</p>
+    </footer>
+</body>
+</html>

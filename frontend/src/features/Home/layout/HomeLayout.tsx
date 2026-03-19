@@ -1,5 +1,5 @@
 import { Outlet, Link } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiMenu, FiX, FiBookOpen, FiAward, FiUsers, FiBarChart2, FiPhone, FiMail, FiMapPin, FiFacebook, FiTwitter, FiInstagram, FiLinkedin } from "react-icons/fi";
 import { Button } from "../../../components/common";
 
@@ -7,18 +7,18 @@ const HomeLayout = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Handle scroll effect
-  if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', () => {
-      setIsScrolled(window.scrollY > 50);
-    });
-  }
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navLinks = [
     { label: "Home", href: "/" },
-    { label: "About", href: "#about" },
-    { label: "Features", href: "#features" },
-    { label: "Contact", href: "#contact" },
+    { label: "About", href: "/about" },
+    { label: "Features", href: "/features" },
+    { label: "Courses", href: "/courses" },
+    { label: "Contact", href: "/contact" },
   ];
 
   return (
@@ -44,13 +44,13 @@ const HomeLayout = () => {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.href}
-                  href={link.href}
+                  to={link.href}
                   className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--primary)] transition"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
 
@@ -83,14 +83,14 @@ const HomeLayout = () => {
           <div className="md:hidden bg-[var(--card-bg)] border-t border-[var(--border)]">
             <div className="px-4 py-4 space-y-3">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.href}
-                  href={link.href}
+                  to={link.href}
                   className="block py-2 text-[var(--text-secondary)] hover:text-[var(--primary)]"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
               <div className="pt-4 border-t border-[var(--border)] flex gap-3">
                 <Link to="/auth/login" className="flex-1">
@@ -145,11 +145,16 @@ const HomeLayout = () => {
             <div>
               <h4 className="font-semibold text-[var(--text)] mb-4">Quick Links</h4>
               <ul className="space-y-2">
-                {["About Us", "Features", "Pricing", "Contact", "FAQ"].map((item) => (
-                  <li key={item}>
-                    <a href="#" className="text-sm text-[var(--text-secondary)] hover:text-[var(--primary)] transition">
-                      {item}
-                    </a>
+                {[
+                  { label: "About Us", href: "/about" },
+                  { label: "Features", href: "/features" },
+                  { label: "Courses", href: "/courses" },
+                  { label: "Contact", href: "/contact" },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <Link to={item.href} className="text-sm text-[var(--text-secondary)] hover:text-[var(--primary)] transition">
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -161,9 +166,9 @@ const HomeLayout = () => {
               <ul className="space-y-2">
                 {["Attendance Tracking", "Online Assessments", "Performance Analytics", "Parent Portal", "Study Materials"].map((item) => (
                   <li key={item}>
-                    <a href="#" className="text-sm text-[var(--text-secondary)] hover:text-[var(--primary)] transition">
+                    <Link to="/features" className="text-sm text-[var(--text-secondary)] hover:text-[var(--primary)] transition">
                       {item}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

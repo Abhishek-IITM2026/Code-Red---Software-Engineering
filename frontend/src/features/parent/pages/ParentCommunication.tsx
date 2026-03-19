@@ -1,14 +1,23 @@
-import { facultyContacts } from "../data";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentCommunication = function() {
+  const { children, selectedChild, selectedChildId, setSelectedChildId, facultyContacts } = useParentChildren();
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
           Communication
         </p>
-        <h2 className="mt-2 text-3xl font-bold">Faculty Contacts</h2>
+        <h2 className="mt-2 text-3xl font-bold">{selectedChild.name} Faculty Contacts</h2>
       </div>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
 
       <div className="grid gap-5 md:grid-cols-2">
         {facultyContacts.map((contact) => (
@@ -23,6 +32,6 @@ const ParentCommunication = function() {
       </div>
     </div>
   );
-}
+};
 
-export default  ParentCommunication;
+export default ParentCommunication;

@@ -1,11 +1,14 @@
 import StudentDashboard from "../pages/StudentDashboard";
+import StudentLeave from "../pages/StudentLeave";
+import UpcomingCourses from "../pages/UpcomingCourses";
 import ViewSchedule from "../pages/ViewSchedule";
-import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiClock, FiDownload } from "react-icons/fi";
+import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiUser, FiClock } from "react-icons/fi";
 import StudentAttendance from "../pages/StudentAttendance";
 import StudentMarks from "../pages/StudentMarks";
-import StudentMaterials from "../pages/StudentMaterials";
 import StudentSubjects from "../pages/StudentSubjects";
-import StudentAssignments from "../pages/StudentAssignments";
+import SubjectDetails from "../pages/SubjectDetails";
+import AssignmentDetails from "../pages/AssignmentDetails";
+import Profile from "../../auth/pages/Profile";
 
 export interface RouteConfig {
   name: string;
@@ -45,11 +48,25 @@ const studentRoutes: RouteConfig[] = [
     description: "Browse enrolled subjects"
   },
   {
-    name: "Assignments",
-    path: "/student/assignments",
-    element: <StudentAssignments />,
+    name: "Subject Details",
+    path: "/student/subjects/:subjectName/:section",
+    element: <SubjectDetails />,
+    icon: FiBook,
+    description: "View subject details"
+  },
+  {
+    name: "Assignment Details",
+    path: "/student/assignments/:assignmentId",
+    element: <AssignmentDetails />,
     icon: FiFileText,
-    description: "View and submit assignments"
+    description: "View and submit assignment"
+  },
+  {
+    name: "Upcoming Courses",
+    path: "/student/upcoming-courses",
+    element: <UpcomingCourses />,
+    icon: FiCalendar,
+    description: "View upcoming courses for your class"
   },
   {
     name: "Class Schedule",
@@ -59,11 +76,18 @@ const studentRoutes: RouteConfig[] = [
     description: "View class timetable"
   },
   {
-    name: "Study Materials",
-    path: "/student/materials",
-    element: <StudentMaterials />,
-    icon: FiDownload,
-    description: "Access study resources"
+    name: "Apply Leave",
+    path: "/student/leave",
+    element: <StudentLeave />,
+    icon: FiClock,
+    description: "Submit leave requests to administration"
+  },
+  {
+    name: "My Profile",
+    path: "/student/profile",
+    element: <Profile />,
+    icon: FiUser,
+    description: "Manage your student profile"
   }
 ];
 

@@ -1,6 +1,7 @@
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import { FiLogIn, FiUserPlus } from "react-icons/fi";
+import Profile from "../pages/Profile";
+import { FiLogIn, FiUserPlus, FiUser } from "react-icons/fi";
 
 export interface AuthRouteConfig {
   name: string;
@@ -21,6 +22,12 @@ const authRoutes: AuthRouteConfig[] = [
     path: "register",
     element: <Register />,
     icon: FiUserPlus
+  },
+  {
+    name: "Profile",
+    path: "profile",
+    element: <Profile />,
+    icon: FiUser
   }
 ];
 

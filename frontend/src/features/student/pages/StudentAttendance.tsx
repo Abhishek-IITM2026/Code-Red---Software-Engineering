@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FiCheckCircle, FiX, FiClock, FiAlertCircle, FiCalendar, FiFilter } from "react-icons/fi";
-import { Card, Table, Button, Input, Select } from "../../../components/common";
+import { FiCheckCircle, FiX, FiClock, FiAlertCircle, FiCalendar } from "react-icons/fi";
+import { Card, Table, Search } from "../../../components/common";
 
 interface AttendanceRecord {
   id: string;
@@ -32,16 +32,34 @@ const statusConfig = {
 
 const StudentAttendance = function() {
   const [attendance] = useState<AttendanceRecord[]>(mockAttendance);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [filteredAttendance, setFilteredAttendance] = useState<AttendanceRecord[]>(mockAttendance);
 
-  const filteredAttendance = attendance.filter(record => {
-    const matchesSearch = record.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = !subjectFilter || record.subject === subjectFilter;
-    const matchesStatus = !statusFilter || record.status === statusFilter;
-    return matchesSearch && matchesSubject && matchesStatus;
-  });
+  const searchConfig = {
+    fields: [
+      { key: 'subject', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' },
+      { key: 'status', label: 'Status', type: 'select' as const,
+        options: [
+          { value: 'present', label: 'Present' },
+          { value: 'absent', label: 'Absent' },
+          { value: 'late', label: 'Late' },
+          { value: 'excused', label: 'Excused' }
+        ]
+      },
+      { key: 'date', label: 'Date', type: 'date' as const }
+    ],
+    placeholder: 'Search attendance...',
+    showAdvancedToggle: true,
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = attendance.filter(record => {
+        const matchesSubject = !values.subject || 
+          record.subject.toLowerCase().includes(values.subject.toLowerCase());
+        const matchesStatus = !values.status || record.status === values.status;
+        const matchesDate = !values.date || record.date === values.date;
+        return matchesSubject && matchesStatus && matchesDate;
+      });
+      setFilteredAttendance(filtered);
+    }
+  };
 
   const subjects = [...new Set(attendance.map(r => r.subject))];
 
@@ -152,43 +170,8 @@ const StudentAttendance = function() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card padding="small" hover={false}>
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[200px]">
-            <Input
-              placeholder="Search by subject..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="w-48">
-            <select
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            >
-              <option value="">All Subjects</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
-          </div>
-          <div className="w-40">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            >
-              <option value="">All Status</option>
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
-              <option value="late">Late</option>
-              <option value="excused">Excused</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+      {/* Search & Filters */}
+      <Search config={searchConfig} />
 
       {/* Attendance Table */}
       <Table

@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useGetClassesQuery,
   useGetSectionsQuery,
   useGetAllFacultyQuery,
-  useCreateScheduleMutation,
 } from '../../../services/api/dataApi';
 import type { ClassSchedule } from '../../../services/api/dataApi';
-import { DEFAULT_TIME_SLOTS, WEEKDAYS } from '../types/schedule';
+import { WEEKDAYS } from '../types/schedule';
 
 interface ScheduleFormProps {
-  onSuccess?: () => void;
+  editingSchedule?: ClassSchedule | null;
+  onSave: (schedule: ClassSchedule) => void;
   onCancel?: () => void;
 }
 
@@ -33,11 +33,11 @@ const DEMO_SECTIONS: Record<string, { id: string; name: string }[]> = {
 };
 
 const DEMO_FACULTY = [
-  { id: 'f1', firstName: 'Ramesh', lastName: ' Sharma', email: 'ramesh@school.com', subjects: ['Mathematics', 'Physics'] },
-  { id: 'f2', firstName: 'Sunita', lastName: ' Devi', email: 'sunita@school.com', subjects: ['Chemistry', 'Biology']},
-  { id: 'f3', firstName: 'Amit', lastName: ' Kumar', email: 'amit@school.com', subjects: ['English', 'Hindi']},
-  { id: 'f4', firstName: 'Priya', lastName: ' Singh', email: 'priya@school.com', subjects: ['History', 'Geography']},
-  { id: 'f5', firstName: 'Vikram', lastName: ' Reddy', email: 'vikram@school.com', subjects: ['Mathematics']},
+  { id: 'f1', firstName: 'Ramesh', lastName: 'Sharma' },
+  { id: 'f2', firstName: 'Sunita', lastName: 'Devi' },
+  { id: 'f3', firstName: 'Amit', lastName: 'Kumar' },
+  { id: 'f4', firstName: 'Priya', lastName: 'Singh' },
+  { id: 'f5', firstName: 'Vikram', lastName: 'Reddy' },
 ];
 
 const SUBJECTS = [
@@ -45,20 +45,23 @@ const SUBJECTS = [
   'History', 'Geography', 'Computer Science', 'Physical Education', 'Art', 'Music'
 ];
 
-const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
-  const [formData, setFormData] = useState({
-    classId: '',
-    sectionId: '',
-    dayOfWeek: 1,
-    timeSlotId: '',
-    subject: '',
-    facultyId: '',
-    roomNumber: '',
-  });
+const emptyForm = {
+  classId: '',
+  sectionId: '',
+  dayOfWeek: 1,
+  startTime: '',
+  endTime: '',
+  subject: '',
+  facultyId: '',
+  roomNumber: '',
+};
+
+const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, onCancel }) => {
+  const [formData, setFormData] = useState(emptyForm);
 
   const { data: apiClasses = [] } = useGetClassesQuery();
   const classes = apiClasses.length > 0 ? apiClasses : DEMO_CLASSES;
-  
+
   const { data: apiSections = [] } = useGetSectionsQuery(formData.classId, {
     skip: !formData.classId,
   });
@@ -67,50 +70,57 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
   const { data: apiFaculty = [] } = useGetAllFacultyQuery();
   const faculty = apiFaculty.length > 0 ? apiFaculty : DEMO_FACULTY;
 
-  const [createSchedule, { isLoading, isSuccess, error }] = useCreateScheduleMutation();
-
   useEffect(() => {
-    if (isSuccess) {
-      onSuccess?.();
+    if (editingSchedule) {
       setFormData({
-        classId: '',
-        sectionId: '',
-        dayOfWeek: 1,
-        timeSlotId: '',
-        subject: '',
-        facultyId: '',
-        roomNumber: '',
+        classId: editingSchedule.classId,
+        sectionId: editingSchedule.sectionId,
+        dayOfWeek: editingSchedule.dayOfWeek,
+        startTime: editingSchedule.timeSlot.startTime,
+        endTime: editingSchedule.timeSlot.endTime,
+        subject: editingSchedule.subject,
+        facultyId: editingSchedule.facultyId,
+        roomNumber: editingSchedule.roomNumber || '',
       });
+      return;
     }
-  }, [isSuccess, onSuccess]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    setFormData(emptyForm);
+  }, [editingSchedule]);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedClass = classes.find((c: any) => c.id === formData.classId);
-    const selectedSection = sections.find((s: any) => s.id === formData.sectionId);
-    const selectedFaculty = faculty.find((f: any) => f.id === formData.facultyId);
-    const selectedSlot = DEFAULT_TIME_SLOTS.find((s) => s.id === formData.timeSlotId);
 
-    const scheduleData = {
+    const selectedClass = classes.find((item: any) => item.id === formData.classId);
+    const selectedSection = sections.find((item: any) => item.id === formData.sectionId);
+    const selectedFaculty = faculty.find((item: any) => item.id === formData.facultyId);
+
+    const scheduleData: ClassSchedule = {
+      id: editingSchedule?.id || `schedule-${Date.now()}`,
       classId: formData.classId,
       className: selectedClass?.name || `Class ${formData.classId}`,
       sectionId: formData.sectionId,
-      sectionName: selectedSection?.name || formData.sectionId,
+      sectionName: selectedSection?.name || formData.sectionId.replace(`${formData.classId}-`, ''),
       dayOfWeek: formData.dayOfWeek,
-      timeSlot: selectedSlot || { id: '', startTime: '', endTime: '' },
+      timeSlot: {
+        id: editingSchedule?.timeSlot.id || `slot-${Date.now()}`,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      },
       subject: formData.subject,
       facultyId: formData.facultyId,
       facultyName: selectedFaculty ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}` : '',
       roomNumber: formData.roomNumber || undefined,
+      createdAt: editingSchedule?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    await createSchedule(scheduleData);
+    onSave(scheduleData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Class */}
         <div>
           <label className={labelClass}>Class</label>
           <select
@@ -128,7 +138,6 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Section */}
         <div>
           <label className={labelClass}>Section</label>
           <select
@@ -140,14 +149,13 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
           >
             <option value="">{formData.classId ? 'Select Section' : 'Select Class First'}</option>
             {sections.map((sec: any) => (
-              <option key={sec.id} value={sec.name}>
+              <option key={sec.id} value={sec.id}>
                 Section {sec.name}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Day of Week */}
         <div>
           <label className={labelClass}>Day</label>
           <select
@@ -156,7 +164,7 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
             onChange={(e) => setFormData({ ...formData, dayOfWeek: Number(e.target.value) })}
             required
           >
-            {WEEKDAYS.map((day) => (
+            {WEEKDAYS.filter((day) => day.value !== 0).map((day) => (
               <option key={day.value} value={day.value}>
                 {day.label}
               </option>
@@ -164,25 +172,6 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Time Slot */}
-        <div>
-          <label className={labelClass}>Time Slot</label>
-          <select
-            className={inputClass}
-            value={formData.timeSlotId}
-            onChange={(e) => setFormData({ ...formData, timeSlotId: e.target.value })}
-            required
-          >
-            <option value="">Select Time</option>
-            {DEFAULT_TIME_SLOTS.filter(slot => slot.startTime !== '10:00' && slot.startTime !== '12:15').map((slot) => (
-              <option key={slot.id} value={slot.id}>
-                {slot.startTime} - {slot.endTime}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Subject */}
         <div>
           <label className={labelClass}>Subject</label>
           <select
@@ -200,7 +189,28 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Faculty */}
+        <div>
+          <label className={labelClass}>Start Time</label>
+          <input
+            type="time"
+            className={inputClass}
+            value={formData.startTime}
+            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+            required
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>End Time</label>
+          <input
+            type="time"
+            className={inputClass}
+            value={formData.endTime}
+            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+            required
+          />
+        </div>
+
         <div>
           <label className={labelClass}>Assign Faculty</label>
           <select
@@ -210,17 +220,16 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
             required
           >
             <option value="">Select Faculty</option>
-            {faculty.map((f: any) => (
-              <option key={f.id} value={f.id}>
-                {f.firstName} {f.lastName}
+            {faculty.map((item: any) => (
+              <option key={item.id} value={item.id}>
+                {item.firstName} {item.lastName}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Room Number */}
         <div>
-          <label className={labelClass}>Room Number (Optional)</label>
+          <label className={labelClass}>Room Number</label>
           <input
             type="text"
             className={inputClass}
@@ -231,26 +240,14 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ onSuccess, onCancel }) => {
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-          Failed to create schedule. Please try again.
-        </div>
-      )}
-
-      {/* Action Buttons */}
       <div className="flex justify-end gap-3 pt-4">
         {onCancel && (
           <button type="button" onClick={onCancel} className={btnSecondary}>
             Cancel
           </button>
         )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={btnPrimary}
-        >
-          {isLoading ? 'Creating...' : 'Create Schedule'}
+        <button type="submit" className={btnPrimary}>
+          {editingSchedule ? 'Save Schedule' : 'Create Schedule'}
         </button>
       </div>
     </form>

@@ -1,14 +1,47 @@
-import { attendanceRows, childProfile } from "../data.ts";
+import { useEffect, useState } from "react";
+import { Search } from "../../../components/common";
+import ChildSelector from "../components/ChildSelector";
+import { useParentChildren } from "../useParentChildren";
 
 const ParentAttendance = function() {
+  const { children, selectedChild, selectedChildId, setSelectedChildId, attendanceRows } = useParentChildren();
+  const [filteredRows, setFilteredRows] = useState(attendanceRows);
+
+  useEffect(() => {
+    setFilteredRows(attendanceRows);
+  }, [attendanceRows]);
+
+  const searchConfig = {
+    fields: [
+      { key: 'subject', label: 'Subject', type: 'text' as const, placeholder: 'Search by subject...' }
+    ],
+    placeholder: 'Search attendance...',
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = attendanceRows.filter(row => {
+        const matchesSubject = !values.subject || 
+          row.subject.toLowerCase().includes(values.subject.toLowerCase());
+        return matchesSubject;
+      });
+      setFilteredRows(filtered);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
           Attendance
         </p>
-        <h2 className="mt-2 text-3xl font-bold">{childProfile.name} Attendance</h2>
+        <h2 className="mt-2 text-3xl font-bold">{selectedChild.name} Attendance</h2>
       </div>
+
+      <ChildSelector
+        children={children}
+        selectedChildId={selectedChildId}
+        onChange={setSelectedChildId}
+      />
+
+      <Search config={searchConfig} />
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="overflow-x-auto">
@@ -22,7 +55,7 @@ const ParentAttendance = function() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {attendanceRows.map((row) => (
+              {filteredRows.map((row) => (
                 <tr key={row.subject}>
                   <td className="px-6 py-4 text-slate-700">{row.subject}</td>
                   <td className="px-6 py-4 text-slate-700">{row.attended}</td>
@@ -36,6 +69,6 @@ const ParentAttendance = function() {
       </div>
     </div>
   );
-}
+};
 
-export default  ParentAttendance;
+export default ParentAttendance;

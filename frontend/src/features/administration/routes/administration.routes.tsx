@@ -1,5 +1,10 @@
 import AdministrationDashboard from "../pages/AdministrationDashboard";
+import AuthorityManagement from "../pages/AuthorityManagement";
+import CourseManagement from "../pages/CourseManagement";
+import FinancialRecords from "../pages/FinancialRecords";
 import GenerateReports from "../pages/GenerateReports";
+import LeaveManagement from "../pages/LeaveManagement";
+import ManageStaffRecords from "../pages/ManageStaffRecords";
 import ManageStudentRecords from "../pages/ManageStudentRecords";
 import MonitorPerformanceTrends from "../pages/MonitorPerformanceTrends";
 import PromoteStudents from "../pages/PromoteStudents";
@@ -8,7 +13,28 @@ import ViewExamParticipationReports from "../pages/ViewExamParticipationReports"
 import InventoryDashboard from "../pages/Inventory/InventoryDashboard";
 import RequestManagement from "../pages/Inventory/RequestManagement";
 import ScheduleManagement from "../pages/ScheduleManagement";
-import { FiGrid, FiFileText, FiPackage, FiUsers, FiTrendingUp, FiArrowUpCircle, FiCheckSquare, FiBarChart2, FiShoppingCart, FiCalendar } from "react-icons/fi";
+import SalarySlips from "../pages/SalarySlips";
+import AdminMySalarySlip from "../pages/AdminMySalarySlip";
+import Profile from "../../auth/pages/Profile";
+import {
+  FiArrowUpCircle,
+  FiBarChart2,
+  FiBriefcase,
+  FiCalendar,
+  FiBookOpen,
+  FiCheckSquare,
+  FiClock,
+  FiCreditCard,
+  FiDollarSign,
+  FiFileText,
+  FiGrid,
+  FiPackage,
+  FiShield,
+  FiShoppingCart,
+  FiTrendingUp,
+  FiUser,
+  FiUsers,
+} from "react-icons/fi";
 
 export interface AdminRouteConfig {
   name: string;
@@ -27,6 +53,20 @@ const administrationRoutes: AdminRouteConfig[] = [
     description: "Institute overview and quick actions"
   },
   {
+    name: "Authority Control",
+    path: "/administration/authority-management",
+    element: <AuthorityManagement />,
+    icon: FiShield,
+    description: "Assign role-based approval authorities to staff"
+  },
+  {
+    name: "Course Management",
+    path: "/administration/course-management",
+    element: <CourseManagement />,
+    icon: FiBookOpen,
+    description: "Create upcoming courses for students"
+  },
+  {
     name: "Student Records",
     path: "/administration/student-records",
     element: <ManageStudentRecords />,
@@ -39,6 +79,48 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <PromoteStudents />,
     icon: FiArrowUpCircle,
     description: "Promote students to next class"
+  },
+  {
+    name: "Staff Records",
+    path: "/administration/staff-records",
+    element: <ManageStaffRecords />,
+    icon: FiBriefcase,
+    description: "Manage teaching and non-teaching staff records"
+  },
+  {
+    name: "Financial Records",
+    path: "/administration/financial-records",
+    element: <FinancialRecords />,
+    icon: FiCreditCard,
+    description: "Review staff salary and increment records"
+  },
+  {
+    name: "Salary Slips",
+    path: "/administration/salary-slips",
+    element: <SalarySlips />,
+    icon: FiDollarSign,
+    description: "Review monthly salary slips with leave and overtime impact"
+  },
+  {
+    name: "My Salary Slip",
+    path: "/administration/my-salary-slip",
+    element: <AdminMySalarySlip />,
+    icon: FiDollarSign,
+    description: "Open your ESS-style salary slip with previous-year access"
+  },
+  {
+    name: "Leave Management",
+    path: "/administration/leave-management",
+    element: <LeaveManagement />,
+    icon: FiClock,
+    description: "Approve or reject student and faculty leave requests"
+  },
+  {
+    name: "Financial Details",
+    path: "/administration/financial-records/:staffId",
+    element: <FinancialRecords />,
+    icon: FiCreditCard,
+    description: "Detailed staff financial profile"
   },
   {
     name: "Attendance Reports",
@@ -88,6 +170,13 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <ScheduleManagement />,
     icon: FiCalendar,
     description: "Manage class lecture schedules"
+  },
+  {
+    name: "My Profile",
+    path: "/administration/profile",
+    element: <Profile />,
+    icon: FiUser,
+    description: "Manage your admin profile"
   }
 ];
 

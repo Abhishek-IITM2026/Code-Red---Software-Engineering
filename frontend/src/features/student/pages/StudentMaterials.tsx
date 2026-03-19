@@ -1,9 +1,33 @@
-const materials = [
-  { name: "Chapter 1 Notes" },
-  { name: "Previous Paper" },
+import { useState } from "react";
+import { Search } from "../../../components/common";
+
+const allMaterials = [
+  { name: "Chapter 1 Notes", subject: "Mathematics" },
+  { name: "Previous Paper", subject: "Physics" },
+  { name: "Chapter 2 Notes", subject: "Mathematics" },
+  { name: "Formula Sheet", subject: "Chemistry" },
+  { name: "Lab Manual", subject: "Physics" },
+  { name: "Sample Questions", subject: "English" },
 ];
 
 const StudentMaterials = function() {
+  const [materials, setMaterials] = useState(allMaterials);
+
+  const searchConfig = {
+    fields: [
+      { key: 'name', label: 'Material Name', type: 'text' as const, placeholder: 'Search materials...' }
+    ],
+    placeholder: 'Search materials...',
+    onSearch: (values: Record<string, string> = {}) => {
+      const filtered = allMaterials.filter(material => {
+        const matchesName = !values.name || 
+          material.name.toLowerCase().includes(values.name.toLowerCase());
+        return matchesName;
+      });
+      setMaterials(filtered);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,6 +36,9 @@ const StudentMaterials = function() {
         </p>
         <h2 className="mt-2 text-3xl font-bold">Study Materials</h2>
       </div>
+
+      {/* Search */}
+      <Search config={searchConfig} />
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="overflow-x-auto">

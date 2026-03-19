@@ -6,6 +6,7 @@ import StudentLayout from "../features/student/layout/StudentLayout";
 import FacultyLayout from "../features/faculty/layout/FacultyLayout";
 import ParentLayout from "../features/parent/layout/ParentLayout";
 import AdministrationLayout from "../features/administration/layout/AdministrationLayout";
+import Profile from "../features/auth/pages/Profile";
 
 // Children Routes for different roles
 import homeRoutes from "../features/Home/routes/home.routes";
@@ -26,7 +27,10 @@ const roleRedirects: Record<string, string> = {
   faculty: "/faculty/dashboard",
   parent: "/parent/dashboard",
   admin: "/administration/dashboard",
-  administration: "/administration/dashboard"
+  administration: "/administration/dashboard",
+  director: "/administration/dashboard",
+  superadmin: "/administration/dashboard",
+  "super admin": "/administration/dashboard",
 };
 
 // Protected Route Component
@@ -89,6 +93,22 @@ const router = createBrowserRouter([
         }))
       },
       
+      // Profile Route (Protected - accessible to all authenticated users)
+      {
+        path: "/profile",
+        element: (
+          <ProtectedRoute>
+            <AuthLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "",
+            element: <Profile />
+          }
+        ]
+      },
+      
       // Student Routes (Protected)
       {
         path: "/student",
@@ -138,7 +158,7 @@ const router = createBrowserRouter([
       {
         path: "/administration",
         element: (
-          <ProtectedRoute allowedRoles={["admin", "administration", "superadmin"]}>
+          <ProtectedRoute allowedRoles={["admin", "administration", "superadmin", "super admin", "director"]}>
             <AdministrationLayout />
           </ProtectedRoute>
         ),

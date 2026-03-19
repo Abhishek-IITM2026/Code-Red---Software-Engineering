@@ -1,4 +1,5 @@
 import FacultyDashboard from "../pages/FacultyDashboard";
+import FacultyLeave from "../pages/FacultyLeave";
 import FacultyClasses from "../pages/FacultyClasses";
 import FacultyAttendance from "../pages/FacultyAttendance";
 import FacultyAssessments from "../pages/FacultyAssessments";
@@ -8,7 +9,10 @@ import RecordAttendance from "../pages/RecordAttendance";
 import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
 import FacultySchedule from "../pages/FacultySchedule";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar } from "react-icons/fi";
+import AssessmentBuilder from "../pages/AssessmentBuilder";
+import FacultySalarySlip from "../pages/FacultySalarySlip";
+import Profile from "../../auth/pages/Profile";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign } from "react-icons/fi";
 
 export interface FacultyRouteConfig {
   name: string;
@@ -81,6 +85,34 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultySchedule />,
     icon: FiCalendar,
     description: "View your teaching schedule"
+  },
+  {
+    name: "Apply Leave",
+    path: "/faculty/leave",
+    element: <FacultyLeave />,
+    icon: FiClock,
+    description: "Submit leave requests to administration"
+  },
+  {
+    name: "Salary Slip",
+    path: "/faculty/salary-slip",
+    element: <FacultySalarySlip />,
+    icon: FiDollarSign,
+    description: "Review monthly salary with leave and overtime adjustments"
+  },
+  {
+    name: "Assessment Builder",
+    path: "/faculty/assessment-builder",
+    element: <AssessmentBuilder />,
+    icon: FiPlusCircle,
+    description: "Create AI-powered assessments"
+  },
+  {
+    name: "My Profile",
+    path: "/faculty/profile",
+    element: <Profile />,
+    icon: FiUser,
+    description: "Manage your faculty profile"
   }
 ];
 
