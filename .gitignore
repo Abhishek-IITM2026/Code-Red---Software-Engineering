@@ -2,14 +2,15 @@
 # Backend Environment
 # ==============================
 backend/.benv/
-backend/__pycache__/
-backend/*.py[cod]
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/**/.pytest_cache/
 backend/*.egg-info/
 backend/.env
 backend/.env.local
 backend/.env.*.local
-backend/venv/
-backend/.venv/
+backend/benv/
+backend/.benv/
 
 # ==============================
 # Frontend Environment

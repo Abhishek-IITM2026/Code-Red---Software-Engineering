@@ -1,0 +1,9 @@
+Initialize migrations locally with:
+
+`flask --app run.py db init`
+`flask --app run.py db migrate -m "initial schema"`
+`flask --app run.py db upgrade`
+
+The app factory is already wired to Flask-Migrate. This directory is included so the
+backend follows a production-ready structure even before the first generated migration
+is committed.
