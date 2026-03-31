@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { FiLogOut, FiMenu, FiX, FiSettings, FiChevronRight, FiChevronLeft, FiUser } from "react-icons/fi";
@@ -6,6 +6,11 @@ import { logout } from "../../auth/store/authSlice";
 import type { RootState, AppDispatch } from "../../../app/store";
 import { Preferences, Button } from "../../../components/common";
 import adminRoutes from "../routes/administration.routes";
+import {
+  AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
+  readAuthorityAssignments,
+  userHasAnyAuthority,
+} from "../utils/authorityAccess";
 
 const appName = import.meta.env.VITE_APP_NAME || "CIOM";
 const appLogo = import.meta.env.VITE_APP_LOGO || "C";
@@ -20,10 +25,21 @@ const AdministrationLayout = function () {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [authorityVersion, setAuthorityVersion] = useState(0);
 
   const handleLogout = () => dispatch(logout());
+  useEffect(() => {
+    const handleAssignmentsUpdated = () => setAuthorityVersion((current) => current + 1);
+    window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+    return () => window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+  }, []);
+
+  const authorityAssignments = useMemo(() => readAuthorityAssignments(), [authorityVersion]);
   const primaryLinks = adminRoutes.filter(
-    (route) => route.path !== adminProfilePath && route.path !== adminFinancialDetailPath,
+    (route) =>
+      route.path !== adminProfilePath &&
+      route.path !== adminFinancialDetailPath &&
+      userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
   );
   const isProfileRoute = location.pathname === adminProfilePath;
 

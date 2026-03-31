@@ -35,14 +35,6 @@ const sidebarLinks = [
   { label: "Apply Leave", href: "/student/leave", icon: FiClock },
 ];
 
-const topNavItems = [
-  { label: "Home", href: "/student/dashboard" },
-  { label: "Subjects", href: "/student/subjects" },
-  { label: "Attendance", href: "/student/attendance" },
-  { label: "Marks", href: "/student/marks" },
-  { label: "Courses", href: "/student/upcoming-courses" },
-];
-
 const StudentLayout = function () {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
@@ -86,22 +78,6 @@ const StudentLayout = function () {
                 </span>
               )}
             </div>
-
-            <nav className="hidden md:flex gap-6">
-              {topNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`text-sm font-medium transition hover:text-[var(--primary)] ${
-                    isActivePath(item.href)
-                      ? "text-[var(--primary)]"
-                      : "text-[var(--text-secondary)]"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
 
             <div className="flex items-center gap-2">
               <Button

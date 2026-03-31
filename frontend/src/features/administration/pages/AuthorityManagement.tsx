@@ -13,25 +13,21 @@ import {
 } from "react-icons/fi";
 import type { RootState } from "../../../app/store";
 import { staffRecords } from "./adminData";
-
-type AuthorityKey = "leaveApproval" | "admissionApproval" | "staffCreation" | "studentPromotion";
+import {
+  AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
+  AUTHORITY_STORAGE_KEY,
+  isDirectorLevelUser,
+  readAuthorityAssignments,
+  roleAuthorityTemplates,
+  type AuthorityAssignment,
+  type AuthorityKey,
+} from "../utils/authorityAccess";
 
 type AuthorityDefinition = {
   key: AuthorityKey;
   label: string;
   description: string;
 };
-
-type AuthorityAssignment = {
-  staffId: string;
-  roles: string[];
-  roleTemplate: string;
-  authorities: Record<AuthorityKey, boolean>;
-  updatedAt: string;
-  updatedBy: string;
-};
-
-const AUTHORITY_STORAGE_KEY = "administration-authority-assignments";
 
 const authorityDefinitions: AuthorityDefinition[] = [
   {
@@ -55,18 +51,6 @@ const authorityDefinitions: AuthorityDefinition[] = [
     description: "Move eligible students to the next academic level.",
   },
 ];
-
-const roleAuthorityTemplates: Record<string, AuthorityKey[]> = {
-  Director: ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion"],
-  "Office Administrator": ["leaveApproval", "admissionApproval", "staffCreation"],
-  Accountant: ["admissionApproval"],
-  "Class Coordinator": ["leaveApproval", "studentPromotion"],
-  "Mathematics Teacher": ["studentPromotion"],
-  "Science Teacher": ["studentPromotion"],
-  "English Teacher": ["studentPromotion"],
-  "Lab Assistant": [],
-  "Transport Coordinator": [],
-};
 
 const allRoleOptions = Array.from(
   new Set([
@@ -112,66 +96,12 @@ const buildDefaultAssignments = (): AuthorityAssignment[] => {
   });
 };
 
-const normalizeAssignment = (
-  assignment: Partial<AuthorityAssignment> | undefined,
-  fallback: AuthorityAssignment,
-): AuthorityAssignment => {
-  if (!assignment) {
-    return fallback;
-  }
-
-  const roles =
-    Array.isArray(assignment.roles) && assignment.roles.length > 0
-      ? assignment.roles
-      : fallback.roles;
-
-  return {
-    ...fallback,
-    ...assignment,
-    roles,
-    authorities: {
-      ...fallback.authorities,
-      ...(assignment.authorities || {}),
-    },
-  };
-};
-
-const readAssignments = (): AuthorityAssignment[] => {
-  if (typeof window === "undefined") {
-    return buildDefaultAssignments();
-  }
-
-  const storedAssignments = window.localStorage.getItem(AUTHORITY_STORAGE_KEY);
-
-  if (!storedAssignments) {
-    return buildDefaultAssignments();
-  }
-
-  try {
-    const parsedAssignments = JSON.parse(storedAssignments) as AuthorityAssignment[];
-    const fallbackAssignments = buildDefaultAssignments();
-
-    return fallbackAssignments.map((defaultAssignment) => {
-      const stored = parsedAssignments.find((item) => item.staffId === defaultAssignment.staffId);
-      return normalizeAssignment(stored, defaultAssignment);
-    });
-  } catch {
-    return buildDefaultAssignments();
-  }
-};
-
 const AuthorityManagement = function () {
   const user = useSelector((state: RootState) => state.auth.user);
-  const [assignments, setAssignments] = useState<AuthorityAssignment[]>(readAssignments);
+  const [assignments, setAssignments] = useState<AuthorityAssignment[]>(readAuthorityAssignments);
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [search, setSearch] = useState("");
-  const normalizedRole = user?.role?.trim().toLowerCase() || "";
-  const isDirectorLevel =
-    normalizedRole === "director" ||
-    normalizedRole === "superadmin" ||
-    normalizedRole === "super admin" ||
-    normalizedRole === "admin" ||
-    normalizedRole === "administration";
+  const isDirectorLevel = isDirectorLevelUser(user);
 
   const assignmentMap = useMemo(() => {
     return assignments.reduce<Record<string, AuthorityAssignment>>((accumulator, assignment) => {
@@ -217,6 +147,7 @@ const AuthorityManagement = function () {
   const persistAssignments = (nextAssignments: AuthorityAssignment[]) => {
     setAssignments(nextAssignments);
     window.localStorage.setItem(AUTHORITY_STORAGE_KEY, JSON.stringify(nextAssignments));
+    window.dispatchEvent(new CustomEvent(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT));
   };
 
   const handleAuthorityToggle = (authorityKey: AuthorityKey) => {
