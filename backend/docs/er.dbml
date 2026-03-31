@@ -1,0 +1,507 @@
+﻿// ============================================================
+// Coaching Institute Management System - DBML Schema
+// ============================================================
+
+
+// --------------------------------------------------------
+// ENUMS
+// --------------------------------------------------------
+
+
+Enum role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+
+Enum attendance_status {
+  PRESENT
+  ABSENT
+  LATE
+  LEAVE
+}
+
+
+Enum exam_type {
+  UNIT_TEST
+  MID_TERM
+  FINAL
+  MOCK
+  QUIZ
+}
+
+
+Enum fee_payment_status {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+
+Enum notification_type {
+  SCHEDULE_UPDATE
+  FEE_REMINDER
+  EXAM_ANNOUNCEMENT
+  RESULT_PUBLISHED
+  GENERAL
+}
+
+
+Enum user_status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+
+// --------------------------------------------------------
+// TABLES
+// --------------------------------------------------------
+
+
+Table role {
+  id bigint [pk, increment]
+  role_name varchar(255) [not null]
+  role_description varchar(255)
+}
+
+
+Table role_users {
+  id bigint [pk, increment]
+  role_id bigint [unique, not null]
+  user_id bigint [unique, not null]
+}
+
+
+Table users {
+  id bigint [pk, increment]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  role role [not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  phone varchar(20)
+  profile_image_url varchar(500)
+  status user_status [default: 'ACTIVE']
+  last_login_at timestamp
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table admins {
+  id bigint [pk, increment]
+  user_id bigint [unique, not null]
+  designation varchar(100)
+  created_at timestamp [default: 'now()']
+}
+
+
+Table teachers {
+  id bigint [pk, increment]
+  user_id bigint [unique, not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  email varchar(255) [unique]
+  phone varchar(20)
+  qualification varchar(255)
+  subject_specialization varchar(255)
+  hire_date date
+  is_class_teacher boolean [default: false]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table students {
+  id bigint [pk, increment]
+  user_id bigint [unique, not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  date_of_birth date
+  gender varchar(20)
+  phone varchar(20)
+  address text
+  blood_group varchar(10)
+  emergency_contact varchar(20)
+  admission_date date
+  roll_number varchar(50)
+  status user_status [default: 'ACTIVE']
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table parents {
+  id bigint [pk, increment]
+  user_id bigint [unique, not null]
+  student_id bigint [not null]
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  email varchar(255)
+  phone varchar(20) [not null]
+  relation varchar(50) [not null]
+  occupation varchar(100)
+  is_primary boolean [default: true]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table classes {
+  id bigint [pk, increment]
+  name varchar(100) [not null]
+  grade varchar(20) [not null]
+  section varchar(10)
+  academic_year varchar(20) [not null]
+  class_teacher_id bigint
+  room_number varchar(20)
+  max_strength int
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table class_enrollments {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  class_id bigint [not null]
+  academic_year varchar(20) [not null]
+  enrolled_at timestamp [default: 'now()']
+}
+
+
+Table subjects {
+  id bigint [pk, increment]
+  name varchar(100) [not null]
+  code varchar(20) [unique]
+  description text
+  is_active boolean [default: true]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table subject_teachers {
+  id bigint [pk, increment]
+  teacher_id bigint [not null]
+  subject_id bigint [not null]
+  class_id bigint [not null]
+  academic_year varchar(20) [not null]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table attendance {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  class_id bigint [not null]
+  subject_id bigint [not null]
+  attendance_date date [not null]
+  status attendance_status [not null]
+  marked_by bigint [not null]
+  notes text
+  created_at timestamp [default: 'now()']
+}
+
+
+Table attendance_summary {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  class_id bigint [not null]
+  month int
+  year int
+  total_days int
+  present_days int
+  absent_days int
+  late_days int
+  leave_days int
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table examinations {
+  id bigint [pk, increment]
+  name varchar(200) [not null]
+  class_id bigint [not null]
+  subject_id bigint [not null]
+  exam_type exam_type
+  exam_date date [not null]
+  start_time time
+  end_time time
+  total_marks int [not null]
+  passing_marks int
+  instructions text
+  is_published boolean [default: false]
+  created_by bigint [not null]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table exam_participations {
+  id bigint [pk, increment]
+  examination_id bigint [not null]
+  student_id bigint [not null]
+  status varchar(20) [default: 'SCHEDULED']
+  created_at timestamp [default: 'now()']
+}
+
+
+Table marks {
+  id bigint [pk, increment]
+  examination_id bigint [not null]
+  student_id bigint [not null]
+  subject_id bigint [not null]
+  marks_obtained decimal(10,2)
+  grade varchar(5)
+  remarks text
+  entered_by bigint [not null]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table performance_analytics {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  subject_id bigint [not null]
+  class_id bigint [not null]
+  academic_year varchar(20)
+  exam_type exam_type
+  avg_marks decimal(10,2)
+  max_marks decimal(10,2)
+  min_marks decimal(10,2)
+  total_exams int
+  rank int
+  percentile decimal(10,2)
+  trend_score decimal(5,2)
+  ai_summary text
+  calculated_at timestamp [default: 'now()']
+}
+
+
+Table fee_structures {
+  id bigint [pk, increment]
+  class_id bigint [not null]
+  academic_year varchar(20) [not null]
+  fee_type varchar(100) [not null]
+  amount decimal(12,2) [not null]
+  due_date date
+  is_mandatory boolean [default: true]
+  description text
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table fee_payments {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  fee_structure_id bigint [not null]
+  amount_paid decimal(12,2) [not null]
+  payment_date date [not null]
+  payment_mode varchar(50)
+  transaction_id varchar(100)
+  receipt_number varchar(50)
+  status fee_payment_status [default: 'PENDING']
+  remarks text
+  received_by bigint [not null]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table fee_communications {
+  id bigint [pk, increment]
+  student_id bigint [not null]
+  parent_id bigint [not null]
+  subject varchar(200) [not null]
+  message text [not null]
+  fee_amount decimal(12,2)
+  due_date date
+  is_read boolean [default: false]
+  created_by bigint [not null]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table schedules {
+  id bigint [pk, increment]
+  class_id bigint [not null]
+  subject_id bigint [not null]
+  teacher_id bigint [not null]
+  day_of_week int [not null]
+  start_time time [not null]
+  end_time time [not null]
+  room_number varchar(20)
+  academic_year varchar(20) [not null]
+  is_active boolean [default: true]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table events {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  description text
+  event_type varchar(50)
+  class_id bigint
+  event_date date [not null]
+  start_time time
+  end_time time
+  location varchar(200)
+  is_active boolean [default: true]
+  created_by bigint [not null]
+  created_at timestamp [default: 'now()']
+  updated_at timestamp [default: 'now()']
+}
+
+
+Table notifications {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  type notification_type [not null]
+  title varchar(200) [not null]
+  message text
+  related_id bigint
+  related_type varchar(50)
+  is_read boolean [default: false]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table notification_batches {
+  id bigint [pk, increment]
+  type notification_type [not null]
+  title varchar(200) [not null]
+  message text
+  target_role role
+  target_class_id bigint
+  scheduled_at timestamp
+  sent_at timestamp
+  created_by bigint [not null]
+  created_at timestamp [default: 'now()']
+}
+
+
+Table ai_summaries {
+  id bigint [pk, increment]
+  entity_type varchar(50) [not null]
+  entity_id bigint [not null]
+  summary_type varchar(50) [not null]
+  summary_text text
+  confidence_score decimal(5,2)
+  generated_at timestamp [default: 'now()']
+}
+
+
+// --------------------------------------------------------
+// RELATIONSHIPS
+// --------------------------------------------------------
+
+
+// User roles
+
+
+Ref: users.id > role_users.user_id
+Ref: role.id > role_users.user_id
+Ref: admins.user_id > users.id
+Ref: teachers.user_id > users.id
+Ref: students.user_id > users.id
+Ref: parents.user_id > users.id
+
+
+
+
+// Parent-Student relationship
+Ref: parents.student_id > students.id
+
+
+// Class teacher
+Ref: classes.class_teacher_id > teachers.id
+
+
+// Student enrollments
+Ref: class_enrollments.student_id > students.id
+Ref: class_enrollments.class_id > classes.id
+
+
+// Subject teachers
+Ref: subject_teachers.teacher_id > teachers.id
+Ref: subject_teachers.subject_id > subjects.id
+Ref: subject_teachers.class_id > classes.id
+
+
+// Attendance
+Ref: attendance.student_id > students.id
+Ref: attendance.class_id > classes.id
+Ref: attendance.subject_id > subjects.id
+Ref: attendance.marked_by > users.id
+
+
+// Attendance summary
+Ref: attendance_summary.student_id > students.id
+Ref: attendance_summary.class_id > classes.id
+
+
+// Examinations
+Ref: examinations.class_id > classes.id
+Ref: examinations.subject_id > subjects.id
+Ref: examinations.created_by > users.id
+
+
+// Exam participations
+Ref: exam_participations.examination_id > examinations.id
+Ref: exam_participations.student_id > students.id
+
+
+// Marks
+Ref: marks.examination_id > examinations.id
+Ref: marks.student_id > students.id
+Ref: marks.subject_id > subjects.id
+Ref: marks.entered_by > users.id
+
+
+// Performance analytics
+Ref: performance_analytics.student_id > students.id
+Ref: performance_analytics.subject_id > subjects.id
+Ref: performance_analytics.class_id > classes.id
+
+
+// Fee structure
+Ref: fee_structures.class_id > classes.id
+
+
+// Fee payments
+Ref: fee_payments.student_id > students.id
+Ref: fee_payments.fee_structure_id > fee_structures.id
+Ref: fee_payments.received_by > users.id
+
+
+// Fee communications
+Ref: fee_communications.student_id > students.id
+Ref: fee_communications.parent_id > parents.id
+Ref: fee_communications.created_by > users.id
+
+
+// Schedules
+Ref: schedules.class_id > classes.id
+Ref: schedules.subject_id > subjects.id
+Ref: schedules.teacher_id > teachers.id
+
+
+// Events
+Ref: events.class_id > classes.id
+Ref: events.created_by > users.id
+
+
+// Notifications
+Ref: notifications.user_id > users.id
+
+
+// Notification batches
+Ref: notification_batches.target_class_id > classes.id
+Ref: notification_batches.created_by > users.id

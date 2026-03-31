@@ -1,0 +1,1411 @@
+openapi: 3.1.0
+info:
+  title: Code Red Backend API
+  version: 1.2.0
+  description: >
+    Production-style backend contract for the Code Red coaching institute platform.
+    Canonical routes are versioned under `/api/v1`. Legacy `/api/*` aliases exist in
+    the Flask app for current frontend compatibility, but this file documents `/api/v1/*`
+    only. Access control follows the frontend role families: student, faculty, parent,
+    and administration (`admin`, `administration`, `director`, `superadmin`). Request
+    payloads are validated with Pydantic, some background work is dispatched through
+    Celery using Redis, and throttled endpoints may return HTTP 429.
+servers:
+  - url: http://localhost:3500
+tags:
+  - name: Auth
+  - name: Students
+  - name: Academics
+  - name: Attendance
+  - name: Marks
+  - name: Schedule
+  - name: Faculty
+  - name: Assessments
+  - name: Assignments
+  - name: Notifications
+  - name: Jobs
+  - name: Parent
+  - name: AI
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate a user
+      description: Public login endpoint for all supported platform roles.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      description: Creates a user and assigns an initial role from the role table.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '409':
+          $ref: '#/components/responses/Error409'
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out current client session
+      responses:
+        '200':
+          description: Logout acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Error401'
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh auth token
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Refreshed token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/v1/auth/otp/send:
+    post:
+      tags: [Auth]
+      summary: Send OTP challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+      responses:
+        '200':
+          description: OTP created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSendResponse'
+  /api/v1/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Verify OTP challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+      responses:
+        '200':
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessFlagResponse'
+  /api/v1/auth/profile/update:
+    post:
+      tags: [Auth]
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileUpdateResponse'
+  /api/v1/auth/profile/picture:
+    post:
+      tags: [Auth]
+      summary: Update current user profile picture
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePictureUpdateRequest'
+      responses:
+        '200':
+          description: Profile picture updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileUpdateResponse'
+  /api/v1/auth/profile/change-password:
+    post:
+      tags: [Auth]
+      summary: Change current user password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessFlagResponse'
+
+  /api/v1/students:
+    get:
+      tags: [Students]
+      summary: List students
+      description: Accessible to faculty and administration.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: class
+          schema: { type: string }
+        - in: query
+          name: section
+          schema: { type: string }
+      responses:
+        '200':
+          description: Student list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/v1/students/{studentId}:
+    get:
+      tags: [Students]
+      summary: Get student by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StudentIdPath'
+      responses:
+        '200':
+          description: Student details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '404':
+          $ref: '#/components/responses/Error404'
+  /api/v1/students/me:
+    get:
+      tags: [Students]
+      summary: Get current student profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current student
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+  /api/v1/students/me/subjects:
+    get:
+      tags: [Students]
+      summary: Get current student subjects
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subject list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subject'
+  /api/v1/students/me/performance:
+    get:
+      tags: [Students]
+      summary: Get current student performance summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Performance summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceSummary'
+
+  /api/v1/classes:
+    get:
+      tags: [Academics]
+      summary: List classes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Class list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClassInfo'
+  /api/v1/classes/{classId}/sections:
+    get:
+      tags: [Academics]
+      summary: List sections for a class
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Section list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SectionInfo'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /api/v1/attendance:
+    get:
+      tags: [Attendance]
+      summary: List attendance records
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: studentId
+          schema: { type: integer }
+        - in: query
+          name: subjectId
+          schema: { type: integer }
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+        - in: query
+          name: class
+          schema: { type: integer }
+        - in: query
+          name: section
+          schema: { type: string }
+        - in: query
+          name: startDate
+          schema: { type: string, format: date }
+        - in: query
+          name: endDate
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttendanceRecord'
+    post:
+      tags: [Attendance]
+      summary: Create attendance sheet
+      description: Accessible to faculty and administration.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceSubmission'
+      responses:
+        '201':
+          description: Attendance created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountSuccessResponse'
+    put:
+      tags: [Attendance]
+      summary: Update attendance sheet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceSubmission'
+      responses:
+        '200':
+          description: Attendance updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountSuccessResponse'
+  /api/v1/attendance/me/stats:
+    get:
+      tags: [Attendance]
+      summary: Get current student attendance stats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Attendance statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceStats'
+
+  /api/v1/marks:
+    get:
+      tags: [Marks]
+      summary: List marks
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: studentId
+          schema: { type: integer }
+        - in: query
+          name: subjectId
+          schema: { type: integer }
+        - in: query
+          name: examType
+          schema: { type: string }
+      responses:
+        '200':
+          description: Marks records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarksRecord'
+
+  /api/v1/schedule:
+    get:
+      tags: [Schedule]
+      summary: List schedules
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: classId
+          schema: { type: integer }
+        - in: query
+          name: sectionId
+          schema: { type: string }
+        - in: query
+          name: facultyId
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Schedule list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+    post:
+      tags: [Schedule]
+      summary: Create schedule entry
+      description: Administration access only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleWrite'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+  /api/v1/schedule/{scheduleId}:
+    put:
+      tags: [Schedule]
+      summary: Update schedule entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleWrite'
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    delete:
+      tags: [Schedule]
+      summary: Delete schedule entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '204':
+          description: Schedule deleted
+  /api/v1/schedule/me:
+    get:
+      tags: [Schedule]
+      summary: Get current student timetable
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current student schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+
+  /api/v1/faculty:
+    get:
+      tags: [Faculty]
+      summary: List faculty
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Faculty list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Faculty'
+  /api/v1/faculty/classes:
+    get:
+      tags: [Faculty]
+      summary: List faculty classes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Faculty class list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FacultyClass'
+  /api/v1/faculty/classes/{classId}/subjects:
+    get:
+      tags: [Faculty]
+      summary: List subjects for a faculty-visible class
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Subject list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subject'
+  /api/v1/faculty/subjects/{subjectId}/materials:
+    get:
+      tags: [Faculty]
+      summary: List materials for a subject
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectIdPath'
+      responses:
+        '200':
+          description: Materials list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Material'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /api/v1/ai/generate-questions:
+    post:
+      tags: [AI]
+      summary: Generate assessment questions
+      description: Rate limited endpoint intended for faculty and administration users.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateQuestionsRequest'
+      responses:
+        '200':
+          description: Generated questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+  /api/v1/ai/modify-questions:
+    post:
+      tags: [AI]
+      summary: Modify generated questions
+      description: Rate limited endpoint intended for faculty and administration users.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifyQuestionsRequest'
+      responses:
+        '200':
+          description: Modified questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
+
+  /api/v1/assessments:
+    get:
+      tags: [Assessments]
+      summary: List assessments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: classId
+          schema: { type: integer }
+        - in: query
+          name: subjectId
+          schema: { type: integer }
+        - in: query
+          name: published
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Assessment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assessment'
+    post:
+      tags: [Assessments]
+      summary: Create assessment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentWrite'
+      responses:
+        '201':
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+  /api/v1/assessments/{assessmentId}:
+    get:
+      tags: [Assessments]
+      summary: Get assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssessmentIdPath'
+      responses:
+        '200':
+          description: Assessment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+    patch:
+      tags: [Assessments]
+      summary: Update assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssessmentIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentPatch'
+      responses:
+        '200':
+          description: Assessment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+    delete:
+      tags: [Assessments]
+      summary: Delete assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssessmentIdPath'
+      responses:
+        '204':
+          description: Assessment deleted
+  /api/v1/assessments/{assessmentId}/publish:
+    post:
+      tags: [Assessments]
+      summary: Publish assessment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssessmentIdPath'
+      responses:
+        '200':
+          description: Assessment published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+
+  /api/v1/assignments:
+    get:
+      tags: [Assignments]
+      summary: List assignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: subjectId
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        '200':
+          description: Assignment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+  /api/v1/assignments/{assignmentId}/submit:
+    post:
+      tags: [Assignments]
+      summary: Submit assignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentSubmissionRequest'
+      responses:
+        '201':
+          description: Assignment submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentSubmissionResponse'
+
+  /api/v1/notifications/schedule:
+    post:
+      tags: [Notifications]
+      summary: Queue schedule notification batch
+      description: >
+        Administration access only. The batch record is stored immediately and the
+        delivery work is dispatched to Celery for asynchronous execution.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleNotificationRequest'
+      responses:
+        '202':
+          description: Notification batch queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueuedJobResponse'
+        '422':
+          $ref: '#/components/responses/Error422'
+
+  /api/v1/jobs/{taskId}:
+    get:
+      tags: [Jobs]
+      summary: Get background job status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /api/v1/parent/children:
+    get:
+      tags: [Parent]
+      summary: List children linked to authenticated parent
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Linked children
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+  /api/v1/parent/children/{childId}:
+    get:
+      tags: [Parent]
+      summary: Get linked child profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChildIdPath'
+      responses:
+        '200':
+          description: Child profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+  /api/v1/parent/children/{childId}/dashboard:
+    get:
+      tags: [Parent]
+      summary: Get child dashboard summary for parent portal
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChildIdPath'
+      responses:
+        '200':
+          description: Parent dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParentDashboard'
+  /api/v1/parent/children/{childId}/attendance:
+    get:
+      tags: [Parent]
+      summary: Get attendance summary for linked child
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChildIdPath'
+      responses:
+        '200':
+          description: Attendance summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceStats'
+  /api/v1/parent/children/{childId}/performance:
+    get:
+      tags: [Parent]
+      summary: Get performance summary for linked child
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChildIdPath'
+      responses:
+        '200':
+          description: Performance summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceSummary'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+  parameters:
+    StudentIdPath:
+      in: path
+      name: studentId
+      required: true
+      schema: { type: integer }
+    ChildIdPath:
+      in: path
+      name: childId
+      required: true
+      schema: { type: integer }
+    ClassIdPath:
+      in: path
+      name: classId
+      required: true
+      schema: { type: integer }
+    SubjectIdPath:
+      in: path
+      name: subjectId
+      required: true
+      schema: { type: integer }
+    ScheduleIdPath:
+      in: path
+      name: scheduleId
+      required: true
+      schema: { type: integer }
+    AssessmentIdPath:
+      in: path
+      name: assessmentId
+      required: true
+      schema: { type: integer }
+    AssignmentIdPath:
+      in: path
+      name: assignmentId
+      required: true
+      schema: { type: integer }
+    TaskIdPath:
+      in: path
+      name: taskId
+      required: true
+      schema: { type: string }
+  responses:
+    Error400:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error401:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error403:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error404:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error409:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error422:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Error429:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        roleScope: { type: string }
+        title: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        profilePicture: { type: string, nullable: true }
+    Student:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            class: { type: string, nullable: true }
+            section: { type: string, nullable: true }
+            rollNumber: { type: string, nullable: true }
+            enrollmentNo: { type: string, nullable: true }
+            classId: { type: string, nullable: true }
+    Faculty:
+      type: object
+      properties:
+        id: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string, format: email }
+        subjects:
+          type: array
+          items: { type: string }
+    FacultyClass:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        section: { type: string, nullable: true }
+    Subject:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        code: { type: string, nullable: true }
+        teacherId: { type: string, nullable: true }
+        facultyId: { type: string, nullable: true }
+        credits: { type: integer, nullable: true }
+    ClassInfo:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        level: { type: integer }
+        section: { type: string, nullable: true }
+    SectionInfo:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    AttendanceRecord:
+      type: object
+      properties:
+        id: { type: string }
+        studentId: { type: string }
+        subjectId: { type: string }
+        date: { type: string, format: date }
+        status: { type: string }
+        markedBy: { type: string }
+    AttendanceStats:
+      type: object
+      properties:
+        total: { type: integer }
+        present: { type: integer }
+        absent: { type: integer }
+        percentage: { type: number }
+    MarksRecord:
+      type: object
+      properties:
+        id: { type: string }
+        studentId: { type: string }
+        subjectId: { type: string }
+        subject: { type: string, nullable: true }
+        examType: { type: string }
+        marks: { type: number }
+        totalMarks: { type: number }
+        date: { type: string, format: date }
+    Schedule:
+      type: object
+      properties:
+        id: { type: string }
+        classId: { type: string }
+        className: { type: string }
+        sectionId: { type: string }
+        sectionName: { type: string }
+        dayOfWeek: { type: integer }
+        timeSlot:
+          $ref: '#/components/schemas/TimeSlot'
+        subject: { type: string }
+        subjectId: { type: string }
+        facultyId: { type: string }
+        facultyName: { type: string }
+        roomNumber: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startTime: { type: string }
+        endTime: { type: string }
+        roomNo: { type: string, nullable: true }
+    TimeSlot:
+      type: object
+      properties:
+        id: { type: string }
+        startTime: { type: string }
+        endTime: { type: string }
+    Material:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        unit: { type: string, nullable: true }
+        week: { type: string, nullable: true }
+        type: { type: string }
+        description: { type: string, nullable: true }
+    Question:
+      type: object
+      properties:
+        id: { type: string }
+        questionText: { type: string }
+        questionType: { type: string }
+        options:
+          type: array
+          items: { type: string }
+          nullable: true
+        correctAnswer:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+          nullable: true
+        marks: { type: integer }
+        difficulty: { type: string }
+    Assessment:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        classId: { type: string }
+        subjectId: { type: string }
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        totalMarks: { type: integer }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        dueDate: { type: string, nullable: true }
+        published: { type: boolean }
+        questionsDocumentId: { type: string, nullable: true }
+    Assignment:
+      type: object
+      properties:
+        id: { type: string }
+        subjectId: { type: string }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        dueDate: { type: string }
+        totalMarks: { type: integer }
+        status: { type: string }
+    PerformanceSummary:
+      type: object
+      properties:
+        average: { type: number }
+        rank: { type: integer }
+        totalStudents: { type: integer }
+    ParentDashboard:
+      type: object
+      properties:
+        child:
+          $ref: '#/components/schemas/Student'
+        attendance:
+          $ref: '#/components/schemas/AttendanceStats'
+        performance:
+          $ref: '#/components/schemas/PerformanceSummary'
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, role]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role:
+          type: string
+          enum: [student, faculty, teacher, parent, admin, administration, director, superadmin, super admin]
+        title: { type: string, nullable: true }
+    OtpSendRequest:
+      type: object
+      required: [email, purpose]
+      properties:
+        email: { type: string, format: email }
+        purpose: { type: string }
+    OtpVerifyRequest:
+      type: object
+      required: [email, purpose, otp]
+      properties:
+        email: { type: string, format: email }
+        purpose: { type: string }
+        otp: { type: string }
+    OtpSendResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        expiresAt: { type: string, format: date-time }
+        otp: { type: string }
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        phone: { type: string, nullable: true }
+    ProfilePictureUpdateRequest:
+      type: object
+      required: [profilePicture]
+      properties:
+        profilePicture: { type: string }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword, confirmPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+        confirmPassword: { type: string }
+    ProfileUpdateResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        user:
+          $ref: '#/components/schemas/User'
+    MessageResponse:
+      type: object
+      properties:
+        message: { type: string }
+        success: { type: boolean, nullable: true }
+    SuccessFlagResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+    CountSuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        count: { type: integer }
+    SuccessIdResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        id: { type: string }
+    QueuedJobResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        id: { type: string }
+        taskId: { type: string }
+    JobStatusResponse:
+      type: object
+      properties:
+        taskId: { type: string }
+        status: { type: string }
+        ready: { type: boolean }
+        result:
+          type: object
+          nullable: true
+          additionalProperties: true
+    AttendanceSubmission:
+      type: object
+      required: [date, class, records]
+      properties:
+        date: { type: string, format: date }
+        class: { type: string }
+        section: { type: string, nullable: true }
+        records:
+          type: array
+          items:
+            type: object
+            required: [studentId, status]
+            properties:
+              studentId: { type: string }
+              subjectId: { type: string, nullable: true }
+              status: { type: string }
+    ScheduleWrite:
+      type: object
+      required: [classId, facultyId, dayOfWeek]
+      properties:
+        classId: { type: string }
+        facultyId: { type: string }
+        subjectId: { type: string, nullable: true }
+        dayOfWeek: { type: integer }
+        roomNumber: { type: string, nullable: true }
+        timeSlot:
+          $ref: '#/components/schemas/TimeSlotWrite'
+        startTime: { type: string, nullable: true }
+        endTime: { type: string, nullable: true }
+    TimeSlotWrite:
+      type: object
+      properties:
+        startTime: { type: string }
+        endTime: { type: string }
+    GenerateQuestionsRequest:
+      type: object
+      required: [subjectId, questionCount, totalMarks]
+      properties:
+        subjectId: { type: string }
+        materials:
+          type: array
+          items:
+            $ref: '#/components/schemas/Material'
+        questionCount: { type: integer }
+        totalMarks: { type: integer }
+        difficultyLevel: { type: string }
+        questionTypes:
+          type: object
+          additionalProperties: { type: integer }
+        customPrompt: { type: string, nullable: true }
+    ModifyQuestionsRequest:
+      type: object
+      required: [questions, modificationPrompt]
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        modificationPrompt: { type: string }
+    AssessmentWrite:
+      type: object
+      required: [title, classId, subjectId, totalMarks]
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        classId: { type: string }
+        subjectId: { type: string }
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        totalMarks: { type: integer }
+        createdBy: { type: string, nullable: true }
+        dueDate: { type: string, nullable: true }
+        published: { type: boolean, nullable: true }
+    AssessmentPatch:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        dueDate: { type: string, nullable: true }
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        published: { type: boolean }
+    AssignmentSubmissionRequest:
+      type: object
+      required: [submissionUrl]
+      properties:
+        submissionUrl: { type: string }
+    AssignmentSubmissionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        submittedAt: { type: string, format: date-time }
+    ScheduleNotificationRequest:
+      type: object
+      properties:
+        message: { type: string, nullable: true }
+        recipientScope:
+          type: string
+          nullable: true
+          description: Logical target group such as all, students, faculty, or parents.
