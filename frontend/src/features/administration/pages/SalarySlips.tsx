@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiClock, FiCreditCard, FiFilter, FiSearch, FiTrendingUp, FiUsers } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiCreditCard, FiFilter, FiSearch, FiTrendingUp, FiUsers } from "react-icons/fi";
 import { Input, SalarySlipPanel } from "../../../components/common";
 import {
   findSalarySlip,
   formatCurrency,
+  getAvailableYearsForStaff,
+  getSalarySlipsForStaffByYear,
   salarySlipYearOptions,
   salarySlips,
 } from "../data/payrollData";
@@ -25,6 +27,8 @@ const SalarySlips = function () {
   const [selectedCategory, setSelectedCategory] = useState<"all" | "Teaching" | "Non-Teaching">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaffId, setSelectedStaffId] = useState("");
+  const [detailYear, setDetailYear] = useState(selectedYear);
+  const [detailMonth, setDetailMonth] = useState(selectedMonth);
 
   const filteredSlips = useMemo(
     () =>
@@ -48,16 +52,53 @@ const SalarySlips = function () {
   }, [availableMonths, selectedMonth]);
 
   useEffect(() => {
-    if (!filteredSlips.some((slip) => slip.staffId === selectedStaffId)) {
-      setSelectedStaffId(filteredSlips[0]?.staffId ?? "");
+    if (selectedStaffId && !salarySlips.some((slip) => slip.staffId === selectedStaffId)) {
+      setSelectedStaffId("");
     }
   }, [filteredSlips, selectedStaffId]);
 
-  const selectedSlip = selectedStaffId ? findSalarySlip(selectedStaffId, selectedMonth) ?? null : null;
+  const detailYearOptions = useMemo(
+    () => (selectedStaffId ? getAvailableYearsForStaff(selectedStaffId) : []),
+    [selectedStaffId],
+  );
+  const detailMonthOptions = useMemo(
+    () => (selectedStaffId && detailYear ? getSalarySlipsForStaffByYear(selectedStaffId, detailYear) : []),
+    [detailYear, selectedStaffId],
+  );
+
+  useEffect(() => {
+    if (!selectedStaffId) return;
+    const nextYear = detailYearOptions.includes(selectedYear) ? selectedYear : detailYearOptions[0] ?? "";
+    setDetailYear(nextYear);
+  }, [detailYearOptions, selectedStaffId, selectedYear]);
+
+  useEffect(() => {
+    if (!selectedStaffId || !detailYear) return;
+    const monthExists = detailMonthOptions.some((slip) => slip.monthKey === detailMonth);
+    if (!monthExists) {
+      const preferredMonth =
+        detailMonthOptions.find((slip) => slip.monthKey === selectedMonth)?.monthKey ??
+        detailMonthOptions[0]?.monthKey ??
+        "";
+      setDetailMonth(preferredMonth);
+    }
+  }, [detailMonth, detailMonthOptions, selectedMonth, selectedStaffId, detailYear]);
+
+  const selectedSlip = selectedStaffId ? findSalarySlip(selectedStaffId, detailMonth) ?? null : null;
 
   const totalNetPayout = filteredSlips.reduce((sum, slip) => sum + slip.netSalary, 0);
   const pendingCount = filteredSlips.filter((slip) => slip.payoutStatus === "Pending").length;
   const overtimeCount = filteredSlips.filter((slip) => slip.overtimeHours > 0).length;
+
+  const handleOpenSlip = (staffId: string) => {
+    setSelectedStaffId(staffId);
+    setDetailYear(selectedYear);
+    setDetailMonth(selectedMonth);
+  };
+
+  const handleBackToList = () => {
+    setSelectedStaffId("");
+  };
 
   return (
     <div className="space-y-8">
@@ -162,8 +203,8 @@ const SalarySlips = function () {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="space-y-6">
+      {!selectedStaffId ? (
+        <section className="space-y-6">
           <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
@@ -210,12 +251,8 @@ const SalarySlips = function () {
                       {filteredSlips.map((slip) => (
                         <tr
                           key={slip.id}
-                          onClick={() => setSelectedStaffId(slip.staffId)}
-                          className={`cursor-pointer transition ${
-                            selectedStaffId === slip.staffId
-                              ? "bg-[var(--primary)]/5"
-                              : "hover:bg-slate-50"
-                          }`}
+                          onClick={() => handleOpenSlip(slip.staffId)}
+                          className="cursor-pointer transition hover:bg-slate-50"
                         >
                           <td className="px-4 py-4">
                             <p className="font-semibold text-slate-900">{slip.staffName}</p>
@@ -246,7 +283,7 @@ const SalarySlips = function () {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
@@ -281,18 +318,69 @@ const SalarySlips = function () {
               </div>
             </div>
           </div>
-        </div>
+        </section>
+      ) : (
+        <section className="space-y-6">
+          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <button
+                  type="button"
+                  onClick={handleBackToList}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <FiArrowLeft className="h-4 w-4" />
+                  Back To Employee List
+                </button>
+                <p className="mt-4 text-lg font-semibold text-slate-900">Employee Salary Slip Viewer</p>
+                <p className="text-sm text-slate-500">
+                  Choose any available year and month for this employee, then review the detailed slip.
+                </p>
+              </div>
 
-        <div>
+              <div className="grid w-full gap-4 md:grid-cols-2 lg:max-w-xl">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Year</span>
+                  <select
+                    value={detailYear}
+                    onChange={(event) => setDetailYear(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  >
+                    {detailYearOptions.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Month</span>
+                  <select
+                    value={detailMonth}
+                    onChange={(event) => setDetailMonth(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  >
+                    {detailMonthOptions.map((slip) => (
+                      <option key={slip.monthKey} value={slip.monthKey}>
+                        {slip.monthLabel}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+
           {selectedSlip ? (
             <SalarySlipPanel slip={selectedSlip} />
           ) : (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 shadow-sm">
-              Select a staff member to view the salary slip.
+              No salary slip is available for the selected month and year.
             </div>
           )}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 };

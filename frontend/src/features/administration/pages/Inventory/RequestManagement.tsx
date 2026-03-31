@@ -177,8 +177,9 @@ const RequestManagement = () => {
 
       {/* Review Modal */}
       {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-lg mx-4 relative">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-lg relative max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-hidden flex flex-col">
             <button
               onClick={() => {
                 setSelectedRequest(null);
@@ -194,7 +195,7 @@ const RequestManagement = () => {
                 From {selectedRequest.facultyName} - {selectedRequest.department}
               </p>
             </div>
-            <div className="p-4">
+            <div className="overflow-y-auto p-4">
               <h3 className="font-medium text-[var(--text)] mb-3">Requested Items:</h3>
               <div className="space-y-2 mb-4">
                 {selectedRequest.items.map((item, idx) => (
@@ -239,6 +240,7 @@ const RequestManagement = () => {
                 Approve
               </Button>
             </div>
+          </div>
           </div>
         </div>
       )}

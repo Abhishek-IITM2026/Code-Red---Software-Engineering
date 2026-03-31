@@ -446,9 +446,10 @@ const ManageStudentRecords = function () {
       </section>
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+            <div className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 md:px-8 md:py-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">New Admission</p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">{editingId ? "Edit Student Record" : "Add Student Record"}</h2>
@@ -457,108 +458,110 @@ const ManageStudentRecords = function () {
               <button type="button" onClick={resetModal} className="rounded-2xl border border-slate-200 p-3 text-slate-500 transition hover:bg-slate-50">
                 <FiX className="h-5 w-5" />
               </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-slate-700">Student Name</label>
-                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className={fieldClass} placeholder="Enter student name" />
               </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Admission Number</label>
-                <input value={form.admissionNo} onChange={(event) => setForm((current) => ({ ...current, admissionNo: event.target.value }))} className={fieldClass} placeholder="Enter admission number" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Class</label>
-                <select value={form.className} onChange={(event) => setForm((current) => ({ ...current, className: event.target.value }))} className={fieldClass}>
-                  {classOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Section</label>
-                <select value={form.section} onChange={(event) => setForm((current) => ({ ...current, section: event.target.value }))} className={fieldClass}>
-                  {sectionOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Guardian Name</label>
-                <input value={form.guardian} onChange={(event) => setForm((current) => ({ ...current, guardian: event.target.value }))} className={fieldClass} placeholder="Enter guardian name" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Parent Phone</label>
-                <input value={form.parentPhone} onChange={(event) => setForm((current) => ({ ...current, parentPhone: event.target.value }))} className={fieldClass} placeholder="Enter contact number" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Document Upload</label>
-                <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5">
-                  <span className="text-sm font-medium text-slate-700">Upload admission document, ID proof, or student record</span>
-                  <span className="mt-1 text-xs text-slate-500">{form.documentName || "Choose a file to attach with this student profile"}</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        documentName: event.target.files?.[0]?.name || current.documentName,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-base font-semibold text-slate-900">Custom Fields</p>
-                  <p className="text-sm text-slate-500">Add any extra field like scholarship type, bus route, sibling reference, or hostel status.</p>
+              <div className="overflow-y-auto px-5 py-5 md:px-8 md:py-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Student Name</label>
+                    <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className={fieldClass} placeholder="Enter student name" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Admission Number</label>
+                    <input value={form.admissionNo} onChange={(event) => setForm((current) => ({ ...current, admissionNo: event.target.value }))} className={fieldClass} placeholder="Enter admission number" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Class</label>
+                    <select value={form.className} onChange={(event) => setForm((current) => ({ ...current, className: event.target.value }))} className={fieldClass}>
+                      {classOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Section</label>
+                    <select value={form.section} onChange={(event) => setForm((current) => ({ ...current, section: event.target.value }))} className={fieldClass}>
+                      {sectionOptions.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Guardian Name</label>
+                    <input value={form.guardian} onChange={(event) => setForm((current) => ({ ...current, guardian: event.target.value }))} className={fieldClass} placeholder="Enter guardian name" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Parent Phone</label>
+                    <input value={form.parentPhone} onChange={(event) => setForm((current) => ({ ...current, parentPhone: event.target.value }))} className={fieldClass} placeholder="Enter contact number" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">Document Upload</label>
+                    <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5">
+                      <span className="text-sm font-medium text-slate-700">Upload admission document, ID proof, or student record</span>
+                      <span className="mt-1 text-xs text-slate-500">{form.documentName || "Choose a file to attach with this student profile"}</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            documentName: event.target.files?.[0]?.name || current.documentName,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddCustomField}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[var(--primary)] ring-1 ring-slate-200 transition hover:bg-slate-100"
-                >
-                  <FiPlus className="h-4 w-4" />
-                  Add New Field
-                </button>
-              </div>
 
-              <div className="mt-4 space-y-4">
-                {form.customFields.map((field) => (
-                  <div key={field.id} className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 md:grid-cols-[0.9fr_1.1fr_auto]">
-                    <input value={field.label} onChange={(event) => handleCustomFieldChange(field.id, "label", event.target.value)} className={fieldClass.replace("mt-2 ", "")} placeholder="Field label" />
-                    <input value={field.value} onChange={(event) => handleCustomFieldChange(field.id, "value", event.target.value)} className={fieldClass.replace("mt-2 ", "")} placeholder="Field value" />
+                <div className="mt-6 rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-base font-semibold text-slate-900">Custom Fields</p>
+                      <p className="text-sm text-slate-500">Add any extra field like scholarship type, bus route, sibling reference, or hostel status.</p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveCustomField(field.id)}
-                      className="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                      onClick={handleAddCustomField}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-[var(--primary)] ring-1 ring-slate-200 transition hover:bg-slate-100"
                     >
-                      Remove
+                      <FiPlus className="h-4 w-4" />
+                      Add New Field
                     </button>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button type="button" onClick={resetModal} className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
-                Cancel
-              </button>
-              <button type="button" onClick={handleSaveStudent} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90">
-                <FiPlus className="h-4 w-4" />
-                {editingId ? "Save Changes" : "Save Student"}
-              </button>
+                  <div className="mt-4 space-y-4">
+                    {form.customFields.map((field) => (
+                      <div key={field.id} className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 md:grid-cols-[0.9fr_1.1fr_auto]">
+                        <input value={field.label} onChange={(event) => handleCustomFieldChange(field.id, "label", event.target.value)} className={fieldClass.replace("mt-2 ", "")} placeholder="Field label" />
+                        <input value={field.value} onChange={(event) => handleCustomFieldChange(field.id, "value", event.target.value)} className={fieldClass.replace("mt-2 ", "")} placeholder="Field value" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomField(field.id)}
+                          className="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-5 py-5 sm:flex-row sm:justify-end md:px-8 md:py-6">
+                <button type="button" onClick={resetModal} className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleSaveStudent} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90">
+                  <FiPlus className="h-4 w-4" />
+                  {editingId ? "Save Changes" : "Save Student"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200">
             <div className="flex items-start gap-4">
               <div className="rounded-2xl bg-rose-100 p-3 text-rose-700">
@@ -579,6 +582,7 @@ const ManageStudentRecords = function () {
                 Confirm Remove
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}

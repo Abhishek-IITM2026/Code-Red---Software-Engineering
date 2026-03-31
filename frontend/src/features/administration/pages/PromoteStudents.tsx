@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FiArrowUpCircle, FiCheckCircle, FiClock, FiUsers } from "react-icons/fi";
+import { FiAlertTriangle, FiArrowUpCircle, FiCheckCircle, FiClock, FiUsers, FiX } from "react-icons/fi";
 import { promotionStudents, type PromotionCandidate } from "./adminData";
 
 const PromoteStudents = function () {
@@ -9,6 +9,7 @@ const PromoteStudents = function () {
       promoted: false,
     })),
   );
+  const [selectedStudent, setSelectedStudent] = useState<(PromotionCandidate & { promoted: boolean }) | null>(null);
 
   const eligibleCount = students.filter((student) => student.resultStatus === "Eligible").length;
   const reviewCount = students.filter((student) => student.resultStatus === "Review Required").length;
@@ -28,6 +29,7 @@ const PromoteStudents = function () {
     setStudents((current) =>
       current.map((student) => (student.id === studentId ? { ...student, promoted: true } : student)),
     );
+    setSelectedStudent(null);
   };
 
   return (
@@ -151,7 +153,7 @@ const PromoteStudents = function () {
 
                     <button
                       type="button"
-                      onClick={() => handlePromoteStudent(student.id)}
+                      onClick={() => setSelectedStudent(student)}
                       disabled={student.promoted || student.resultStatus !== "Eligible"}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
@@ -165,6 +167,76 @@ const PromoteStudents = function () {
           </div>
         ))}
       </section>
+
+      {selectedStudent && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+            <div className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+              <button
+                type="button"
+                onClick={() => setSelectedStudent(null)}
+                className="absolute right-4 top-4 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+
+              <div className="border-b border-slate-200 px-6 py-5">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+                    <FiAlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-amber-600">Warning</p>
+                    <h2 className="mt-1 text-2xl font-bold text-slate-900">Confirm Student Promotion</h2>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 px-6 py-5">
+                <p className="text-sm leading-6 text-slate-600">
+                  You are about to promote <span className="font-semibold text-slate-900">{selectedStudent.name}</span> from{" "}
+                  <span className="font-semibold text-slate-900">
+                    {selectedStudent.className} - Section {selectedStudent.section}
+                  </span>{" "}
+                  to <span className="font-semibold text-slate-900">{selectedStudent.targetClass}</span>.
+                </p>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                  This action marks the student as promoted in the current academic list. Please verify results, attendance,
+                  and promotion note before continuing.
+                </div>
+                <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Attendance</p>
+                    <p className="mt-1 font-semibold text-slate-900">{selectedStudent.attendance}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Average</p>
+                    <p className="mt-1 font-semibold text-slate-900">{selectedStudent.average}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePromoteStudent(selectedStudent.id)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+                >
+                  <FiArrowUpCircle className="h-4 w-4" />
+                  Promote Student
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

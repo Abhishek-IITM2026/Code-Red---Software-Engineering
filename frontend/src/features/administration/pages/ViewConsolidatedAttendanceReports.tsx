@@ -97,8 +97,8 @@ const ViewConsolidatedAttendanceReports = function () {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl bg-[var(--secondary)] p-8 shadow-sm ring-1 ring-[var(--text)]/10">
+    <div className="min-w-0 space-y-6">
+      <div className="rounded-3xl bg-[var(--secondary)] p-6 sm:p-8 shadow-sm ring-1 ring-[var(--text)]/10">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">Attendance Reports</p>
         <h1 className="mt-3 text-3xl font-bold">Consolidated Attendance</h1>
         <p className="mt-3 text-[var(--text)]/75">
@@ -202,7 +202,7 @@ const ViewConsolidatedAttendanceReports = function () {
         </label>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <p className="text-sm text-slate-500">Records Visible</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">{filteredRows.length}</p>
@@ -221,7 +221,7 @@ const ViewConsolidatedAttendanceReports = function () {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="min-w-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
@@ -233,8 +233,8 @@ const ViewConsolidatedAttendanceReports = function () {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
+        <div className="w-full overflow-x-auto">
+          <table className="min-w-[720px] divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">ID</th>

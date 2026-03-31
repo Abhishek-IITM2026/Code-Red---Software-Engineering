@@ -142,7 +142,7 @@ function Table<T extends Record<string, any>>({
   }
 
   return (
-    <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border)] overflow-hidden">
+    <div className="min-w-0 bg-[var(--card-bg)] rounded-2xl border border-[var(--border)] overflow-hidden">
       {/* Search and Filter Bar */}
       {(searchable || filterable) && (
         <div className="p-4 border-b border-[var(--border)] flex flex-wrap gap-4 items-center">
@@ -177,8 +177,8 @@ function Table<T extends Record<string, any>>({
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="w-full min-w-0 overflow-x-auto">
+        <table className="min-w-full">
           <thead>
             <tr className="bg-[var(--secondary)]">
               {columns.map((column) => (

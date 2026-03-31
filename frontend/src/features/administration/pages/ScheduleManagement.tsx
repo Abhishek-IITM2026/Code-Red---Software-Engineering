@@ -86,9 +86,10 @@ const ScheduleManagement = () => {
       )}
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-6 md:px-8">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">
                   Schedule Editor
@@ -112,7 +113,7 @@ const ScheduleManagement = () => {
               </button>
             </div>
 
-            <div className="mt-6">
+            <div className="overflow-y-auto px-6 py-6 md:px-8">
               <ScheduleForm
                 editingSchedule={editingSchedule}
                 onSave={handleSaveSchedule}
@@ -123,11 +124,13 @@ const ScheduleManagement = () => {
               />
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200">
             <div className="flex items-start gap-4">
               <div className="rounded-2xl bg-rose-100 p-3 text-rose-700">
@@ -156,6 +159,7 @@ const ScheduleManagement = () => {
                 Confirm Delete
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}
