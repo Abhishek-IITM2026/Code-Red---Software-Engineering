@@ -318,9 +318,10 @@ const FinancialRecords = function () {
       )}
 
       {editingRecordId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="flex w-full max-w-xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-6 md:px-8">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">Salary Editor</p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">Change Salary Details</h2>
@@ -335,7 +336,8 @@ const FinancialRecords = function () {
               </button>
             </div>
 
-            <div className="mt-6 grid gap-4">
+            <div className="overflow-y-auto px-6 py-6 md:px-8">
+            <div className="grid gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-700">Current Salary</label>
                 <input value={salaryForm.currentSalary} onChange={(event) => setSalaryForm((current) => ({ ...current, currentSalary: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20" />
@@ -358,6 +360,8 @@ const FinancialRecords = function () {
                 Save Salary Change
               </button>
             </div>
+            </div>
+          </div>
           </div>
         </div>
       )}

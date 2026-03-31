@@ -106,7 +106,7 @@ const HomeLayout = () => {
       </header>
 
       {/* Main Content */}
-      <main>
+      <main className="min-w-0">
         <Outlet />
       </main>
 

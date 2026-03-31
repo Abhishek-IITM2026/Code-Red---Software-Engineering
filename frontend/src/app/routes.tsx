@@ -15,6 +15,11 @@ import authRoutes from "../features/auth/routes/auth.routes";
 import facultyRoutes from "../features/faculty/routes/faculty.routes";
 import parentRoutes from "../features/parent/routes/parent.routes";
 import administrationRoutes from "../features/administration/routes/administration.routes";
+import {
+  AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
+  readAuthorityAssignments,
+  userHasAnyAuthority,
+} from "../features/administration/utils/authorityAccess";
 
 // Protected Route wrapper component
 import { useSelector } from "react-redux";
@@ -64,6 +69,28 @@ const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to={redirectPath} replace />;
   }
   
+  return <>{children}</>;
+};
+
+const FeatureAccessRoute: React.FC<{
+  children: React.ReactNode;
+  requiredAuthorities?: import("../features/administration/utils/authorityAccess").AuthorityKey[];
+  fallbackPath: string;
+}> = ({ children, requiredAuthorities, fallbackPath }) => {
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [authorityVersion, setAuthorityVersion] = React.useState(0);
+  const authorityAssignments = React.useMemo(() => readAuthorityAssignments(), [authorityVersion]);
+
+  React.useEffect(() => {
+    const handleAssignmentsUpdated = () => setAuthorityVersion((current) => current + 1);
+    window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+    return () => window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+  }, []);
+
+  if (!userHasAnyAuthority(user, requiredAuthorities, authorityAssignments)) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -135,7 +162,11 @@ const router = createBrowserRouter([
         children: facultyRoutes.map((route, index) => ({
           index: index === 0,
           path: route.path.replace("/faculty/", ""),
-          element: route.element
+          element: (
+            <FeatureAccessRoute requiredAuthorities={route.requiredAuthorities} fallbackPath="/faculty/dashboard">
+              {route.element}
+            </FeatureAccessRoute>
+          )
         }))
       },
       
@@ -165,7 +196,14 @@ const router = createBrowserRouter([
         children: administrationRoutes.map((route, index) => ({
           index: index === 0,
           path: route.path.replace("/administration/", ""),
-          element: route.element
+          element: (
+            <FeatureAccessRoute
+              requiredAuthorities={route.requiredAuthorities}
+              fallbackPath="/administration/dashboard"
+            >
+              {route.element}
+            </FeatureAccessRoute>
+          )
         }))
       },
       

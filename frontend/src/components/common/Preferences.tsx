@@ -56,7 +56,7 @@ const Preferences: React.FC<PreferencesProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -64,7 +64,8 @@ const Preferences: React.FC<PreferencesProps> = ({ isOpen, onClose }) => {
       />
 
       {/* Modal */}
-      <div className="relative bg-[var(--card-bg)] rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative mx-auto flex min-h-full items-center justify-center py-2 sm:py-6">
+        <div className="relative bg-[var(--card-bg)] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
@@ -412,6 +413,7 @@ const Preferences: React.FC<PreferencesProps> = ({ isOpen, onClose }) => {
               />
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

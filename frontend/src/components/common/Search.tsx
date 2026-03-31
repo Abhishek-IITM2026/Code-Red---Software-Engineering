@@ -99,7 +99,7 @@ const Search: React.FC<SearchProps> = ({
           </button>
         )}
         {showAdvanced && (
-          <div className="absolute top-full right-0 mt-2 p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl shadow-lg z-10 min-w-[300px]">
+          <div className="absolute top-full right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl shadow-lg z-10">
             <div className="space-y-3">
               {advancedFields.map(field => (
                 <div key={field.key}>

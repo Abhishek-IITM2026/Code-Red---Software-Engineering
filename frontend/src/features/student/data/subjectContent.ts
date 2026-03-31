@@ -11,9 +11,15 @@ export interface SubjectMaterial {
   id: string;
   title: string;
   type: "notes" | "video" | "pdf" | "worksheet";
+  subjectName?: string;
   week: string;
   uploadedAt: string;
   description: string;
+  chapterId?: string;
+  chapterTitle?: string;
+  fileName?: string;
+  uploadedBy?: string;
+  isFacultyUpload?: boolean;
 }
 
 export interface SubjectAssignment {
@@ -37,6 +43,18 @@ export interface StudentSubjectData {
   chapters: SubjectChapter[];
   materials: SubjectMaterial[];
   assignments: SubjectAssignment[];
+}
+
+export interface FacultyMaterialUploadInput {
+  subjectName: string;
+  title: string;
+  type: SubjectMaterial["type"];
+  week: string;
+  description: string;
+  chapterId?: string;
+  chapterTitle?: string;
+  fileName?: string;
+  uploadedBy?: string;
 }
 
 export const studentSubjectContent: Record<string, StudentSubjectData> = {
@@ -319,4 +337,96 @@ export const studentSubjectContent: Record<string, StudentSubjectData> = {
   },
 };
 
-export const studentSubjects = Object.values(studentSubjectContent);
+const FACULTY_UPLOADED_MATERIALS_KEY = "faculty_uploaded_subject_materials";
+
+const formatUploadDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+
+const canUseStorage = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+
+const readFacultyUploadedMaterials = (): SubjectMaterial[] => {
+  if (!canUseStorage()) return [];
+
+  try {
+    const raw = window.localStorage.getItem(FACULTY_UPLOADED_MATERIALS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SubjectMaterial[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeFacultyUploadedMaterials = (materials: SubjectMaterial[]) => {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(FACULTY_UPLOADED_MATERIALS_KEY, JSON.stringify(materials));
+  window.dispatchEvent(new CustomEvent("student-subject-materials-updated"));
+};
+
+export const saveFacultyUploadedMaterial = (input: FacultyMaterialUploadInput): SubjectMaterial => {
+  const newMaterial: SubjectMaterial = {
+    id: `faculty-${Date.now()}`,
+    title: input.title,
+    type: input.type,
+    subjectName: input.subjectName,
+    week: input.week,
+    uploadedAt: formatUploadDate(new Date()),
+    description: input.description,
+    chapterId: input.chapterId,
+    chapterTitle: input.chapterTitle,
+    fileName: input.fileName,
+    uploadedBy: input.uploadedBy,
+    isFacultyUpload: true,
+  };
+
+  const currentMaterials = readFacultyUploadedMaterials();
+  writeFacultyUploadedMaterials([...currentMaterials, newMaterial]);
+
+  return newMaterial;
+};
+
+const getFacultyUploadedMaterialsForSubject = (subjectName: string): SubjectMaterial[] =>
+  readFacultyUploadedMaterials().filter((material) => material.subjectName === subjectName);
+
+export const getMergedStudentSubjectContent = (): Record<string, StudentSubjectData> =>
+  Object.fromEntries(
+    Object.entries(studentSubjectContent).map(([subjectName, subjectValue]) => [
+      subjectName,
+      {
+        ...subjectValue,
+        materials: [...subjectValue.materials, ...getFacultyUploadedMaterialsForSubject(subjectName)],
+      },
+    ]),
+  );
+
+export const getMergedStudentSubjects = () => Object.values(getMergedStudentSubjectContent());
+
+export const getSubjectWeekOptions = (subjectName: string) => {
+  const subject = studentSubjectContent[subjectName];
+  if (!subject) return [];
+
+  return Array.from(
+    new Map(
+      subject.chapters.flatMap((chapter) =>
+        chapter.weeklyTopics.map((topic) => [topic.week, topic.week] as const),
+      ),
+    ).values(),
+  );
+};
+
+export const getSubjectChapterOptions = (subjectName: string) => {
+  const subject = studentSubjectContent[subjectName];
+  if (!subject) return [];
+
+  return subject.chapters.map((chapter) => ({
+    id: chapter.id,
+    title: chapter.title,
+    weeks: chapter.weeklyTopics.map((topic) => topic.week),
+  }));
+};
+
+export const studentSubjects = getMergedStudentSubjects();

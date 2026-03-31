@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
+  FiArrowLeft,
   FiCheckCircle,
   FiKey,
   FiLock,
@@ -12,25 +13,21 @@ import {
 } from "react-icons/fi";
 import type { RootState } from "../../../app/store";
 import { staffRecords } from "./adminData";
-
-type AuthorityKey = "leaveApproval" | "admissionApproval" | "staffCreation" | "studentPromotion";
+import {
+  AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
+  AUTHORITY_STORAGE_KEY,
+  isDirectorLevelUser,
+  readAuthorityAssignments,
+  roleAuthorityTemplates,
+  type AuthorityAssignment,
+  type AuthorityKey,
+} from "../utils/authorityAccess";
 
 type AuthorityDefinition = {
   key: AuthorityKey;
   label: string;
   description: string;
 };
-
-type AuthorityAssignment = {
-  staffId: string;
-  roles: string[];
-  roleTemplate: string;
-  authorities: Record<AuthorityKey, boolean>;
-  updatedAt: string;
-  updatedBy: string;
-};
-
-const AUTHORITY_STORAGE_KEY = "administration-authority-assignments";
 
 const authorityDefinitions: AuthorityDefinition[] = [
   {
@@ -54,18 +51,6 @@ const authorityDefinitions: AuthorityDefinition[] = [
     description: "Move eligible students to the next academic level.",
   },
 ];
-
-const roleAuthorityTemplates: Record<string, AuthorityKey[]> = {
-  Director: ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion"],
-  "Office Administrator": ["leaveApproval", "admissionApproval", "staffCreation"],
-  Accountant: ["admissionApproval"],
-  "Class Coordinator": ["leaveApproval", "studentPromotion"],
-  "Mathematics Teacher": ["studentPromotion"],
-  "Science Teacher": ["studentPromotion"],
-  "English Teacher": ["studentPromotion"],
-  "Lab Assistant": [],
-  "Transport Coordinator": [],
-};
 
 const allRoleOptions = Array.from(
   new Set([
@@ -111,66 +96,12 @@ const buildDefaultAssignments = (): AuthorityAssignment[] => {
   });
 };
 
-const normalizeAssignment = (
-  assignment: Partial<AuthorityAssignment> | undefined,
-  fallback: AuthorityAssignment,
-): AuthorityAssignment => {
-  if (!assignment) {
-    return fallback;
-  }
-
-  const roles =
-    Array.isArray(assignment.roles) && assignment.roles.length > 0
-      ? assignment.roles
-      : fallback.roles;
-
-  return {
-    ...fallback,
-    ...assignment,
-    roles,
-    authorities: {
-      ...fallback.authorities,
-      ...(assignment.authorities || {}),
-    },
-  };
-};
-
-const readAssignments = (): AuthorityAssignment[] => {
-  if (typeof window === "undefined") {
-    return buildDefaultAssignments();
-  }
-
-  const storedAssignments = window.localStorage.getItem(AUTHORITY_STORAGE_KEY);
-
-  if (!storedAssignments) {
-    return buildDefaultAssignments();
-  }
-
-  try {
-    const parsedAssignments = JSON.parse(storedAssignments) as AuthorityAssignment[];
-    const fallbackAssignments = buildDefaultAssignments();
-
-    return fallbackAssignments.map((defaultAssignment) => {
-      const stored = parsedAssignments.find((item) => item.staffId === defaultAssignment.staffId);
-      return normalizeAssignment(stored, defaultAssignment);
-    });
-  } catch {
-    return buildDefaultAssignments();
-  }
-};
-
 const AuthorityManagement = function () {
   const user = useSelector((state: RootState) => state.auth.user);
-  const [assignments, setAssignments] = useState<AuthorityAssignment[]>(readAssignments);
-  const [selectedStaffId, setSelectedStaffId] = useState(staffRecords[0]?.id || "");
+  const [assignments, setAssignments] = useState<AuthorityAssignment[]>(readAuthorityAssignments);
+  const [selectedStaffId, setSelectedStaffId] = useState("");
   const [search, setSearch] = useState("");
-  const normalizedRole = user?.role?.trim().toLowerCase() || "";
-  const isDirectorLevel =
-    normalizedRole === "director" ||
-    normalizedRole === "superadmin" ||
-    normalizedRole === "super admin" ||
-    normalizedRole === "admin" ||
-    normalizedRole === "administration";
+  const isDirectorLevel = isDirectorLevelUser(user);
 
   const assignmentMap = useMemo(() => {
     return assignments.reduce<Record<string, AuthorityAssignment>>((accumulator, assignment) => {
@@ -198,9 +129,8 @@ const AuthorityManagement = function () {
     });
   }, [assignmentMap, search]);
 
-  const selectedStaff = staffRecords.find((staff) => staff.id === selectedStaffId) || staffRecords[0];
-  const selectedAssignment =
-    assignments.find((assignment) => assignment.staffId === selectedStaff?.id) || assignments[0];
+  const selectedStaff = staffRecords.find((staff) => staff.id === selectedStaffId);
+  const selectedAssignment = assignments.find((assignment) => assignment.staffId === selectedStaff?.id);
 
   const authorityCounts = authorityDefinitions.map((authority) => ({
     ...authority,
@@ -217,6 +147,7 @@ const AuthorityManagement = function () {
   const persistAssignments = (nextAssignments: AuthorityAssignment[]) => {
     setAssignments(nextAssignments);
     window.localStorage.setItem(AUTHORITY_STORAGE_KEY, JSON.stringify(nextAssignments));
+    window.dispatchEvent(new CustomEvent(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT));
   };
 
   const handleAuthorityToggle = (authorityKey: AuthorityKey) => {
@@ -365,192 +296,14 @@ const AuthorityManagement = function () {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
-              <FiShield className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-slate-900">Authority Catalog</p>
-              <p className="text-sm text-slate-500">
-                See how many staff members can execute each high-impact action.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            {authorityCounts.map((authority) => (
-              <article key={authority.key} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-base font-semibold text-slate-900">{authority.label}</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{authority.description}</p>
-                  </div>
-                  <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
-                    {authority.count} staff
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-200">
-            Role templates are applied automatically from the staff role, and the director can override any person individually when extra authority is needed.
-          </div>
-        </div>
-
-        <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-              <FiUserCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-slate-900">Director Assignment Panel</p>
-              <p className="text-sm text-slate-500">
-                Select a staff member and grant authority based on role or custom needs.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-            <div>
-              <label className="text-sm font-medium text-slate-700">Choose Staff Member</label>
-              <select
-                value={selectedStaffId}
-                onChange={(event) => setSelectedStaffId(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
-              >
-                {staffRecords.map((staff) => (
-                  <option key={staff.id} value={staff.id}>
-                    {staff.name} - {staff.role}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedStaff && selectedAssignment ? (
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-lg font-semibold text-slate-900">{selectedStaff.name}</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {selectedStaff.employeeCode} • {selectedStaff.department}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(selectedAssignment?.roles || []).map((role) => (
-                        <span key={role} className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                      Template: {selectedAssignment.roleTemplate}
-                    </p>
-                  </div>
-
-                  <div className="text-right text-sm text-slate-500">
-                    <p>Updated by {selectedAssignment.updatedBy}</p>
-                    <p className="mt-1">{selectedAssignment.updatedAt}</p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="font-semibold text-slate-900">Change Staff Roles</p>
-                <p className="mt-1 text-sm text-slate-500">Give one role or multiple roles to the same staff member.</p>
-              </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                {(selectedAssignment?.roles || []).length} assigned
-              </span>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {allRoleOptions.map((role) => {
-                const isSelected = selectedAssignment?.roles.includes(role) || false;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => handleRoleToggle(role)}
-                    disabled={!isDirectorLevel}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${
-                      isSelected
-                        ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
-                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                    } ${!isDirectorLevel ? "cursor-not-allowed opacity-70" : ""}`}
-                  >
-                    {role}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {authorityDefinitions.map((authority) => {
-              const isChecked = selectedAssignment?.authorities[authority.key] || false;
-
-              return (
-                <button
-                  key={authority.key}
-                  type="button"
-                  onClick={() => handleAuthorityToggle(authority.key)}
-                  disabled={!isDirectorLevel}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    isChecked
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
-                  } ${!isDirectorLevel ? "cursor-not-allowed opacity-70" : ""}`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-slate-900">{authority.label}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{authority.description}</p>
-                    </div>
-                    <div
-                      className={`mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full ${
-                        isChecked ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-400"
-                      }`}
-                    >
-                      <FiCheckCircle className="h-4 w-4" />
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={handleResetToRoleTemplate}
-              disabled={!isDirectorLevel}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              <FiRefreshCw className="h-4 w-4" />
-              Reset to Role Template
-            </button>
-            <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
-              {isDirectorLevel ? <FiKey className="h-4 w-4 text-slate-500" /> : <FiLock className="h-4 w-4 text-slate-500" />}
-              {isDirectorLevel
-                ? "Changes are saved for this demo in local storage."
-                : "Assignment controls stay locked until a director-level account signs in."}
-            </div>
-          </div>
-        </div>
-      </section>
-
+      {!selectedStaff || !selectedAssignment ? (
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="border-b border-slate-200 px-6 py-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-lg font-semibold text-slate-900">Staff Authority Register</p>
               <p className="text-sm text-slate-500">
-                Full visibility into which staff members currently hold which authorities.
+                Choose an employee to open role and authority controls.
               </p>
             </div>
             <div className="relative w-full max-w-md">
@@ -584,7 +337,11 @@ const AuthorityManagement = function () {
                 );
 
                 return (
-                  <tr key={staff.id}>
+                  <tr
+                    key={staff.id}
+                    onClick={() => setSelectedStaffId(staff.id)}
+                    className="cursor-pointer transition hover:bg-slate-50"
+                  >
                     <td className="px-6 py-4">
                       <div className="font-semibold text-slate-900">{staff.name}</div>
                       <p className="text-sm text-slate-500">
@@ -667,11 +424,190 @@ const AuthorityManagement = function () {
                   <p>{assignment?.updatedAt || "Role default"}</p>
                   <p className="mt-1">Updated by {assignment?.updatedBy || "System"}</p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedStaffId(staff.id)}
+                  className="mt-4 inline-flex items-center justify-center rounded-2xl bg-[var(--primary)] px-4 py-2 font-semibold text-white transition hover:opacity-90"
+                >
+                  Open Authority Controls
+                </button>
               </article>
             );
           })}
         </div>
       </section>
+      ) : (
+      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
+              <FiShield className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Authority Catalog</p>
+              <p className="text-sm text-slate-500">
+                See how many staff members can execute each high-impact action.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            {authorityCounts.map((authority) => (
+              <article key={authority.key} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-base font-semibold text-slate-900">{authority.label}</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{authority.description}</p>
+                  </div>
+                  <div className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+                    {authority.count} staff
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-200">
+            Role templates are applied automatically from the staff role, and the director can override any person individually when extra authority is needed.
+          </div>
+        </div>
+
+        <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+                <FiUserCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">Director Assignment Panel</p>
+                <p className="text-sm text-slate-500">
+                  Change role and authority for the selected employee.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedStaffId("")}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <FiArrowLeft className="h-4 w-4" />
+              Back To Employee List
+            </button>
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{selectedStaff.name}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {selectedStaff.employeeCode} • {selectedStaff.department}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(selectedAssignment.roles || []).map((role) => (
+                    <span key={role} className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                      {role}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                  Template: {selectedAssignment.roleTemplate}
+                </p>
+              </div>
+
+              <div className="text-right text-sm text-slate-500">
+                <p>Updated by {selectedAssignment.updatedBy}</p>
+                <p className="mt-1">{selectedAssignment.updatedAt}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-slate-900">Change Staff Roles</p>
+                <p className="mt-1 text-sm text-slate-500">Give one role or multiple roles to the same staff member.</p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                {(selectedAssignment.roles || []).length} assigned
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {allRoleOptions.map((role) => {
+                const isSelected = selectedAssignment.roles.includes(role) || false;
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => handleRoleToggle(role)}
+                    disabled={!isDirectorLevel}
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${
+                      isSelected
+                        ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    } ${!isDirectorLevel ? "cursor-not-allowed opacity-70" : ""}`}
+                  >
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {authorityDefinitions.map((authority) => {
+              const isChecked = selectedAssignment.authorities[authority.key] || false;
+
+              return (
+                <button
+                  key={authority.key}
+                  type="button"
+                  onClick={() => handleAuthorityToggle(authority.key)}
+                  disabled={!isDirectorLevel}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    isChecked
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  } ${!isDirectorLevel ? "cursor-not-allowed opacity-70" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-slate-900">{authority.label}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{authority.description}</p>
+                    </div>
+                    <div
+                      className={`mt-1 inline-flex h-7 w-7 items-center justify-center rounded-full ${
+                        isChecked ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-400"
+                      }`}
+                    >
+                      <FiCheckCircle className="h-4 w-4" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleResetToRoleTemplate}
+              disabled={!isDirectorLevel}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <FiRefreshCw className="h-4 w-4" />
+              Reset to Role Template
+            </button>
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
+              {isDirectorLevel ? <FiKey className="h-4 w-4 text-slate-500" /> : <FiLock className="h-4 w-4 text-slate-500" />}
+              {isDirectorLevel
+                ? "Changes are saved for this demo in local storage."
+                : "Assignment controls stay locked until a director-level account signs in."}
+            </div>
+          </div>
+        </div>
+      </section>
+      )}
 
       <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center gap-3">

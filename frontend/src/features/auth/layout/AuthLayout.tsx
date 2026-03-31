@@ -45,7 +45,7 @@ const AuthLayout = function () {
         user={user ? { name: `${user.firstName} ${user.lastName}` } : null}
       />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-w-0">
         {/* Sidebar - Hidden on login/register pages for cleaner look */}
         {!isLoginPage && !isRegisterPage && (
           <aside className="w-64 bg-[var(--secondary)] min-h-[calc(100vh-64px)] p-4 hidden md:block">
@@ -85,7 +85,7 @@ const AuthLayout = function () {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 min-w-0 flex flex-col">
           {/* Mobile Theme Switcher */}
           <div className="md:hidden p-4 bg-[var(--secondary)]">
             <label htmlFor="mobile-theme" className="text-sm font-medium mr-2">
@@ -106,7 +106,7 @@ const AuthLayout = function () {
           </div>
 
           {/* Page Content */}
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex-1 min-w-0 flex items-center justify-center p-4">
             <Outlet />
           </div>
         </main>

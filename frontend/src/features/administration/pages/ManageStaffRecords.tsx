@@ -454,9 +454,10 @@ const ManageStaffRecords = function () {
       </section>
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200 md:p-8">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="flex w-full max-w-3xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 md:px-8 md:py-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">Staff Entry</p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-900">
@@ -473,7 +474,8 @@ const ManageStaffRecords = function () {
               </button>
             </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="overflow-y-auto px-5 py-5 md:px-8 md:py-6">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="text-sm font-medium text-slate-700">Staff Name</label>
                 <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className={fieldClass} placeholder="Enter staff name" />
@@ -579,12 +581,15 @@ const ManageStaffRecords = function () {
                 {editingId ? "Save Changes" : "Save Staff Record"}
               </button>
             </div>
+            </div>
+          </div>
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
           <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl ring-1 ring-slate-200">
             <div className="flex items-start gap-4">
               <div className="rounded-2xl bg-rose-100 p-3 text-rose-700">
@@ -605,6 +610,7 @@ const ManageStaffRecords = function () {
                 Confirm Remove
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}

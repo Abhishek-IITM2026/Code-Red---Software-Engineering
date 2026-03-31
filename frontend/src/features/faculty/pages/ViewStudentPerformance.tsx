@@ -114,7 +114,7 @@ const ViewStudentPerformance = function() {
 
       <Card padding="small" hover={false}>
         <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[200px]">
+          <div className="min-w-0 flex-1 sm:min-w-[200px]">
             <Input placeholder="Search by name or roll number..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} icon={<FiSearch className="w-4 h-4" />} iconPosition="left" />
           </div>
           <div className="w-40">
@@ -159,8 +159,9 @@ const ViewStudentPerformance = function() {
       </div>
 
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -170,8 +171,8 @@ const ViewStudentPerformance = function() {
                 <Button variant="ghost" onClick={() => setSelectedStudent(null)}><FiX className="w-5 h-5" /></Button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+            <div className="overflow-y-auto p-6 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="text-center p-4 bg-[var(--secondary)] rounded-xl"><p className="text-sm text-[var(--text-secondary)]">Overall Grade</p><p className={`text-2xl font-bold ${gradeColors[selectedStudent.overallGrade]}`}>{selectedStudent.overallGrade}</p></div>
                 <div className="text-center p-4 bg-[var(--secondary)] rounded-xl"><p className="text-sm text-[var(--text-secondary)]">Attendance</p><p className="text-2xl font-bold text-[var(--text)]">{selectedStudent.attendance}%</p></div>
                 <div className="text-center p-4 bg-[var(--secondary)] rounded-xl"><p className="text-sm text-[var(--text-secondary)]">Trend</p><div className="flex items-center justify-center gap-1">{getTrendIcon(selectedStudent.performanceTrend)}<span className="text-lg font-bold capitalize text-[var(--text)]">{selectedStudent.performanceTrend}</span></div></div>
@@ -188,6 +189,7 @@ const ViewStudentPerformance = function() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}

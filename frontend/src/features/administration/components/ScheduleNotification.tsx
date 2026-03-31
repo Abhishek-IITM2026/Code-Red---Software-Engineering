@@ -61,8 +61,9 @@ const ScheduleNotification: React.FC<ScheduleNotificationProps> = ({ schedules, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+      <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xl font-semibold text-slate-800">Send Schedule Notification</h3>
           <button
@@ -191,6 +192,7 @@ const ScheduleNotification: React.FC<ScheduleNotificationProps> = ({ schedules, 
             {isSending ? 'Sending...' : 'Send Notification'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

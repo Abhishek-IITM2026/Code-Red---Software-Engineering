@@ -35,23 +35,17 @@ export const mockMaterialRequests: MaterialRequest[] = [
   { id: '4', facultyId: '2', facultyName: 'Jane Smith', department: 'Mathematics', items: [{ itemId: '15', itemName: 'Chalk Box', quantity: 5 }], status: 'fulfilled', requestedAt: '2024-01-10T11:00:00', updatedAt: '2024-01-11T15:00:00', reviewedBy: 'Admin User' },
 ];
 
-// Simulated API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 // Inventory API
 export const inventoryApi = {
   getItems: async (): Promise<InventoryItem[]> => {
-    await delay(300);
     return mockInventoryItems;
   },
 
   getItem: async (id: string): Promise<InventoryItem | undefined> => {
-    await delay(200);
     return mockInventoryItems.find(item => item.id === id);
   },
 
   addItem: async (item: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<InventoryItem> => {
-    await delay(300);
     const newItem: InventoryItem = {
       ...item,
       id: String(mockInventoryItems.length + 1),
@@ -63,7 +57,6 @@ export const inventoryApi = {
   },
 
   updateItem: async (id: string, updates: Partial<InventoryItem>): Promise<InventoryItem | undefined> => {
-    await delay(300);
     const index = mockInventoryItems.findIndex(item => item.id === id);
     if (index !== -1) {
       mockInventoryItems[index] = { ...mockInventoryItems[index], ...updates, updatedAt: new Date().toISOString() };
@@ -73,7 +66,6 @@ export const inventoryApi = {
   },
 
   deleteItem: async (id: string): Promise<boolean> => {
-    await delay(300);
     const index = mockInventoryItems.findIndex(item => item.id === id);
     if (index !== -1) {
       mockInventoryItems.splice(index, 1);
@@ -83,12 +75,10 @@ export const inventoryApi = {
   },
 
   getTransactions: async (): Promise<StockTransaction[]> => {
-    await delay(300);
     return mockTransactions;
   },
 
   addTransaction: async (transaction: Omit<StockTransaction, 'id' | 'createdAt'>): Promise<StockTransaction> => {
-    await delay(300);
     const newTransaction: StockTransaction = {
       ...transaction,
       id: String(mockTransactions.length + 1),
@@ -112,12 +102,10 @@ export const inventoryApi = {
   },
 
   getRequests: async (): Promise<MaterialRequest[]> => {
-    await delay(300);
     return mockMaterialRequests;
   },
 
   updateRequestStatus: async (id: string, status: MaterialRequest['status'], reviewNotes?: string): Promise<MaterialRequest | undefined> => {
-    await delay(300);
     const index = mockMaterialRequests.findIndex(r => r.id === id);
     if (index !== -1) {
       mockMaterialRequests[index] = {
@@ -133,7 +121,6 @@ export const inventoryApi = {
   },
 
   createRequest: async (request: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt' | 'updatedAt'>): Promise<MaterialRequest> => {
-    await delay(300);
     const newRequest: MaterialRequest = {
       ...request,
       id: String(mockMaterialRequests.length + 1),

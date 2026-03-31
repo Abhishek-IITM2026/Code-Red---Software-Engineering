@@ -1,9 +1,17 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiBook, FiCheckCircle, FiClock, FiFileText, FiLayers } from "react-icons/fi";
-import { studentSubjects } from "../data/subjectContent";
+import { getMergedStudentSubjects } from "../data/subjectContent";
 
 const StudentSubjects = function () {
   const navigate = useNavigate();
+  const [studentSubjects, setStudentSubjects] = useState(() => getMergedStudentSubjects());
+
+  useEffect(() => {
+    const refreshSubjects = () => setStudentSubjects(getMergedStudentSubjects());
+    window.addEventListener("student-subject-materials-updated", refreshSubjects);
+    return () => window.removeEventListener("student-subject-materials-updated", refreshSubjects);
+  }, []);
 
   return (
     <div className="space-y-8">

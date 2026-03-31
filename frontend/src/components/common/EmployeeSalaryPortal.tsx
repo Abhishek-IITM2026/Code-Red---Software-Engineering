@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiSearch, FiTrendingUp } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiSearch, FiTrendingUp } from "react-icons/fi";
 import Input from "./Input";
 import {
   formatCurrency,
@@ -28,6 +28,7 @@ const EmployeeSalaryPortal = ({
   const availableYears = useMemo(() => (staffId ? getAvailableYearsForStaff(staffId) : []), [staffId]);
   const [selectedYear, setSelectedYear] = useState(availableYears[0] ?? "");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isViewingSlip, setIsViewingSlip] = useState(false);
   const slipsForYear = useMemo(
     () =>
       staffId && selectedYear
@@ -115,8 +116,8 @@ const EmployeeSalaryPortal = ({
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <div className="space-y-6">
+      {!isViewingSlip ? (
+        <section className="space-y-6">
           <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
               <div className="w-full xl:max-w-md">
@@ -192,12 +193,11 @@ const EmployeeSalaryPortal = ({
                     {slipsForYear.map((slip) => (
                       <tr
                         key={slip.id}
-                        onClick={() => setSelectedMonthKey(slip.monthKey)}
-                        className={`cursor-pointer transition ${
-                          slip.monthKey === selectedSlip.monthKey
-                            ? "bg-[var(--primary)]/5"
-                            : "hover:bg-slate-50"
-                        }`}
+                        onClick={() => {
+                          setSelectedMonthKey(slip.monthKey);
+                          setIsViewingSlip(true);
+                        }}
+                        className="cursor-pointer transition hover:bg-slate-50"
                       >
                         <td className="px-4 py-4 text-sm font-semibold text-slate-900">{slip.monthLabel}</td>
                         <td className="px-4 py-4 text-sm text-slate-700">{formatCurrency(slip.netSalary)}</td>
@@ -223,7 +223,7 @@ const EmployeeSalaryPortal = ({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
@@ -258,10 +258,63 @@ const EmployeeSalaryPortal = ({
               </div>
             </div>
           </div>
-        </div>
+        </section>
+      ) : (
+        <section className="space-y-6">
+          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setIsViewingSlip(false)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  <FiArrowLeft className="h-4 w-4" />
+                  Back To Month List
+                </button>
+                <p className="mt-4 text-lg font-semibold text-slate-900">Salary Slip Viewer</p>
+                <p className="text-sm text-slate-500">
+                  Switch the year or month to open any available salary slip in your payroll history.
+                </p>
+              </div>
 
-        <SalarySlipPanel slip={selectedSlip} />
-      </section>
+              <div className="grid w-full gap-4 md:grid-cols-2 lg:max-w-xl">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Financial year</span>
+                  <select
+                    value={selectedYear}
+                    onChange={(event) => setSelectedYear(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  >
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Month</span>
+                  <select
+                    value={selectedMonthKey}
+                    onChange={(event) => setSelectedMonthKey(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+                  >
+                    {slipsForYear.map((slip) => (
+                      <option key={slip.monthKey} value={slip.monthKey}>
+                        {slip.monthLabel}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <SalarySlipPanel slip={selectedSlip} />
+        </section>
+      )}
     </div>
   );
 };

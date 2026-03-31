@@ -195,8 +195,9 @@ const RequestMaterials = () => {
 
       {/* Request Modal */}
       {showRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
+          <div className="bg-[var(--card-bg)] rounded-2xl w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
               <h2 className="text-lg font-semibold text-[var(--text)]">New Material Request</h2>
               <button onClick={() => setShowRequestModal(false)} className="p-2 hover:bg-[var(--secondary)] rounded-lg">
@@ -294,6 +295,7 @@ const RequestMaterials = () => {
                 Submit Request ({selectedItems.length} items)
               </Button>
             </div>
+          </div>
           </div>
         </div>
       )}

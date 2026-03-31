@@ -35,6 +35,7 @@ import {
   FiUser,
   FiUsers,
 } from "react-icons/fi";
+import type { AuthorityKey } from "../utils/authorityAccess";
 
 export interface AdminRouteConfig {
   name: string;
@@ -42,6 +43,7 @@ export interface AdminRouteConfig {
   element: React.ReactNode;
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
+  requiredAuthorities?: AuthorityKey[];
 }
 
 const administrationRoutes: AdminRouteConfig[] = [
@@ -78,14 +80,16 @@ const administrationRoutes: AdminRouteConfig[] = [
     path: "/administration/promote-students",
     element: <PromoteStudents />,
     icon: FiArrowUpCircle,
-    description: "Promote students to next class"
+    description: "Promote students to next class",
+    requiredAuthorities: ["studentPromotion"],
   },
   {
     name: "Staff Records",
     path: "/administration/staff-records",
     element: <ManageStaffRecords />,
     icon: FiBriefcase,
-    description: "Manage teaching and non-teaching staff records"
+    description: "Manage teaching and non-teaching staff records",
+    requiredAuthorities: ["staffCreation"],
   },
   {
     name: "Financial Records",
@@ -113,7 +117,8 @@ const administrationRoutes: AdminRouteConfig[] = [
     path: "/administration/leave-management",
     element: <LeaveManagement />,
     icon: FiClock,
-    description: "Approve or reject student and faculty leave requests"
+    description: "Approve or reject student and faculty leave requests",
+    requiredAuthorities: ["leaveApproval"],
   },
   {
     name: "Financial Details",

@@ -20,11 +20,12 @@ const mockUsers: Record<string, User & { password: string }> = {
     password: "password"
   },
   "faculty@demo.com": {
-    id: "2",
+    id: "ST-201",
     email: "faculty@demo.com",
-    firstName: "Jane",
-    lastName: "Teacher",
+    firstName: "Ananya",
+    lastName: "Menon",
     role: "faculty",
+    employeeCode: "EMP-010",
     password: "password"
   },
   "parent@demo.com": {
@@ -36,11 +37,12 @@ const mockUsers: Record<string, User & { password: string }> = {
     password: "password"
   },
   "admin@demo.com": {
-    id: "4",
+    id: "ST-203",
     email: "admin@demo.com",
-    firstName: "Admin",
-    lastName: "User",
+    firstName: "Sujatha",
+    lastName: "Devi",
     role: "admin",
+    employeeCode: "EMP-022",
     password: "password"
   }
 };
