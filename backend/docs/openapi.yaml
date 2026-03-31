@@ -1,16 +1,18 @@
 openapi: 3.1.0
 info:
   title: Code Red Backend API
-  version: 1.2.0
+  version: 1.3.0
   description: >
     Production-style backend contract for the Code Red coaching institute platform.
-    Canonical routes are versioned under `/api/v1`. Legacy `/api/*` aliases exist in
-    the Flask app for current frontend compatibility, but this file documents `/api/v1/*`
-    only. Access control follows the frontend role families: student, faculty, parent,
+    Canonical routes are versioned under `/api/v1`. This revision aligns the contract
+    with the current frontend implementation, including authority-based navigation,
+    inventory requests, payroll views, promotion flows, and faculty material publishing.
+    Access control follows the frontend role families: student, faculty, parent,
     and administration (`admin`, `administration`, `director`, `superadmin`). Request
     payloads are validated with Pydantic, some background work is dispatched through
     Celery using Redis, and throttled endpoints may return HTTP 429.
 servers:
+  - url: http://localhost:3000
   - url: http://localhost:3500
 tags:
   - name: Auth
@@ -26,6 +28,10 @@ tags:
   - name: Jobs
   - name: Parent
   - name: AI
+  - name: Administration
+  - name: Inventory
+  - name: Payroll
+  - name: Authority
 paths:
   /api/v1/auth/login:
     post:
@@ -270,6 +276,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Subject'
+  /api/v1/students/me/subjects/{subjectId}/content:
+    get:
+      tags: [Students]
+      summary: Get current student subject content tree
+      description: >
+        Returns the week-grouped subject content used by the student subject details page,
+        including weekly contents, study materials, and assessments.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectIdPath'
+      responses:
+        '200':
+          description: Subject content tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSubjectContent'
+        '404':
+          $ref: '#/components/responses/Error404'
   /api/v1/students/me/performance:
     get:
       tags: [Students]
@@ -590,6 +616,317 @@ paths:
                   $ref: '#/components/schemas/Material'
         '404':
           $ref: '#/components/responses/Error404'
+    post:
+      tags: [Faculty]
+      summary: Publish study material for a subject
+      description: >
+        Creates a new study material record for the selected subject. Materials may be
+        grouped week-wise or chapter-wise and should become visible in the student subject page.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialCreateRequest'
+      responses:
+        '201':
+          description: Material published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Material'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /api/v1/inventory/items:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryItem'
+    post:
+      tags: [Inventory]
+      summary: Create inventory item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryItemWrite'
+      responses:
+        '201':
+          description: Inventory item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+  /api/v1/inventory/items/{itemId}:
+    put:
+      tags: [Inventory]
+      summary: Update inventory item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryItemPatch'
+      responses:
+        '200':
+          description: Inventory item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+    delete:
+      tags: [Inventory]
+      summary: Delete inventory item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemIdPath'
+      responses:
+        '204':
+          description: Inventory item deleted
+  /api/v1/inventory/requests:
+    get:
+      tags: [Inventory]
+      summary: List material requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: facultyId
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, approved, rejected, fulfilled] }
+      responses:
+        '200':
+          description: Material requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaterialRequest'
+    post:
+      tags: [Inventory]
+      summary: Create material request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialRequestCreate'
+      responses:
+        '201':
+          description: Material request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialRequest'
+  /api/v1/inventory/requests/{requestId}/status:
+    patch:
+      tags: [Inventory]
+      summary: Update material request status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialRequestStatusUpdate'
+      responses:
+        '200':
+          description: Material request updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialRequest'
+
+  /api/v1/authority/assignments:
+    get:
+      tags: [Authority]
+      summary: List staff authority assignments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authority assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthorityAssignment'
+    put:
+      tags: [Authority]
+      summary: Replace authority assignments
+      description: Director-level endpoint for updating role and authority access per employee.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuthorityAssignmentWrite'
+      responses:
+        '200':
+          description: Assignments saved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthorityAssignment'
+  /api/v1/authority/templates:
+    get:
+      tags: [Authority]
+      summary: List role authority templates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Role-based authority templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleAuthorityTemplate'
+
+  /api/v1/administration/staff:
+    get:
+      tags: [Administration]
+      summary: List staff register
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffMember'
+  /api/v1/administration/promotions/candidates:
+    get:
+      tags: [Administration]
+      summary: List student promotion candidates
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: targetClass
+          schema: { type: string }
+      responses:
+        '200':
+          description: Promotion candidate list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromotionCandidate'
+  /api/v1/administration/promotions/{studentId}:
+    post:
+      tags: [Administration]
+      summary: Promote a student
+      description: Confirms and records promotion for an eligible student.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StudentIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromotionActionRequest'
+      responses:
+        '200':
+          description: Student promoted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromotionActionResponse'
+        '409':
+          $ref: '#/components/responses/Error409'
+
+  /api/v1/payroll/salary-slips:
+    get:
+      tags: [Payroll]
+      summary: List staff salary slips
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: staffId
+          schema: { type: string }
+        - in: query
+          name: year
+          schema: { type: string }
+        - in: query
+          name: monthKey
+          schema: { type: string }
+      responses:
+        '200':
+          description: Salary slips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarySlip'
+  /api/v1/payroll/me/salary-slips:
+    get:
+      tags: [Payroll]
+      summary: List current employee salary slips
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema: { type: string }
+      responses:
+        '200':
+          description: Current employee salary slips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalarySlip'
 
   /api/v1/ai/generate-questions:
     post:
@@ -922,37 +1259,47 @@ components:
       in: path
       name: studentId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     ChildIdPath:
       in: path
       name: childId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     ClassIdPath:
       in: path
       name: classId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     SubjectIdPath:
       in: path
       name: subjectId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     ScheduleIdPath:
       in: path
       name: scheduleId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     AssessmentIdPath:
       in: path
       name: assessmentId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
     AssignmentIdPath:
       in: path
       name: assignmentId
       required: true
-      schema: { type: integer }
+      schema: { type: string }
+    ItemIdPath:
+      in: path
+      name: itemId
+      required: true
+      schema: { type: string }
+    RequestIdPath:
+      in: path
+      name: requestId
+      required: true
+      schema: { type: string }
     TaskIdPath:
       in: path
       name: taskId
@@ -1021,6 +1368,7 @@ components:
         firstName: { type: string }
         lastName: { type: string }
         role: { type: string }
+        employeeCode: { type: string, nullable: true }
         roles:
           type: array
           items: { type: string }
@@ -1133,11 +1481,226 @@ components:
       type: object
       properties:
         id: { type: string }
+        subjectId: { type: string, nullable: true }
+        subjectName: { type: string, nullable: true }
+        chapterId: { type: string, nullable: true }
+        chapterTitle: { type: string, nullable: true }
         title: { type: string }
         unit: { type: string, nullable: true }
         week: { type: string, nullable: true }
         type: { type: string }
         description: { type: string, nullable: true }
+        fileName: { type: string, nullable: true }
+        uploadedBy: { type: string, nullable: true }
+        isFacultyUpload: { type: boolean, nullable: true }
+    SubjectWeekContent:
+      type: object
+      properties:
+        id: { type: string }
+        weekLabel: { type: string }
+        contents:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        materials:
+          type: array
+          items:
+            $ref: '#/components/schemas/Material'
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+    StudentSubjectContent:
+      type: object
+      properties:
+        subject:
+          $ref: '#/components/schemas/Subject'
+        weeks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubjectWeekContent'
+    StaffMember:
+      type: object
+      properties:
+        id: { type: string }
+        employeeCode: { type: string }
+        name: { type: string }
+        category: { type: string }
+        role: { type: string }
+        department: { type: string }
+        joiningDate: { type: string, format: date }
+        phone: { type: string, nullable: true }
+        status: { type: string }
+    AuthorityAssignment:
+      type: object
+      properties:
+        staffId: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        roleTemplate: { type: string }
+        authorities:
+          $ref: '#/components/schemas/AuthorityFlags'
+        updatedAt: { type: string }
+        updatedBy: { type: string }
+    AuthorityAssignmentWrite:
+      type: object
+      required: [staffId, roles, authorities]
+      properties:
+        staffId: { type: string }
+        roles:
+          type: array
+          items: { type: string }
+        roleTemplate: { type: string, nullable: true }
+        authorities:
+          $ref: '#/components/schemas/AuthorityFlags'
+    AuthorityFlags:
+      type: object
+      properties:
+        leaveApproval: { type: boolean }
+        admissionApproval: { type: boolean }
+        staffCreation: { type: boolean }
+        studentPromotion: { type: boolean }
+    RoleAuthorityTemplate:
+      type: object
+      properties:
+        roleName: { type: string }
+        authorities:
+          type: array
+          items: { type: string }
+    InventoryItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        quantity: { type: integer }
+        available: { type: integer }
+        reserved: { type: integer }
+        unit: { type: string }
+        minStock: { type: integer }
+        price: { type: number }
+        supplier: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    InventoryItemWrite:
+      type: object
+      required: [name, category, quantity, unit, minStock, price]
+      properties:
+        name: { type: string }
+        category: { type: string }
+        quantity: { type: integer }
+        available: { type: integer, nullable: true }
+        reserved: { type: integer, nullable: true }
+        unit: { type: string }
+        minStock: { type: integer }
+        price: { type: number }
+        supplier: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+    InventoryItemPatch:
+      type: object
+      properties:
+        name: { type: string }
+        category: { type: string }
+        quantity: { type: integer }
+        available: { type: integer }
+        reserved: { type: integer }
+        unit: { type: string }
+        minStock: { type: integer }
+        price: { type: number }
+        supplier: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+    RequestItem:
+      type: object
+      properties:
+        itemId: { type: string }
+        itemName: { type: string }
+        quantity: { type: integer }
+    MaterialRequest:
+      type: object
+      properties:
+        id: { type: string }
+        facultyId: { type: string }
+        facultyName: { type: string }
+        department: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestItem'
+        status: { type: string, enum: [pending, approved, rejected, fulfilled] }
+        reviewNotes: { type: string, nullable: true }
+        reviewedBy: { type: string, nullable: true }
+        requestedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    MaterialRequestCreate:
+      type: object
+      required: [facultyId, facultyName, department, items]
+      properties:
+        facultyId: { type: string }
+        facultyName: { type: string }
+        department: { type: string }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestItem'
+    MaterialRequestStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [approved, rejected, fulfilled] }
+        reviewNotes: { type: string, nullable: true }
+    PromotionCandidate:
+      type: object
+      properties:
+        id: { type: string }
+        admissionNo: { type: string }
+        name: { type: string }
+        className: { type: string }
+        section: { type: string }
+        targetClass: { type: string }
+        guardian: { type: string }
+        attendance: { type: string }
+        average: { type: string }
+        resultStatus: { type: string, enum: [Eligible, Review Required] }
+        notes: { type: string, nullable: true }
+        promoted: { type: boolean, nullable: true }
+    PromotionActionRequest:
+      type: object
+      properties:
+        targetClass: { type: string }
+        confirmed: { type: boolean, default: true }
+        note: { type: string, nullable: true }
+    PromotionActionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        studentId: { type: string }
+        promotedTo: { type: string }
+        promotedAt: { type: string, format: date-time }
+    SalarySlip:
+      type: object
+      properties:
+        id: { type: string }
+        staffId: { type: string }
+        staffName: { type: string }
+        employeeCode: { type: string }
+        category: { type: string }
+        role: { type: string }
+        department: { type: string }
+        year: { type: string }
+        monthKey: { type: string }
+        monthLabel: { type: string }
+        grossSalary: { type: number }
+        netSalary: { type: number }
+        unpaidLeaveDays: { type: number }
+        paidLeaveDays: { type: number }
+        overtimeHours: { type: number }
+        generatedAt: { type: string, format: date-time, nullable: true }
     Question:
       type: object
       properties:
@@ -1223,6 +1786,7 @@ components:
         role:
           type: string
           enum: [student, faculty, teacher, parent, admin, administration, director, superadmin, super admin]
+        employeeCode: { type: string, nullable: true }
         title: { type: string, nullable: true }
     OtpSendRequest:
       type: object
@@ -1409,3 +1973,15 @@ components:
           type: string
           nullable: true
           description: Logical target group such as all, students, faculty, or parents.
+    MaterialCreateRequest:
+      type: object
+      required: [title, type]
+      properties:
+        title: { type: string }
+        type: { type: string }
+        description: { type: string, nullable: true }
+        week: { type: string, nullable: true }
+        unit: { type: string, nullable: true }
+        chapterId: { type: string, nullable: true }
+        chapterTitle: { type: string, nullable: true }
+        fileName: { type: string, nullable: true }
