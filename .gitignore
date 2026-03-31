@@ -12,6 +12,8 @@ backend/.env.*.local
 backend/benv/
 backend/.benv/
 
+app.db
+
 # ==============================
 # Frontend Environment
 # ==============================
