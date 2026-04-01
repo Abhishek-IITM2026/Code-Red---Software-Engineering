@@ -63,7 +63,7 @@ export interface Schedule {
 export const studentApi = createApi({
   reducerPath: 'studentApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3500/api',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
       if (token) {
