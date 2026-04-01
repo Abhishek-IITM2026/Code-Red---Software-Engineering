@@ -1,9 +1,11 @@
-from flask import Blueprint
+from flask import Blueprint, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
-from ...models import Faculty, FacultySubjectAssignment, Material
+from ...extensions import db
+from ...models import Faculty, FacultySubjectAssignment, Material, Subject
+from ...schemas import MaterialCreateRequest, parse_json
 
 
 faculty_bp = Blueprint("faculty", __name__)
@@ -50,3 +52,23 @@ def subject_materials(subject_id: int):
     if not materials:
         raise ApiError(404, "MATERIALS_NOT_FOUND", "No materials found for the selected subject.")
     return success_response([material.to_dict() for material in materials])
+
+
+@faculty_bp.post("/subjects/<int:subject_id>/materials")
+@roles_required("faculty", "administration")
+def publish_subject_material(subject_id: int):
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+    payload = parse_json(MaterialCreateRequest, request.get_json())
+    material = Material(
+        subject_id=subject_id,
+        title=payload.title,
+        unit=payload.unit,
+        week=payload.week,
+        material_type=payload.material_type,
+        description=payload.description,
+    )
+    db.session.add(material)
+    db.session.commit()
+    return success_response(material.to_dict(), status_code=201)

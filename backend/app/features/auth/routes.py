@@ -7,7 +7,7 @@ from ...api.errors import ApiError
 from ...common.auth import auth_required, generate_token, normalize_role_name, verify_token
 from ...common.responses import success_response
 from ...extensions import db, limiter
-from ...models import OtpChallenge, Role, User
+from ...models import OtpChallenge, Role, User, UserContactProfile
 from ...schemas import (
     ChangePasswordRequest,
     LoginRequest,
@@ -163,7 +163,11 @@ def update_profile():
     payload = parse_json(ProfileUpdateRequest, request.get_json())
     g.current_user.first_name = payload.first_name or g.current_user.first_name
     g.current_user.last_name = payload.last_name or g.current_user.last_name
-    g.current_user.phone = payload.phone or g.current_user.phone
+    if payload.phone is not None:
+        if g.current_user.contact_profile is None:
+            db.session.add(UserContactProfile(user_id=g.current_user.id, phone_number=payload.phone))
+        else:
+            g.current_user.contact_profile.phone_number = payload.phone
     db.session.commit()
     return success_response({"success": True, "message": "Profile updated successfully", "user": g.current_user.to_dict()})
 

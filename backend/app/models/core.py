@@ -57,7 +57,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20))
     profile_image_url = db.Column(db.String(500))
     title = db.Column(db.String(100))
     status = db.Column(db.Enum(UserStatus), nullable=False, default=UserStatus.ACTIVE)
@@ -68,6 +67,7 @@ class User(db.Model):
     roles = db.relationship("Role", secondary=user_roles, back_populates="users", lazy="joined")
     student = db.relationship("Student", back_populates="user", uselist=False)
     faculty = db.relationship("Faculty", back_populates="user", uselist=False)
+    contact_profile = db.relationship("UserContactProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -114,9 +114,21 @@ class User(db.Model):
             "roles": self.role_names,
             "roleScope": self.role_scope,
             "title": self.title,
-            "phone": self.phone,
+            "phone": self.contact_profile.phone_number if self.contact_profile else None,
             "profilePicture": self.profile_image_url,
         }
+
+
+class UserContactProfile(db.Model):
+    __tablename__ = "user_contact_profiles"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
+    phone_number = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    user = db.relationship("User", back_populates="contact_profile")
 
 
 class AdministrationStaff(db.Model):
@@ -404,6 +416,7 @@ class Material(db.Model):
     def to_dict(self):
         return {
             "id": str(self.id),
+            "subjectId": str(self.subject_id),
             "title": self.title,
             "unit": self.unit,
             "week": self.week,
@@ -505,3 +518,180 @@ class OtpChallenge(db.Model):
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class InventoryItem(db.Model):
+    __tablename__ = "inventory_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50), nullable=False, default="other")
+    quantity = db.Column(db.Integer, nullable=False, default=0)
+    available = db.Column(db.Integer, nullable=False, default=0)
+    reserved = db.Column(db.Integer, nullable=False, default=0)
+    unit = db.Column(db.String(30), nullable=False, default="piece")
+    min_stock = db.Column(db.Integer, nullable=False, default=0)
+    price = db.Column(db.Float, nullable=False, default=0)
+    supplier = db.Column(db.String(200))
+    location = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "name": self.name,
+            "category": self.category,
+            "quantity": self.quantity,
+            "available": self.available,
+            "reserved": self.reserved,
+            "unit": self.unit,
+            "minStock": self.min_stock,
+            "price": self.price,
+            "supplier": self.supplier,
+            "location": self.location,
+            "description": self.description,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
+class MaterialRequest(db.Model):
+    __tablename__ = "material_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
+    department = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pending")
+    review_notes = db.Column(db.Text)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    requested_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    faculty = db.relationship("Faculty")
+    reviewer = db.relationship("User")
+    items = db.relationship("MaterialRequestItem", back_populates="request", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        faculty_name = f"{self.faculty.user.first_name} {self.faculty.user.last_name}"
+        return {
+            "id": str(self.id),
+            "facultyId": str(self.faculty_id),
+            "facultyName": faculty_name,
+            "department": self.department,
+            "items": [item.to_dict() for item in self.items],
+            "status": self.status,
+            "requestedAt": self.requested_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+            "reviewedBy": (
+                f"{self.reviewer.first_name} {self.reviewer.last_name}" if self.reviewer is not None else None
+            ),
+            "reviewNotes": self.review_notes,
+        }
+
+
+class MaterialRequestItem(db.Model):
+    __tablename__ = "material_request_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(db.Integer, db.ForeignKey("material_requests.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("inventory_items.id"), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    notes = db.Column(db.Text)
+
+    request = db.relationship("MaterialRequest", back_populates="items")
+    inventory_item = db.relationship("InventoryItem")
+
+    def to_dict(self):
+        return {
+            "itemId": str(self.item_id),
+            "itemName": self.inventory_item.name if self.inventory_item else None,
+            "quantity": self.quantity,
+            "notes": self.notes,
+        }
+
+
+class AuthorityAssignment(db.Model):
+    __tablename__ = "authority_assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    staff_id = db.Column(db.String(50), unique=True, nullable=False)
+    roles_json = db.Column(db.JSON, nullable=False, default=list)
+    role_template = db.Column(db.String(100), nullable=False, default="Custom")
+    authorities_json = db.Column(db.JSON, nullable=False, default=dict)
+    updated_by = db.Column(db.String(100), nullable=False, default="System")
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            "staffId": self.staff_id,
+            "roles": self.roles_json or [],
+            "roleTemplate": self.role_template,
+            "authorities": self.authorities_json or {},
+            "updatedAt": self.updated_at.isoformat() if self.updated_at else None,
+            "updatedBy": self.updated_by,
+        }
+
+
+class SalarySlip(db.Model):
+    __tablename__ = "salary_slips"
+
+    id = db.Column(db.Integer, primary_key=True)
+    staff_id = db.Column(db.String(50), nullable=False, index=True)
+    staff_name = db.Column(db.String(200), nullable=False)
+    employee_code = db.Column(db.String(50), nullable=False)
+    role = db.Column(db.String(100), nullable=False)
+    department = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(30), nullable=False)
+    bank_account = db.Column(db.String(100), nullable=False)
+    year = db.Column(db.String(4), nullable=False, index=True)
+    month_key = db.Column(db.String(10), nullable=False, index=True)
+    month_label = db.Column(db.String(50), nullable=False)
+    working_days = db.Column(db.Integer, nullable=False)
+    payable_days = db.Column(db.Integer, nullable=False)
+    paid_leave_days = db.Column(db.Integer, nullable=False, default=0)
+    unpaid_leave_days = db.Column(db.Integer, nullable=False, default=0)
+    overtime_hours = db.Column(db.Float, nullable=False, default=0)
+    overtime_rate = db.Column(db.Float, nullable=False, default=0)
+    payment_mode = db.Column(db.String(50), nullable=False, default="Bank Transfer")
+    generated_on = db.Column(db.String(20), nullable=False)
+    payout_status = db.Column(db.String(20), nullable=False, default="Pending")
+    base_salary = db.Column(db.Float, nullable=False, default=0)
+    allowances_json = db.Column(db.JSON, nullable=False, default=list)
+    overtime_amount = db.Column(db.Float, nullable=False, default=0)
+    unpaid_leave_deduction = db.Column(db.Float, nullable=False, default=0)
+    gross_salary = db.Column(db.Float, nullable=False, default=0)
+    total_deductions = db.Column(db.Float, nullable=False, default=0)
+    net_salary = db.Column(db.Float, nullable=False, default=0)
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "staffId": self.staff_id,
+            "staffName": self.staff_name,
+            "employeeCode": self.employee_code,
+            "role": self.role,
+            "department": self.department,
+            "category": self.category,
+            "bankAccount": self.bank_account,
+            "year": self.year,
+            "monthKey": self.month_key,
+            "monthLabel": self.month_label,
+            "workingDays": self.working_days,
+            "payableDays": self.payable_days,
+            "paidLeaveDays": self.paid_leave_days,
+            "unpaidLeaveDays": self.unpaid_leave_days,
+            "overtimeHours": self.overtime_hours,
+            "overtimeRate": self.overtime_rate,
+            "paymentMode": self.payment_mode,
+            "generatedOn": self.generated_on,
+            "payoutStatus": self.payout_status,
+            "baseSalary": self.base_salary,
+            "allowances": self.allowances_json or [],
+            "overtimeAmount": self.overtime_amount,
+            "unpaidLeaveDeduction": self.unpaid_leave_deduction,
+            "grossSalary": self.gross_salary,
+            "totalDeductions": self.total_deductions,
+            "netSalary": self.net_salary,
+        }

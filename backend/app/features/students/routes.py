@@ -3,7 +3,7 @@ from flask import Blueprint, g, request
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
-from ...models import Student
+from ...models import Material, Student
 from ...services.query import get_current_student, get_performance_summary, get_student_subjects
 
 
@@ -41,6 +41,22 @@ def get_me():
 def get_me_subjects():
     student = get_current_student()
     return success_response(get_student_subjects(student.id))
+
+
+@students_bp.get("/me/subjects/<int:subject_id>/content")
+@roles_required("student")
+def get_me_subject_content(subject_id: int):
+    student = get_current_student()
+    subjects = get_student_subjects(student.id)
+    if not any(int(subject["id"]) == subject_id for subject in subjects):
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject is not available for the current student.")
+    materials = Material.query.filter_by(subject_id=subject_id).all()
+    return success_response(
+        {
+            "subjectId": str(subject_id),
+            "materials": [material.to_dict() for material in materials],
+        }
+    )
 
 
 @students_bp.get("/me/performance")
