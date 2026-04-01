@@ -7,10 +7,10 @@ import { login, clearError } from "../store/authSlice";
 import type { AppDispatch, RootState } from "../../../app/store";
 
 const demoUsers = [
-  { email: "student@demo.com", password: "password", role: "Student", icon: FiUser },
-  { email: "faculty@demo.com", password: "password", role: "Faculty", icon: FiShield },
-  { email: "parent@demo.com", password: "password", role: "Parent", icon: FiUser },
-  { email: "admin@demo.com", password: "password", role: "Admin", icon: FiShield },
+  { email: "student@example.com", password: "student123", role: "Student", icon: FiUser },
+  { email: "faculty@example.com", password: "faculty123", role: "Faculty", icon: FiShield },
+  { email: "parent@example.com", password: "parent123", role: "Parent", icon: FiUser },
+  { email: "admin@example.com", password: "admin123", role: "Admin", icon: FiShield },
 ];
 
 const Login = () => {
@@ -180,7 +180,7 @@ const Login = () => {
         <div className="mt-4 p-4 rounded-xl bg-[var(--secondary)] border border-[var(--border)]">
           <p className="text-xs font-medium text-[var(--text)] mb-2">Demo Credentials</p>
           <p className="text-xs text-[var(--text-secondary)]">
-            Email: <span className="font-mono">student@demo.com</span> | Password: <span className="font-mono">password</span>
+            Email: <span className="font-mono">student@example.com</span> | Password: <span className="font-mono">student123</span>
           </p>
         </div>
       </div>

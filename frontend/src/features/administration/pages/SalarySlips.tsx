@@ -2,16 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiClock, FiCreditCard, FiFilter, FiSearch, FiTrendingUp, FiUsers } from "react-icons/fi";
 import { Input, SalarySlipPanel } from "../../../components/common";
 import {
-  findSalarySlip,
+  calculateSalaryYearSummary,
   formatCurrency,
-  getAvailableYearsForStaff,
-  getSalarySlipsForStaffByYear,
-  salarySlipYearOptions,
-  salarySlips,
+  type SalarySlip,
 } from "../data/payrollData";
+import { payrollApi } from "../api/payrollApi";
 
 const SalarySlips = function () {
-  const [selectedYear, setSelectedYear] = useState(salarySlipYearOptions[0]?.value ?? "");
+  const [salarySlips, setSalarySlips] = useState<SalarySlip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const yearOptions = useMemo(
+    () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
+    [salarySlips],
+  );
+  const [selectedYear, setSelectedYear] = useState("");
   const availableMonths = useMemo(
     () =>
       Array.from(
@@ -29,6 +33,26 @@ const SalarySlips = function () {
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [detailYear, setDetailYear] = useState(selectedYear);
   const [detailMonth, setDetailMonth] = useState(selectedMonth);
+
+  useEffect(() => {
+    const loadSalarySlips = async () => {
+      try {
+        setLoading(true);
+        const data = await payrollApi.getSalarySlips();
+        setSalarySlips(data);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadSalarySlips();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedYear && yearOptions.length > 0) {
+      setSelectedYear(yearOptions[0]);
+    }
+  }, [selectedYear, yearOptions]);
 
   const filteredSlips = useMemo(
     () =>
@@ -58,12 +82,22 @@ const SalarySlips = function () {
   }, [filteredSlips, selectedStaffId]);
 
   const detailYearOptions = useMemo(
-    () => (selectedStaffId ? getAvailableYearsForStaff(selectedStaffId) : []),
-    [selectedStaffId],
+    () =>
+      selectedStaffId
+        ? Array.from(
+            new Set(
+              salarySlips.filter((slip) => slip.staffId === selectedStaffId).map((slip) => slip.year),
+            ),
+          ).sort((a, b) => b.localeCompare(a))
+        : [],
+    [salarySlips, selectedStaffId],
   );
   const detailMonthOptions = useMemo(
-    () => (selectedStaffId && detailYear ? getSalarySlipsForStaffByYear(selectedStaffId, detailYear) : []),
-    [detailYear, selectedStaffId],
+    () =>
+      selectedStaffId && detailYear
+        ? salarySlips.filter((slip) => slip.staffId === selectedStaffId && slip.year === detailYear)
+        : [],
+    [detailYear, salarySlips, selectedStaffId],
   );
 
   useEffect(() => {
@@ -84,7 +118,12 @@ const SalarySlips = function () {
     }
   }, [detailMonth, detailMonthOptions, selectedMonth, selectedStaffId, detailYear]);
 
-  const selectedSlip = selectedStaffId ? findSalarySlip(selectedStaffId, detailMonth) ?? null : null;
+  const selectedSlip =
+    selectedStaffId ? salarySlips.find((slip) => slip.staffId === selectedStaffId && slip.monthKey === detailMonth) ?? null : null;
+  const selectedSlipYearSummary = useMemo(
+    () => (selectedStaffId && detailYear ? calculateSalaryYearSummary(detailMonthOptions) : null),
+    [detailMonthOptions, detailYear, selectedStaffId],
+  );
 
   const totalNetPayout = filteredSlips.reduce((sum, slip) => sum + slip.netSalary, 0);
   const pendingCount = filteredSlips.filter((slip) => slip.payoutStatus === "Pending").length;
@@ -99,6 +138,10 @@ const SalarySlips = function () {
   const handleBackToList = () => {
     setSelectedStaffId("");
   };
+
+  if (loading) {
+    return <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">Loading salary slips...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -162,9 +205,9 @@ const SalarySlips = function () {
                 onChange={(event) => setSelectedYear(event.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
               >
-                {salarySlipYearOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
                   </option>
                 ))}
               </select>
@@ -373,7 +416,7 @@ const SalarySlips = function () {
           </div>
 
           {selectedSlip ? (
-            <SalarySlipPanel slip={selectedSlip} />
+            selectedSlipYearSummary ? <SalarySlipPanel slip={selectedSlip} yearSummary={selectedSlipYearSummary} /> : null
           ) : (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 shadow-sm">
               No salary slip is available for the selected month and year.
