@@ -10,6 +10,7 @@ import {
   AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
   readAuthorityAssignments,
   userHasAnyAuthority,
+  type AuthorityKey,
 } from "../../administration/utils/authorityAccess";
 
 const appName = import.meta.env.VITE_APP_NAME || "CIOM";
@@ -31,15 +32,79 @@ const FacultyLayout = function () {
   };
 
   useEffect(() => {
-    const handleAssignmentsUpdated = () => setAuthorityVersion((current) => current + 1);
+    const handleAssignmentsUpdated = () => {
+      console.log("[FacultyLayout] Authority update detected, refreshing routes...");
+      setAuthorityVersion((current) => current + 1);
+    };
+
+    // Listen for custom authority update event from AuthorityManagement
     window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
-    return () => window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+
+    // Also listen for storage changes in case admin updates authorities in another tab
+    window.addEventListener("storage", (event) => {
+      if (event.key === "administration-authority-assignments") {
+        console.log("[FacultyLayout] Storage change detected for authorities, refreshing routes...");
+        handleAssignmentsUpdated();
+      }
+    });
+
+    return () => {
+      window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+      window.removeEventListener("storage", handleAssignmentsUpdated);
+    };
   }, []);
 
-  const authorityAssignments = useMemo(() => readAuthorityAssignments(), [authorityVersion]);
-  const primaryLinks = facultyRoutes.filter(
-    (route) => route.path !== facultyProfilePath && userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
-  );
+  const authorityAssignments = useMemo(() => {
+    const assignments = readAuthorityAssignments();
+    console.log("[FacultyLayout] Authority assignments loaded:", {
+      user: `${user?.firstName} ${user?.lastName} (${user?.email})`,
+      userId: user?.id,
+      totalAssignments: assignments.length,
+      assignments: assignments,
+      timestamp: new Date().toISOString(),
+    });
+    return assignments;
+  }, [authorityVersion]);
+
+  const primaryLinks = useMemo(() => {
+    const filtered = facultyRoutes.filter(
+      (route) => route.path !== facultyProfilePath && userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
+    );
+    
+    // Detailed logging for debugging
+    const hidden = facultyRoutes.filter(
+      (route) => route.path !== facultyProfilePath && !userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
+    );
+
+    const userAssignment = authorityAssignments.find(
+      (a) => a.staffId === user?.id || a.staffId === user?.email,
+    );
+    
+    console.log("[FacultyLayout] Route filtering details:", {
+      user: `${user?.firstName} ${user?.lastName}`,
+      userId: user?.id,
+      userStaffId: userAssignment?.staffId,
+      userAssignment: userAssignment,
+      totalRoutes: facultyRoutes.length,
+      visibleRoutes: filtered.length,
+      hiddenRoutes: hidden.length,
+      visibleRoutesList: filtered.map((r) => ({
+        name: r.name,
+        requiredAuthorities: r.requiredAuthorities,
+      })),
+      hiddenRoutesList: hidden.map((r) => ({
+        name: r.name,
+        requiredAuthorities: r.requiredAuthorities,
+        hasAuthority: userAssignment ? Object.entries(userAssignment.authorities)
+          .filter(([key, value]) => value && (r.requiredAuthorities?.includes(key as AuthorityKey) || r.requiredAuthorities === undefined))
+          .map(([key]) => key) : [],
+      })),
+      timestamp: new Date().toISOString(),
+    });
+    
+    return filtered;
+  }, [authorityVersion, user?.id, authorityAssignments]);
+
   const isProfileRoute = location.pathname === facultyProfilePath;
 
   return (

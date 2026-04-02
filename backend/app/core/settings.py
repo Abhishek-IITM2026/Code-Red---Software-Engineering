@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     USE_MONGO_MOCK: bool = False
 
     REDIS_URL: str = "redis://localhost:6379/0"
-    CELERY_BROKER_URL: str | None = None
-    CELERY_RESULT_BACKEND: str | None = None
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
     CELERY_TASK_ALWAYS_EAGER: bool = False
 
     RATELIMIT_ENABLED: bool = True

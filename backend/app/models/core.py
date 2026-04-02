@@ -616,16 +616,19 @@ class AuthorityAssignment(db.Model):
     __tablename__ = "authority_assignments"
 
     id = db.Column(db.Integer, primary_key=True)
-    staff_id = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
     roles_json = db.Column(db.JSON, nullable=False, default=list)
     role_template = db.Column(db.String(100), nullable=False, default="Custom")
     authorities_json = db.Column(db.JSON, nullable=False, default=dict)
     updated_by = db.Column(db.String(100), nullable=False, default="System")
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
+    user = db.relationship("User", backref=db.backref("authority_assignment", uselist=False))
+
     def to_dict(self):
         return {
-            "staffId": self.staff_id,
+            "staffId": str(self.user_id),
+            "userId": str(self.user_id),
             "roles": self.roles_json or [],
             "roleTemplate": self.role_template,
             "authorities": self.authorities_json or {},

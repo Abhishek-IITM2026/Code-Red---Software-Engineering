@@ -14,6 +14,10 @@ backend/.benv/
 
 app.db
 
+.pytest_cache/
+.pytest_cache/*
+.pytest_cache/**/*
+
 # ==============================
 # Frontend Environment
 # ==============================

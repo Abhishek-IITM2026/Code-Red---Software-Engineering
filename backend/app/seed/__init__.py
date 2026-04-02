@@ -250,7 +250,7 @@ def seed_database():
     db.session.add_all(
         [
             AuthorityAssignment(
-                staff_id="ST-201",
+                user_id=faculty_user.id,
                 roles_json=["Mathematics Teacher"],
                 role_template="Mathematics Teacher",
                 authorities_json={
@@ -258,18 +258,20 @@ def seed_database():
                     "admissionApproval": False,
                     "staffCreation": False,
                     "studentPromotion": True,
+                    "scheduleCreation": True,
                 },
                 updated_by="System",
             ),
             AuthorityAssignment(
-                staff_id="ST-203",
-                roles_json=["Accountant"],
-                role_template="Accountant",
+                user_id=admin.id,
+                roles_json=["Administration Staff"],
+                role_template="Administration Staff",
                 authorities_json={
                     "leaveApproval": False,
                     "admissionApproval": True,
-                    "staffCreation": False,
+                    "staffCreation": True,
                     "studentPromotion": False,
+                    "scheduleCreation": False,
                 },
                 updated_by="System",
             ),

@@ -7,6 +7,8 @@ interface ScheduleListProps {
   onEdit?: (schedule: ClassSchedule) => void;
   onDelete?: (schedule: ClassSchedule) => void;
   onSelectForNotification?: (schedules: ClassSchedule[]) => void;
+  isLoading?: boolean;
+  isDeleting?: boolean;
 }
 
 const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -40,7 +42,7 @@ export const DEMO_SCHEDULES: ClassSchedule[] = [
   },
 ];
 
-const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete, onSelectForNotification }) => {
+const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete, onSelectForNotification, isLoading = false, isDeleting = false }) => {
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');
   const [filterDay, setFilterDay] = useState<number | ''>('');
@@ -206,10 +208,10 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete
                       <td className="px-4 py-3 text-sm text-slate-600">{schedule.roomNumber || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-3">
-                          <button type="button" onClick={() => onEdit?.(schedule)} className="text-[var(--primary)] hover:underline">
+                          <button type="button" onClick={() => onEdit?.(schedule)} disabled={isLoading || isDeleting} className="text-[var(--primary)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
                             Edit
                           </button>
-                          <button type="button" onClick={() => onDelete?.(schedule)} className="text-red-600 hover:underline">
+                          <button type="button" onClick={() => onDelete?.(schedule)} disabled={isLoading || isDeleting} className="text-red-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
                             Delete
                           </button>
                         </div>

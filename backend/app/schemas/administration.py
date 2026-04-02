@@ -12,7 +12,7 @@ class MaterialCreateRequest(StrictModel):
 
 
 class AuthorityAssignmentWriteRequest(StrictModel):
-    staff_id: str = Field(alias="staffId")
+    user_id: int | str = Field(alias="staffId")
     roles: list[str]
     role_template: str = Field(alias="roleTemplate")
     authorities: dict[str, bool]

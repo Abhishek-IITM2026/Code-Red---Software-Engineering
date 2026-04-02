@@ -5,7 +5,8 @@ export type AuthorityKey =
   | "leaveApproval"
   | "admissionApproval"
   | "staffCreation"
-  | "studentPromotion";
+  | "studentPromotion"
+  | "scheduleCreation";
 
 export type AuthorityAssignment = {
   staffId: string;
@@ -20,13 +21,13 @@ export const AUTHORITY_STORAGE_KEY = "administration-authority-assignments";
 export const AUTHORITY_ASSIGNMENTS_UPDATED_EVENT = "authority-assignments-updated";
 
 export const roleAuthorityTemplates: Record<string, AuthorityKey[]> = {
-  Director: ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion"],
-  "Office Administrator": ["leaveApproval", "admissionApproval", "staffCreation"],
+  Director: ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion", "scheduleCreation"],
+  "Office Administrator": ["leaveApproval", "admissionApproval", "staffCreation", "scheduleCreation"],
   Accountant: ["admissionApproval"],
-  "Class Coordinator": ["leaveApproval", "studentPromotion"],
-  "Mathematics Teacher": ["studentPromotion"],
-  "Science Teacher": ["studentPromotion"],
-  "English Teacher": ["studentPromotion"],
+  "Class Coordinator": ["leaveApproval", "studentPromotion", "scheduleCreation"],
+  "Mathematics Teacher": ["studentPromotion", "scheduleCreation"],
+  "Science Teacher": ["studentPromotion", "scheduleCreation"],
+  "English Teacher": ["studentPromotion", "scheduleCreation"],
   "Lab Assistant": [],
   "Transport Coordinator": [],
 };
@@ -36,6 +37,7 @@ const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
   admissionApproval: false,
   staffCreation: false,
   studentPromotion: false,
+  scheduleCreation: false,
 });
 
 const buildAuthorities = (keys: AuthorityKey[]) => {

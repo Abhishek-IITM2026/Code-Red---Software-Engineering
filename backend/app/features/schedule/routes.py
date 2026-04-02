@@ -1,15 +1,36 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import Schedule
+from ...models import Schedule, AuthorityAssignment, Faculty
 from ...schemas import ScheduleListQuery, ScheduleWriteRequest, parse_json, parse_query
 from ...services.query import get_current_student
 
 
 schedule_bp = Blueprint("schedule", __name__)
+
+
+def _has_schedule_creation_authority():
+    """Check if current user has scheduleCreation authority"""
+    if not hasattr(g, 'current_user') or g.current_user is None:
+        return False
+    
+    # Check if user is administration (super admin)
+    if g.current_user.has_any_role("administration", "admin", "director", "superadmin"):
+        return True
+    
+    # Check if faculty with scheduleCreation authority
+    if g.current_user.has_any_role("faculty", "teacher"):
+        assignment = AuthorityAssignment.query.filter_by(
+            user_id=g.current_user.id
+        ).first()
+        if assignment:
+            authorities = assignment.authorities_json or {}
+            return authorities.get("scheduleCreation", False)
+    
+    return False
 
 
 @schedule_bp.get("")
@@ -27,8 +48,13 @@ def list_schedule():
 
 
 @schedule_bp.post("")
-@roles_required("administration")
+@roles_required("faculty", "teacher", "administration")
 def create_schedule():
+    # Check authority for faculty
+    if g.current_user.has_any_role("faculty", "teacher"):
+        if not _has_schedule_creation_authority():
+            raise ApiError(403, "INSUFFICIENT_AUTHORITY", "You do not have permission to create schedules. Contact administration.")
+    
     payload = parse_json(ScheduleWriteRequest, request.get_json())
     schedule = Schedule(
         class_id=payload.class_id,
@@ -46,8 +72,13 @@ def create_schedule():
 
 
 @schedule_bp.put("/<int:schedule_id>")
-@roles_required("administration")
+@roles_required("faculty", "teacher", "administration")
 def update_schedule(schedule_id: int):
+    # Check authority for faculty
+    if g.current_user.has_any_role("faculty", "teacher"):
+        if not _has_schedule_creation_authority():
+            raise ApiError(403, "INSUFFICIENT_AUTHORITY", "You do not have permission to update schedules. Contact administration.")
+    
     schedule = db.session.get(Schedule, schedule_id)
     if schedule is None:
         raise ApiError(404, "SCHEDULE_NOT_FOUND", "Schedule entry was not found.")
@@ -61,8 +92,13 @@ def update_schedule(schedule_id: int):
 
 
 @schedule_bp.delete("/<int:schedule_id>")
-@roles_required("administration")
+@roles_required("faculty", "teacher", "administration")
 def delete_schedule(schedule_id: int):
+    # Check authority for faculty
+    if g.current_user.has_any_role("faculty", "teacher"):
+        if not _has_schedule_creation_authority():
+            raise ApiError(403, "INSUFFICIENT_AUTHORITY", "You do not have permission to delete schedules. Contact administration.")
+    
     schedule = db.session.get(Schedule, schedule_id)
     if schedule is None:
         raise ApiError(404, "SCHEDULE_NOT_FOUND", "Schedule entry was not found.")

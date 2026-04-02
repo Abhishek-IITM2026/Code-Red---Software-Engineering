@@ -101,6 +101,48 @@ export interface Faculty {
   subjects?: string[];
 }
 
+export interface StaffRecord {
+  staffId: string;
+  employeeCode: string;
+  name: string;
+  category: 'Teaching' | 'Non-Teaching';
+  role: string;
+  department: string;
+  joiningDate?: string;
+  phone?: string;
+  status: string;
+  id: string;
+}
+
+export type AuthorityKey =
+  | 'leaveApproval'
+  | 'admissionApproval'
+  | 'staffCreation'
+  | 'studentPromotion'
+  | 'scheduleCreation';
+
+export interface AuthorityAssignment {
+  staffId: string;
+  roles: string[];
+  roleTemplate: string;
+  authorities: Record<AuthorityKey, boolean>;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+// Schedule Request Types (match backend ScheduleWriteRequest)
+export interface ScheduleRequest {
+  classId: string;
+  subjectId: number;
+  facultyId: string;
+  dayOfWeek: number;
+  timeSlot: {
+    startTime: string;
+    endTime: string;
+  };
+  roomNumber?: string;
+}
+
 // Create the API slice
 export const dataApi = createApi({
   reducerPath: 'dataApi',
@@ -114,7 +156,7 @@ export const dataApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Students', 'Attendance', 'Marks', 'Classes', 'Sections', 'Schedule', 'Faculty'],
+  tagTypes: ['Students', 'Attendance', 'Marks', 'Classes', 'Sections', 'Schedule', 'Faculty', 'Staff', 'Authority'],
   endpoints: (builder) => ({
     // Students
     getStudents: builder.query<Student[], void>({
@@ -194,7 +236,7 @@ export const dataApi = createApi({
       providesTags: ['Schedule'],
     }),
 
-    createSchedule: builder.mutation<ClassSchedule, Omit<ClassSchedule, 'id' | 'createdAt' | 'updatedAt'>>({
+    createSchedule: builder.mutation<ClassSchedule, ScheduleRequest>({
       query: (scheduleData) => ({
         url: '/schedule',
         method: 'POST',
@@ -203,11 +245,11 @@ export const dataApi = createApi({
       invalidatesTags: ['Schedule'],
     }),
 
-    updateSchedule: builder.mutation<ClassSchedule, ClassSchedule>({
-      query: (scheduleData) => ({
-        url: `/schedule/${scheduleData.id}`,
+    updateSchedule: builder.mutation<ClassSchedule, { id: string; data: ScheduleRequest }>({
+      query: ({ id, data }) => ({
+        url: `/schedule/${id}`,
         method: 'PUT',
-        body: scheduleData,
+        body: data,
       }),
       invalidatesTags: ['Schedule'],
     }),
@@ -224,6 +266,27 @@ export const dataApi = createApi({
     getAllFaculty: builder.query<Faculty[], void>({
       query: () => '/faculty',
       providesTags: ['Faculty'],
+    }),
+
+    // Administration - Staff
+    getStaff: builder.query<StaffRecord[], void>({
+      query: () => '/administration/staff',
+      providesTags: ['Staff'],
+    }),
+
+    // Authority Management
+    getAuthorityAssignments: builder.query<AuthorityAssignment[], void>({
+      query: () => '/authority/assignments',
+      providesTags: ['Authority'],
+    }),
+
+    updateAuthorityAssignments: builder.mutation<AuthorityAssignment[], AuthorityAssignment[]>({
+      query: (assignments) => ({
+        url: '/authority/assignments',
+        method: 'PUT',
+        body: assignments,
+      }),
+      invalidatesTags: ['Authority'],
     }),
 
     // Notifications
@@ -258,6 +321,10 @@ export const {
   useDeleteScheduleMutation,
   // Faculty
   useGetAllFacultyQuery,
+  // Staff & Authority
+  useGetStaffQuery,
+  useGetAuthorityAssignmentsQuery,
+  useUpdateAuthorityAssignmentsMutation,
   // Notifications
   useSendScheduleNotificationMutation,
 } = dataApi;

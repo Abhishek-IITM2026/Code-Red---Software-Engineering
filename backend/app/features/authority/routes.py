@@ -14,11 +14,11 @@ authority_bp = Blueprint("authority", __name__)
 ROLE_AUTHORITY_TEMPLATES = [
     {
         "role": "Director",
-        "authorities": ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion"],
+        "authorities": ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion", "scheduleCreation"],
     },
     {
         "role": "Office Administrator",
-        "authorities": ["leaveApproval", "admissionApproval", "staffCreation"],
+        "authorities": ["leaveApproval", "admissionApproval", "staffCreation", "scheduleCreation"],
     },
     {
         "role": "Accountant",
@@ -26,7 +26,15 @@ ROLE_AUTHORITY_TEMPLATES = [
     },
     {
         "role": "Mathematics Teacher",
-        "authorities": ["studentPromotion"],
+        "authorities": ["studentPromotion", "scheduleCreation"],
+    },
+    {
+        "role": "Science Teacher",
+        "authorities": ["studentPromotion", "scheduleCreation"],
+    },
+    {
+        "role": "English Teacher",
+        "authorities": ["studentPromotion", "scheduleCreation"],
     },
 ]
 
@@ -34,7 +42,7 @@ ROLE_AUTHORITY_TEMPLATES = [
 @authority_bp.get("/assignments")
 @roles_required("administration")
 def list_authority_assignments():
-    return success_response([assignment.to_dict() for assignment in AuthorityAssignment.query.order_by(AuthorityAssignment.staff_id.asc()).all()])
+    return success_response([assignment.to_dict() for assignment in AuthorityAssignment.query.order_by(AuthorityAssignment.user_id.asc()).all()])
 
 
 @authority_bp.put("/assignments")
@@ -48,8 +56,14 @@ def replace_authority_assignments():
     assignments = []
     updated_by = f"{g.current_user.first_name} {g.current_user.last_name}"
     for item in payload:
+        # Convert string user_id to int if needed
+        user_id = int(item.user_id) if isinstance(item.user_id, str) else item.user_id
+        
+        # Delete existing assignment for this user if any
+        AuthorityAssignment.query.filter_by(user_id=user_id).delete()
+        
         assignment = AuthorityAssignment(
-            staff_id=item.staff_id,
+            user_id=user_id,
             roles_json=item.roles,
             role_template=item.role_template,
             authorities_json=item.authorities,

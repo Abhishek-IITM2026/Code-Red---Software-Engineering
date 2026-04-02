@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   FiArrowLeft,
@@ -12,14 +12,19 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import type { RootState } from "../../../app/store";
-import { staffRecords } from "./adminData";
+import {
+  useGetStaffQuery,
+  useGetAuthorityAssignmentsQuery,
+  useUpdateAuthorityAssignmentsMutation,
+  type StaffRecord,
+  type AuthorityAssignment,
+} from "../../../services/api/dataApi";
 import {
   AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
   AUTHORITY_STORAGE_KEY,
   isDirectorLevelUser,
   readAuthorityAssignments,
   roleAuthorityTemplates,
-  type AuthorityAssignment,
   type AuthorityKey,
 } from "../utils/authorityAccess";
 
@@ -50,29 +55,26 @@ const authorityDefinitions: AuthorityDefinition[] = [
     label: "Promote Student",
     description: "Move eligible students to the next academic level.",
   },
+  {
+    key: "scheduleCreation",
+    label: "Create Schedule",
+    description: "Create and manage class lecture schedules for assigned classes.",
+  },
 ];
-
-const allRoleOptions = Array.from(
-  new Set([
-    ...Object.keys(roleAuthorityTemplates),
-    ...staffRecords.flatMap((staff) => staff.role.split(", ").filter(Boolean)),
-  ]),
-).sort();
 
 const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
   leaveApproval: false,
   admissionApproval: false,
   staffCreation: false,
   studentPromotion: false,
+  scheduleCreation: false,
 });
 
 const buildAuthorities = (keys: AuthorityKey[]) => {
   const next = emptyAuthorities();
-
   keys.forEach((key) => {
     next[key] = true;
   });
-
   return next;
 };
 
@@ -80,13 +82,12 @@ const getTemplateForRole = (role: string) => {
   return roleAuthorityTemplates[role] ? role : "Custom";
 };
 
-const buildDefaultAssignments = (): AuthorityAssignment[] => {
-  return staffRecords.map((staff) => {
+const buildDefaultAssignments = (staffList: StaffRecord[]): AuthorityAssignment[] => {
+  return staffList.map((staff) => {
     const templateName = getTemplateForRole(staff.role);
     const templateKeys = roleAuthorityTemplates[staff.role] || [];
-
     return {
-      staffId: staff.id,
+      staffId: staff.staffId || staff.id,
       roles: staff.role.split(", ").filter(Boolean),
       roleTemplate: templateName,
       authorities: buildAuthorities(templateKeys),
@@ -98,10 +99,54 @@ const buildDefaultAssignments = (): AuthorityAssignment[] => {
 
 const AuthorityManagement = function () {
   const user = useSelector((state: RootState) => state.auth.user);
-  const [assignments, setAssignments] = useState<AuthorityAssignment[]>(readAuthorityAssignments);
+  
+  // RTK Query hooks
+  const { data: staffList = [], isLoading: isStaffLoading } = useGetStaffQuery();
+  const { data: authorityAssignments = [], isLoading: isAuthoritiesLoading } = useGetAuthorityAssignmentsQuery();
+  const [updateAuthorityAssignments] = useUpdateAuthorityAssignmentsMutation();
+  
+  // Local state
+  const [assignments, setAssignments] = useState<AuthorityAssignment[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [search, setSearch] = useState("");
+  const [isSavingToBackend, setIsSavingToBackend] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSaveTime, setLastSaveTime] = useState<string | null>(null);
+  
+  const isFetching = isStaffLoading || isAuthoritiesLoading;
   const isDirectorLevel = isDirectorLevelUser(user);
+
+  // Initialize assignments from API or localStorage
+  useEffect(() => {
+    if (!isFetching && staffList.length > 0) {
+      if (authorityAssignments && Array.isArray(authorityAssignments) && authorityAssignments.length > 0) {
+        setAssignments(authorityAssignments);
+      } else {
+        // Fall back to localStorage if API returns empty
+        const stored = readAuthorityAssignments();
+        setAssignments(stored.length > 0 ? stored : buildDefaultAssignments(staffList));
+      }
+    }
+  }, [isFetching, staffList, authorityAssignments]);
+
+  // Sync assignments to localStorage and broadcast changes whenever they change
+  useEffect(() => {
+    if (assignments.length > 0) {
+      // Update localStorage immediately for persistence
+      window.localStorage.setItem(AUTHORITY_STORAGE_KEY, JSON.stringify(assignments));
+      
+      // Broadcast change event for other components listening to authority updates
+      window.dispatchEvent(new CustomEvent(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, { 
+        detail: { assignments, timestamp: new Date().toISOString() } 
+      }));
+      
+      // Log authority changes for debugging
+      console.log("[Authority Update] Assignments synced to localStorage", {
+        total: assignments.length,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [assignments]);
 
   const assignmentMap = useMemo(() => {
     return assignments.reduce<Record<string, AuthorityAssignment>>((accumulator, assignment) => {
@@ -113,24 +158,24 @@ const AuthorityManagement = function () {
   const filteredStaff = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    return staffRecords.filter((staff) => {
+    return staffList.filter((staff) => {
       if (!term) {
         return true;
       }
 
-      const assignedRoles = assignmentMap[staff.id]?.roles || staff.role.split(", ").filter(Boolean);
+      const assignedRoles = assignmentMap[staff.id || staff.staffId]?.roles || staff.role.split(", ").filter(Boolean);
 
       return (
         staff.name.toLowerCase().includes(term) ||
         assignedRoles.join(", ").toLowerCase().includes(term) ||
         staff.department.toLowerCase().includes(term) ||
-        staff.employeeCode.toLowerCase().includes(term)
+        (staff.employeeCode || "").toLowerCase().includes(term)
       );
     });
-  }, [assignmentMap, search]);
+  }, [assignmentMap, search, staffList]);
 
-  const selectedStaff = staffRecords.find((staff) => staff.id === selectedStaffId);
-  const selectedAssignment = assignments.find((assignment) => assignment.staffId === selectedStaff?.id);
+  const selectedStaff = staffList.find((staff) => staff.id === selectedStaffId || staff.staffId === selectedStaffId);
+  const selectedAssignment = assignments.find((assignment) => assignment.staffId === (selectedStaff?.id || selectedStaff?.staffId));
 
   const authorityCounts = authorityDefinitions.map((authority) => ({
     ...authority,
@@ -144,19 +189,44 @@ const AuthorityManagement = function () {
     );
   }, 0);
 
-  const persistAssignments = (nextAssignments: AuthorityAssignment[]) => {
+  const persistAssignments = async (nextAssignments: AuthorityAssignment[]) => {
+    // Update local state immediately for instant UI feedback (optimistic update)
+    // This triggers the useEffect that syncs to localStorage automatically
     setAssignments(nextAssignments);
-    window.localStorage.setItem(AUTHORITY_STORAGE_KEY, JSON.stringify(nextAssignments));
-    window.dispatchEvent(new CustomEvent(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT));
+    setSaveError(null);
+    setIsSavingToBackend(true);
+
+    try {
+      // Prepare payload for backend - remove updatedAt and updatedBy as API doesn't accept them
+      const backendPayload = nextAssignments.map(({ updatedAt, updatedBy, ...rest }) => rest);
+      
+      // Save to backend API (localStorage is handled by useEffect that watches assignments)
+      await updateAuthorityAssignments(backendPayload).unwrap();
+      
+      // Record successful save
+      const now = new Date().toLocaleTimeString();
+      setLastSaveTime(now);
+      
+      console.log("[Authority Sync] Successfully saved to backend", { timestamp: now, assignmentCount: backendPayload.length });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save authority assignments";
+      setSaveError(errorMessage);
+      console.error("[Authority Sync] Backend save failed, changes kept in state and localStorage:", error);
+    } finally {
+      setIsSavingToBackend(false);
+    }
   };
 
-  const handleAuthorityToggle = (authorityKey: AuthorityKey) => {
+  const handleAuthorityToggle = async (authorityKey: AuthorityKey) => {
     if (!selectedStaff || !selectedAssignment || !isDirectorLevel) {
       return;
     }
 
+    const staffId = selectedStaff.id || selectedStaff.staffId || "";
+    const wasEnabled = selectedAssignment.authorities[authorityKey];
+    
     const nextAssignments = assignments.map((assignment) => {
-      if (assignment.staffId !== selectedStaff.id) {
+      if (assignment.staffId !== staffId) {
         return assignment;
       }
 
@@ -172,19 +242,39 @@ const AuthorityManagement = function () {
       };
     });
 
-    persistAssignments(nextAssignments);
+    // Log authority change with clear visibility
+    const action = wasEnabled ? "REMOVED" : "GRANTED";
+    console.log(`[Authority Change] Authority ${action}:`, {
+      staff: selectedStaff.name,
+      staffId: staffId,
+      authority: authorityKey,
+      action: action,
+      newState: !wasEnabled,
+      timestamp: new Date().toISOString(),
+    });
+
+    await persistAssignments(nextAssignments);
   };
 
-  const handleResetToRoleTemplate = () => {
+  const handleResetToRoleTemplate = async () => {
     if (!selectedStaff || !isDirectorLevel) {
       return;
     }
 
     const templateName = getTemplateForRole(selectedStaff.role);
     const templateKeys = roleAuthorityTemplates[selectedStaff.role] || [];
+    const staffId = selectedStaff.id || selectedStaff.staffId || "";
+    const currentAssignment = assignments.find((a) => a.staffId === staffId);
+    
+    // Identify which authorities are being removed
+    const removedAuthorities: AuthorityKey[] = currentAssignment
+      ? (Object.keys(currentAssignment.authorities) as AuthorityKey[]).filter(
+          (key) => currentAssignment.authorities[key] && !templateKeys.includes(key)
+        )
+      : [];
 
     const nextAssignments = assignments.map((assignment) => {
-      if (assignment.staffId !== selectedStaff.id) {
+      if (assignment.staffId !== staffId) {
         return assignment;
       }
 
@@ -198,14 +288,25 @@ const AuthorityManagement = function () {
       };
     });
 
-    persistAssignments(nextAssignments);
+    // Log reset action with details
+    console.log(`[Authority Reset] Role template reset for ${selectedStaff.name}:`, {
+      staffId: staffId,
+      role: selectedStaff.role,
+      template: templateName,
+      grantedAuthorities: templateKeys,
+      removedAuthorities: removedAuthorities,
+      timestamp: new Date().toISOString(),
+    });
+
+    await persistAssignments(nextAssignments);
   };
 
-  const handleRoleToggle = (role: string) => {
+  const handleRoleToggle = async (role: string) => {
     if (!selectedStaff || !isDirectorLevel) {
       return;
     }
 
+    const staffId = selectedStaff.id || selectedStaff.staffId || "";
     const currentRoles = selectedAssignment?.roles || [];
     const hasRole = currentRoles.includes(role);
     const nextRoles = hasRole ? currentRoles.filter((item) => item !== role) : [...currentRoles, role];
@@ -219,9 +320,15 @@ const AuthorityManagement = function () {
       });
       return accumulator;
     }, []);
+    
+    // Get current authorities to identify what's being removed
+    const currentAuthorities: Record<AuthorityKey, boolean> = selectedAssignment?.authorities || emptyAuthorities();
+    const removedAuthorities = (Object.keys(currentAuthorities) as AuthorityKey[]).filter(
+      (key) => currentAuthorities[key] && !mergedAuthorities.includes(key)
+    );
 
     const nextAssignments = assignments.map((assignment) => {
-      if (assignment.staffId !== selectedStaff.id) {
+      if (assignment.staffId !== staffId) {
         return assignment;
       }
 
@@ -238,8 +345,37 @@ const AuthorityManagement = function () {
       };
     });
 
-    persistAssignments(nextAssignments);
+    // Log role change with details
+    const action = hasRole ? "REMOVED" : "ADDED";
+    console.log(`[Role Change] Role ${action}:`, {
+      staff: selectedStaff.name,
+      staffId: staffId,
+      role: role,
+      action: action,
+      previousRoles: currentRoles,
+      newRoles: effectiveRoles,
+      grantedAuthorities: mergedAuthorities,
+      removedAuthorities: removedAuthorities,
+      timestamp: new Date().toISOString(),
+    });
+
+    await persistAssignments(nextAssignments);
   };
+
+  const allRoleOptions = Array.from(
+    new Set([
+      ...Object.keys(roleAuthorityTemplates),
+      ...staffList.flatMap((staff) => staff.role.split(", ").filter(Boolean)),
+    ]),
+  ).sort();
+
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-lg text-gray-600">Loading authority data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -277,7 +413,7 @@ const AuthorityManagement = function () {
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Staff in Register</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{staffRecords.length}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{staffList.length}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Authority Types</p>
@@ -496,6 +632,41 @@ const AuthorityManagement = function () {
             </button>
           </div>
 
+          {(saveError || isSavingToBackend || lastSaveTime) && (
+            <div className={`mt-4 rounded-2xl px-4 py-3 ring-1 ${
+              saveError
+                ? "bg-red-50 text-red-700 ring-red-200"
+                : isSavingToBackend
+                  ? "bg-yellow-50 text-yellow-700 ring-yellow-200"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+            }`}>
+              <div className="flex items-center gap-3">
+                {saveError ? (
+                  <>
+                    <FiLock className="h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold">Save Failed</p>
+                      <p className="text-sm opacity-90">{saveError}</p>
+                    </div>
+                  </>
+                ) : isSavingToBackend ? (
+                  <>
+                    <div className="h-5 w-5 flex-shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <span className="font-semibold">Saving changes to backend...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiCheckCircle className="h-5 w-5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold">Changes Saved</p>
+                      <p className="text-sm opacity-90">Authority changes have been saved to backend at {lastSaveTime}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -592,17 +763,47 @@ const AuthorityManagement = function () {
             <button
               type="button"
               onClick={handleResetToRoleTemplate}
-              disabled={!isDirectorLevel}
+              disabled={!isDirectorLevel || isSavingToBackend}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              <FiRefreshCw className="h-4 w-4" />
+              <FiRefreshCw className={`h-4 w-4 ${isSavingToBackend ? "animate-spin" : ""}`} />
               Reset to Role Template
             </button>
-            <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
-              {isDirectorLevel ? <FiKey className="h-4 w-4 text-slate-500" /> : <FiLock className="h-4 w-4 text-slate-500" />}
-              {isDirectorLevel
-                ? "Changes are saved for this demo in local storage."
-                : "Assignment controls stay locked until a director-level account signs in."}
+            <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm ring-1 ${
+              saveError
+                ? "bg-red-50 text-red-600 ring-red-200"
+                : isSavingToBackend
+                  ? "bg-yellow-50 text-yellow-600 ring-yellow-200"
+                  : lastSaveTime
+                    ? "bg-emerald-50 text-emerald-600 ring-emerald-200"
+                    : "bg-slate-50 text-slate-600 ring-slate-200"
+            }`}>
+              {saveError ? (
+                <>
+                  <FiLock className="h-4 w-4" />
+                  <span>Error: {saveError}</span>
+                </>
+              ) : isSavingToBackend ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span>Saving to backend...</span>
+                </>
+              ) : lastSaveTime ? (
+                <>
+                  <FiCheckCircle className="h-4 w-4" />
+                  <span>Saved at {lastSaveTime}</span>
+                </>
+              ) : isDirectorLevel ? (
+                <>
+                  <FiKey className="h-4 w-4 text-slate-500" />
+                  <span>Ready to save changes</span>
+                </>
+              ) : (
+                <>
+                  <FiLock className="h-4 w-4 text-slate-500" />
+                  <span>Assignment controls stay locked until a director-level account signs in.</span>
+                </>
+              )}
             </div>
           </div>
         </div>
