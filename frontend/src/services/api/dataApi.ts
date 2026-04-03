@@ -130,6 +130,13 @@ export interface AuthorityAssignment {
   updatedBy?: string;
 }
 
+export interface AuthorityAssignmentUpdatePayload {
+  id: string;
+  roles: string[];
+  roleTemplate: string;
+  authorities: Record<AuthorityKey, boolean>;
+}
+
 // Schedule Request Types (match backend ScheduleWriteRequest)
 export interface ScheduleRequest {
   classId: string;
@@ -236,6 +243,11 @@ export const dataApi = createApi({
       providesTags: ['Schedule'],
     }),
 
+    getMySchedule: builder.query<ClassSchedule[], void>({
+      query: () => '/schedule/me',
+      providesTags: ['Schedule'],
+    }),
+
     createSchedule: builder.mutation<ClassSchedule, ScheduleRequest>({
       query: (scheduleData) => ({
         url: '/schedule',
@@ -280,7 +292,7 @@ export const dataApi = createApi({
       providesTags: ['Authority'],
     }),
 
-    updateAuthorityAssignments: builder.mutation<AuthorityAssignment[], AuthorityAssignment[]>({
+    updateAuthorityAssignments: builder.mutation<AuthorityAssignment[], AuthorityAssignmentUpdatePayload[]>({
       query: (assignments) => ({
         url: '/authority/assignments',
         method: 'PUT',
@@ -316,6 +328,7 @@ export const {
   useGetAllSchedulesQuery,
   useGetScheduleByClassQuery,
   useGetScheduleByFacultyQuery,
+  useGetMyScheduleQuery,
   useCreateScheduleMutation,
   useUpdateScheduleMutation,
   useDeleteScheduleMutation,

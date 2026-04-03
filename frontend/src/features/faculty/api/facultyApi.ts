@@ -93,6 +93,43 @@ export interface ClassInfo {
   totalStudents: number;
 }
 
+export interface FacultyClassOverview {
+  id: string;
+  name: string;
+  section: string;
+  studentCount: number;
+  subjects: Array<{
+    id: string;
+    name: string;
+    code: string;
+    materials: Array<{
+      id: string;
+      title: string;
+      unit?: string;
+      week?: string;
+      type: string;
+      description?: string;
+    }>;
+  }>;
+}
+
+export interface PerformanceStudent {
+  id: string;
+  name: string;
+  rollNumber: string;
+  class: string;
+  section: string;
+  overallGrade: string;
+  attendance: number;
+  performanceTrend: 'up' | 'down' | 'stable';
+  marks: Array<{
+    subject: string;
+    marks: number;
+    totalMarks: number;
+    grade: string;
+  }>;
+}
+
 export const facultyApi = createApi({
   reducerPath: 'facultyApi',
   baseQuery: fetchBaseQuery({
@@ -128,6 +165,11 @@ export const facultyApi = createApi({
       providesTags: ['Classes'],
     }),
 
+    getFacultyClassOverview: builder.query<FacultyClassOverview[], void>({
+      query: () => '/faculty/classes/overview',
+      providesTags: ['Classes'],
+    }),
+
     // Class Subject
     getClassSubjects: builder.query<
       { id: string; name: string; code: string }[],
@@ -141,6 +183,18 @@ export const facultyApi = createApi({
     getClassSchedule: builder.query<ClassSchedule[], void>({
       query: () => '/faculty/schedule',
       providesTags: ['Schedule'],
+    }),
+
+    getPerformanceStudents: builder.query<PerformanceStudent[], { classId?: string } | void>({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params?.classId) {
+          searchParams.append('classId', params.classId);
+        }
+        const query = searchParams.toString();
+        return `/faculty/performance/students${query ? `?${query}` : ''}`;
+      },
+      providesTags: ['Marks', 'Attendance', 'Classes'],
     }),
 
     // Assignments
@@ -351,8 +405,10 @@ export const facultyApi = createApi({
 export const {
   useGetFacultyProfileQuery,
   useGetFacultyClassesQuery,
+  useGetFacultyClassOverviewQuery,
   useGetClassSubjectsQuery,
   useGetClassScheduleQuery,
+  useGetPerformanceStudentsQuery,
   useListAssignmentsQuery,
   useGetAssignmentQuery,
   useCreateAssignmentMutation,

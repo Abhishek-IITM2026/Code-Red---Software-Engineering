@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { FiAlertTriangle, FiCalendar, FiPlus, FiX } from 'react-icons/fi';
 import ScheduleForm from '../../administration/components/ScheduleForm';
@@ -11,20 +11,44 @@ import {
   useDeleteScheduleMutation,
 } from '../../../services/api/dataApi';
 import type { ClassSchedule } from '../../../services/api/dataApi';
-import { readAuthorityAssignments } from '../../administration/utils/authorityAccess';
+import {
+  AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
+  readAuthorityAssignments,
+  userHasAuthority,
+} from '../../administration/utils/authorityAccess';
 
 const CreateSchedule = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClassSchedule | null>(null);
+  const [authorityVersion, setAuthorityVersion] = useState(0);
+  const [localSchedules, setLocalSchedules] = useState<ClassSchedule[]>([]);
 
   // Check schedule creation authority
-  const authorityAssignments = useMemo(() => readAuthorityAssignments(), []);
+  useEffect(() => {
+    const handleAssignmentsUpdated = () => {
+      setAuthorityVersion((current) => current + 1);
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'administration-authority-assignments') {
+        handleAssignmentsUpdated();
+      }
+    };
+
+    window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const authorityAssignments = useMemo(() => readAuthorityAssignments(), [authorityVersion]);
   const hasScheduleCreationAuthority = useMemo(() => {
-    if (!user) return false;
-    const assignment = authorityAssignments.find((a) => a.staffId === String(user.id));
-    return assignment ? assignment.authorities.scheduleCreation : false;
+    return userHasAuthority(user, 'scheduleCreation', authorityAssignments);
   }, [user, authorityAssignments]);
 
   // API Hooks
@@ -34,10 +58,26 @@ const CreateSchedule = () => {
   const [deleteSchedule, { isLoading: isDeleting }] = useDeleteScheduleMutation();
 
   // Filter schedules created by or assigned to this faculty member
-  const facultyId = user?.id ? String(user.id) : '';
-  const facultySchedules = allSchedules.filter(
-    (schedule) => schedule.facultyId === facultyId
-  );
+  const facultyId = user?.id ? String(user.id).trim() : '';
+  const normalizeId = (value: string | number | undefined | null) => String(value ?? '').trim();
+  const mergedSchedules = useMemo(() => {
+    const scheduleMap = new Map<string, ClassSchedule>();
+
+    allSchedules.forEach((schedule) => {
+      scheduleMap.set(String(schedule.id), schedule);
+    });
+
+    localSchedules.forEach((schedule) => {
+      scheduleMap.set(String(schedule.id), schedule);
+    });
+
+    return Array.from(scheduleMap.values());
+  }, [allSchedules, localSchedules]);
+
+  const facultySchedules = useMemo(() => {
+    return mergedSchedules.filter((schedule) => normalizeId(schedule.facultyId) === facultyId);
+  }, [mergedSchedules, facultyId]);
+  const facultyName = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim();
 
   if (!hasScheduleCreationAuthority) {
     return (
@@ -70,7 +110,7 @@ const CreateSchedule = () => {
       const apiPayload = {
         classId: schedule.classId,
         subjectId: 1,
-        facultyId: schedule.facultyId,
+        facultyId,
         dayOfWeek: schedule.dayOfWeek,
         timeSlot: {
           startTime: schedule.timeSlot.startTime,
@@ -80,9 +120,31 @@ const CreateSchedule = () => {
       };
 
       if (editingSchedule) {
-        await updateSchedule({ id: editingSchedule.id, data: apiPayload }).unwrap();
+        const updatedSchedule = await updateSchedule({ id: editingSchedule.id, data: apiPayload }).unwrap();
+        setLocalSchedules((current) => {
+          const nextSchedule = {
+            ...schedule,
+            ...updatedSchedule,
+            facultyId,
+            facultyName: updatedSchedule.facultyName || facultyName,
+          };
+          const hasExisting = current.some((item) => item.id === editingSchedule.id);
+
+          return hasExisting
+            ? current.map((item) => (item.id === editingSchedule.id ? nextSchedule : item))
+            : [...current, nextSchedule];
+        });
       } else {
-        await createSchedule(apiPayload).unwrap();
+        const createdSchedule = await createSchedule(apiPayload).unwrap();
+        setLocalSchedules((current) => [
+          ...current.filter((item) => item.id !== createdSchedule.id),
+          {
+            ...schedule,
+            ...createdSchedule,
+            facultyId,
+            facultyName: createdSchedule.facultyName || facultyName,
+          },
+        ]);
       }
       setIsFormOpen(false);
       setEditingSchedule(null);
@@ -98,6 +160,7 @@ const CreateSchedule = () => {
 
     try {
       await deleteSchedule(deleteTarget.id).unwrap();
+      setLocalSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err) {
       console.error('Failed to delete schedule:', err);

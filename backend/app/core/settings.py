@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     MONGO_URI: str = "mongodb://localhost:27017"
     MONGO_DB_NAME: str = "code_red"
     MONGO_ASSESSMENT_COLLECTION: str = "assessment_questions"
+    MONGO_ASSESSMENT_SUBMISSION_COLLECTION: str = "assessment_submissions"
     USE_MONGO_MOCK: bool = False
 
     REDIS_URL: str = "redis://localhost:6379/0"

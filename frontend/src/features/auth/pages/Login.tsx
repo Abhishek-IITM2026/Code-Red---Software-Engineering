@@ -7,9 +7,9 @@ import { login, clearError } from "../store/authSlice";
 import type { AppDispatch, RootState } from "../../../app/store";
 
 const demoUsers = [
-  { email: "student@example.com", password: "student123", role: "Student", icon: FiUser },
-  { email: "faculty@example.com", password: "faculty123", role: "Faculty", icon: FiShield },
-  { email: "parent@example.com", password: "parent123", role: "Parent", icon: FiUser },
+  { email: "student001@example.com", password: "student123", role: "Student", icon: FiUser },
+  { email: "faculty01@example.com", password: "faculty123", role: "Faculty", icon: FiShield },
+  { email: "parent001@example.com", password: "parent123", role: "Parent", icon: FiUser },
   { email: "admin@example.com", password: "admin123", role: "Admin", icon: FiShield },
 ];
 
@@ -180,7 +180,7 @@ const Login = () => {
         <div className="mt-4 p-4 rounded-xl bg-[var(--secondary)] border border-[var(--border)]">
           <p className="text-xs font-medium text-[var(--text)] mb-2">Demo Credentials</p>
           <p className="text-xs text-[var(--text-secondary)]">
-            Email: <span className="font-mono">student@example.com</span> | Password: <span className="font-mono">student123</span>
+            Email: <span className="font-mono">student001@example.com</span> | Password: <span className="font-mono">student123</span>
           </p>
         </div>
       </div>

@@ -9,6 +9,7 @@ export interface Student {
   lastName: string;
   role: string;
   enrollmentNo?: string;
+  class?: string;
   classId?: string;
   section?: string;
 }
@@ -47,6 +48,7 @@ export interface Assignment {
   description: string;
   dueDate: string;
   totalMarks: number;
+  status: string;
 }
 
 export interface Schedule {
@@ -57,6 +59,20 @@ export interface Schedule {
   startTime: string;
   endTime: string;
   roomNo?: string;
+}
+
+export interface UpcomingCourse {
+  id: string;
+  title: string;
+  description: string;
+  className: string;
+  section: string;
+  startDate: string;
+  endDate: string;
+  instructor: string;
+  mode: string;
+  seats: number;
+  createdBy: string;
 }
 
 // API Slice
@@ -147,6 +163,10 @@ export const studentApi = createApi({
       query: () => '/students/me/performance',
       providesTags: ['Marks'],
     }),
+
+    getUpcomingCourses: builder.query<UpcomingCourse[], void>({
+      query: () => '/students/me/upcoming-courses',
+    }),
   }),
 });
 
@@ -161,6 +181,7 @@ export const {
   useSubmitAssignmentMutation,
   useGetAttendanceStatsQuery,
   useGetPerformanceSummaryQuery,
+  useGetUpcomingCoursesQuery,
 } = studentApi;
 
 export default studentApi;

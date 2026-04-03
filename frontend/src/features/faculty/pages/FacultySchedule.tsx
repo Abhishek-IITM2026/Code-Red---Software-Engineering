@@ -1,16 +1,21 @@
 import { useSelector } from 'react-redux';
 import ScheduleView from '../../administration/components/ScheduleView';
 import type { RootState } from '../../../app/store';
+import { useGetScheduleByFacultyQuery } from '../../../services/api/dataApi';
 
 const FacultySchedule = () => {
-  // Get faculty ID and auth token from auth state
   const user = useSelector((state: RootState) => state.auth.user);
   const token = useSelector((state: RootState) => state.auth.token);
-  
-  // Use the numeric user ID directly - backend expects integer facultyId
-  const facultyId = user?.id ? user.id : null;
+  const facultyId = user?.id ? String(user.id).trim() : '';
+  const isFacultyUser = user?.role?.trim().toLowerCase() === 'faculty';
+  const {
+    data: facultySchedules = [],
+    isLoading,
+    error,
+  } = useGetScheduleByFacultyQuery(facultyId, {
+    skip: !token || !user || !facultyId || !isFacultyUser,
+  });
 
-  // Check if user is authenticated
   if (!token || !user) {
     return (
       <div className="space-y-6">
@@ -22,8 +27,7 @@ const FacultySchedule = () => {
     );
   }
 
-  // Check if user is faculty
-  if (user.role !== 'faculty') {
+  if (!isFacultyUser) {
     return (
       <div className="space-y-6">
         <div className="rounded-2xl bg-red-50 p-4 border border-red-200">
@@ -46,9 +50,12 @@ const FacultySchedule = () => {
   }
 
   return (
-    <ScheduleView 
-      userRole="faculty" 
+    <ScheduleView
+      userRole="faculty"
       facultyId={facultyId}
+      schedulesOverride={facultySchedules}
+      isLoadingOverride={isLoading}
+      errorOverride={error}
     />
   );
 };

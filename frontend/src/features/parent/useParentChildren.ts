@@ -1,35 +1,100 @@
 import { useEffect, useMemo, useState } from "react";
-import { childProfiles, getAttendanceForChild, getChildProfileById, getFacultyContactsForChild, getFeesForChild, getPerformanceForChild } from "./data";
+import {
+  useGetChildWorkspaceQuery,
+  useGetLinkedStudentsQuery,
+} from "./api/parentApi";
+import type {
+  AttendanceRow,
+  FacultyContact,
+  FeeTransaction,
+  ParentChildProfile,
+  PerformanceSubject,
+} from "./data";
 
 const SELECTED_CHILD_KEY = "parent-selected-child-id";
 
-const getInitialChildId = () => {
-  if (typeof window === "undefined") {
-    return childProfiles[0]?.id || "";
-  }
-
-  return window.localStorage.getItem(SELECTED_CHILD_KEY) || childProfiles[0]?.id || "";
-};
-
 export const useParentChildren = () => {
-  const [selectedChildId, setSelectedChildId] = useState(getInitialChildId);
+  const { data: linkedStudents = [], isLoading: isChildrenLoading } = useGetLinkedStudentsQuery();
+  const [selectedChildId, setSelectedChildId] = useState("");
 
   useEffect(() => {
-    if (!selectedChildId) {
+    if (!linkedStudents.length) {
+      return;
+    }
+
+    const storedChildId =
+      typeof window === "undefined" ? "" : window.localStorage.getItem(SELECTED_CHILD_KEY) || "";
+    const nextChildId =
+      linkedStudents.find((child) => child.studentId === storedChildId)?.studentId ||
+      linkedStudents[0].studentId;
+
+    setSelectedChildId((current) => current || nextChildId);
+  }, [linkedStudents]);
+
+  useEffect(() => {
+    if (!selectedChildId || typeof window === "undefined") {
       return;
     }
 
     window.localStorage.setItem(SELECTED_CHILD_KEY, selectedChildId);
   }, [selectedChildId]);
 
-  const selectedChild = useMemo(() => getChildProfileById(selectedChildId), [selectedChildId]);
-  const attendanceRows = useMemo(() => getAttendanceForChild(selectedChild.id), [selectedChild.id]);
-  const performanceSubjects = useMemo(() => getPerformanceForChild(selectedChild.id), [selectedChild.id]);
-  const feeTransactions = useMemo(() => getFeesForChild(selectedChild.id), [selectedChild.id]);
-  const facultyContacts = useMemo(() => getFacultyContactsForChild(selectedChild.id), [selectedChild.id]);
+  const {
+    data: workspace,
+    isLoading: isWorkspaceLoading,
+    isFetching: isWorkspaceFetching,
+  } = useGetChildWorkspaceQuery(selectedChildId, {
+    skip: !selectedChildId,
+  });
+
+  const children = useMemo<ParentChildProfile[]>(
+    () =>
+      linkedStudents.map((child) => ({
+        id: child.studentId,
+        name: child.studentName,
+        className: child.class,
+        classId: child.studentId,
+        section: child.section,
+        sectionId: child.section,
+      })),
+    [linkedStudents],
+  );
+
+  const selectedChild = useMemo<ParentChildProfile>(() => {
+    const fallback = children[0] || {
+      id: "",
+      name: "Student",
+      className: "",
+      classId: "",
+      section: "",
+      sectionId: "",
+    };
+
+    const fromWorkspace = workspace?.child
+      ? {
+          id: workspace.child.id || workspace.child.studentId,
+          name:
+            workspace.child.studentName ||
+            [workspace.child.firstName, workspace.child.lastName].filter(Boolean).join(" ") ||
+            fallback.name,
+          className: workspace.child.class || fallback.className,
+          classId: workspace.child.classId || fallback.classId,
+          section: workspace.child.section || fallback.section,
+          sectionId: workspace.child.section || fallback.sectionId,
+        }
+      : null;
+
+    return fromWorkspace || children.find((child) => child.id === selectedChildId) || fallback;
+  }, [children, selectedChildId, workspace]);
+
+  const attendanceRows = (workspace?.attendanceRows || []) as AttendanceRow[];
+  const performanceSubjects = (workspace?.performanceSubjects || []) as PerformanceSubject[];
+  const feeTransactions = (workspace?.feeTransactions || []) as FeeTransaction[];
+  const facultyContacts = (workspace?.facultyContacts || []) as FacultyContact[];
+  const upcomingCourses = workspace?.upcomingCourses || [];
 
   return {
-    children: childProfiles,
+    children,
     selectedChild,
     selectedChildId,
     setSelectedChildId,
@@ -37,5 +102,9 @@ export const useParentChildren = () => {
     performanceSubjects,
     feeTransactions,
     facultyContacts,
+    upcomingCourses,
+    summary: workspace?.performance,
+    attendanceSummary: workspace?.attendance,
+    isLoading: isChildrenLoading || isWorkspaceLoading || isWorkspaceFetching,
   };
 };

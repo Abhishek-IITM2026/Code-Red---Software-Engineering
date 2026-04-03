@@ -24,6 +24,8 @@ export interface StudentRecord {
   status: 'active' | 'inactive' | 'suspended';
   createdAt: string;
   updatedAt: string;
+  attendance?: number;
+  average?: number;
 }
 
 export interface StaffRecord {
@@ -37,7 +39,7 @@ export interface StaffRecord {
   department: string;
   phone?: string;
   joiningDate: string;
-  status: 'active' | 'inactive' | 'on-leave';
+  status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
 }
@@ -60,11 +62,17 @@ export interface LeaveRequest {
 
 export interface Course {
   id: string;
-  code: string;
-  name: string;
+  title: string;
   description: string;
-  credits: number;
-  semester: number;
+  classId?: string;
+  className: string;
+  section: string;
+  startDate: string;
+  endDate: string;
+  instructor: string;
+  mode: 'Online' | 'Offline' | 'Hybrid';
+  seats: number;
+  createdBy: string;
   status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
@@ -76,6 +84,22 @@ export interface PromotionData {
   studentIds: string[];
   promoteToClass: string;
   promoteToSection: string;
+}
+
+export interface PromotionCandidate {
+  id: string;
+  admissionNo: string;
+  name: string;
+  className: string;
+  section: string;
+  guardian?: string;
+  parentPhone?: string;
+  attendance: string;
+  average: string;
+  status: string;
+  resultStatus: 'Eligible' | 'Review Required';
+  targetClass: string;
+  notes: string;
 }
 
 export interface FinancialRecord {
@@ -93,21 +117,20 @@ export interface FinancialRecord {
 }
 
 export interface AttendanceReport {
-  studentId: string;
-  studentName: string;
-  class: string;
-  section: string;
-  totalClasses: number;
-  presentDays: number;
-  absentDays: number;
-  lateDays: number;
-  attendancePercentage: number;
+  id: string;
+  name: string;
+  role: string;
+  departmentOrClass: string;
+  attendance: string;
+  status: string;
+  audience: 'students' | 'faculty' | 'staff';
 }
 
 export interface ExamParticipationReport {
   studentId: string;
   studentName: string;
   class: string;
+  section?: string;
   examName: string;
   participationStatus: 'participated' | 'absent' | 'exempted';
   marksObtained?: number;
@@ -264,7 +287,7 @@ export const adminApi = createApi({
       providesTags: ['Courses'],
     }),
 
-    createCourse: builder.mutation<Course, Omit<Course, 'id' | 'createdAt' | 'updatedAt'>>({
+    createCourse: builder.mutation<Course, Omit<Course, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'classId'>>({
       query: (data) => ({
         url: '/administration/courses',
         method: 'POST',
@@ -273,7 +296,7 @@ export const adminApi = createApi({
       invalidatesTags: ['Courses'],
     }),
 
-    updateCourse: builder.mutation<Course, Course>({
+    updateCourse: builder.mutation<Course, Omit<Course, 'createdBy' | 'classId'> & { id: string }>({
       query: ({ id, ...data }) => ({
         url: `/administration/courses/${id}`,
         method: 'PUT',
@@ -291,6 +314,28 @@ export const adminApi = createApi({
     }),
 
     // Student Promotion
+    listPromotionCandidates: builder.query<PromotionCandidate[], { targetClass?: string } | void>({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params && params.targetClass) queryParams.append('targetClass', params.targetClass);
+        const queryString = queryParams.toString();
+        return `/administration/promotions/candidates${queryString ? `?${queryString}` : ''}`;
+      },
+      providesTags: ['Students'],
+    }),
+
+    promoteStudent: builder.mutation<
+      { studentId: string; targetClass: string; academicYear: string; promoted: boolean },
+      { id: string; targetClass: string; academicYear?: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/administration/promotions/${id}`,
+        method: 'POST',
+        body: body,
+      }),
+      invalidatesTags: ['Students'],
+    }),
+
     promoteStudents: builder.mutation<{ success: boolean }, PromotionData>({
       query: (data) => ({
         url: '/administration/students/promote',
@@ -377,6 +422,8 @@ export const {
   useUpdateCourseMutation,
   useDeleteCourseMutation,
   usePromoteStudentsMutation,
+  useListPromotionCandidatesQuery,
+  usePromoteStudentMutation,
   useListFinancialRecordsQuery,
   useGetFinancialRecordQuery,
   useCreateFinancialRecordMutation,

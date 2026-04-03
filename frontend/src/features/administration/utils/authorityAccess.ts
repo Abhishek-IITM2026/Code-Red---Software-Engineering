@@ -9,7 +9,7 @@ export type AuthorityKey =
   | "scheduleCreation";
 
 export type AuthorityAssignment = {
-  staffId: string;
+  staffId: string; // Contains user_id from backend (users table id) - used to link authorities to specific users
   roles: string[];
   roleTemplate: string;
   authorities: Record<AuthorityKey, boolean>;
@@ -125,11 +125,28 @@ export const readAuthorityAssignments = (): AuthorityAssignment[] => {
   try {
     const parsedAssignments = JSON.parse(storedAssignments) as AuthorityAssignment[];
     const fallbackAssignments = buildDefaultAssignments();
-
-    return fallbackAssignments.map((defaultAssignment) => {
+    const normalizedFallbackAssignments = fallbackAssignments.map((defaultAssignment) => {
       const stored = parsedAssignments.find((item) => item.staffId === defaultAssignment.staffId);
       return normalizeAssignment(stored, defaultAssignment);
     });
+
+    const additionalStoredAssignments = parsedAssignments
+      .filter(
+        (storedAssignment) =>
+          !fallbackAssignments.some((defaultAssignment) => defaultAssignment.staffId === storedAssignment.staffId),
+      )
+      .map((storedAssignment) =>
+        normalizeAssignment(storedAssignment, {
+          staffId: String(storedAssignment.staffId ?? "").trim(),
+          roles: Array.isArray(storedAssignment.roles) ? storedAssignment.roles : [],
+          roleTemplate: storedAssignment.roleTemplate || "Custom",
+          authorities: emptyAuthorities(),
+          updatedAt: storedAssignment.updatedAt || "Unknown",
+          updatedBy: storedAssignment.updatedBy || "System",
+        }),
+      );
+
+    return [...normalizedFallbackAssignments, ...additionalStoredAssignments];
   } catch {
     return buildDefaultAssignments();
   }
@@ -155,13 +172,17 @@ export const getAuthorityAssignmentForUser = (
   user: User | null | undefined,
   assignments = readAuthorityAssignments(),
 ) => {
-  const staffRecord = getStaffRecordForUser(user);
-
-  if (!staffRecord) {
+  if (!user || !user.id) {
     return undefined;
   }
 
-  return assignments.find((assignment) => assignment.staffId === staffRecord.id);
+  // Normalize user.id to string for comparison (staffId in assignment is actually user_id from backend)
+  const normalizedUserId = String(user.id).trim();
+  
+  return assignments.find((assignment) => {
+    // Compare user_id directly - staffId field contains user_id value from backend
+    return String(assignment.staffId).trim() === normalizedUserId;
+  });
 };
 
 export const userHasAuthority = (

@@ -45,7 +45,7 @@ class InMemoryDocumentStore:
 
 class MongoDocumentStore:
     def __init__(self, mongo_uri: str, db_name: str):
-        self.client = MongoClient(mongo_uri)
+        self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)
         self.database = self.client[db_name]
 
     @staticmethod
@@ -79,16 +79,50 @@ class MongoDocumentStore:
             self.database[collection].delete_one({"_id": self._normalize_id(document_id)})
 
 
+class ResilientDocumentStore:
+    def __init__(self, primary, fallback):
+        self.primary = primary
+        self.fallback = fallback
+
+    def _call(self, method_name: str, *args, **kwargs):
+        primary_method = getattr(self.primary, method_name)
+        fallback_method = getattr(self.fallback, method_name)
+        try:
+            return primary_method(*args, **kwargs)
+        except Exception as exc:  # pragma: no cover - depends on runtime infra
+            current_app.logger.warning("Document store primary backend unavailable, using fallback store. Reason: %s", exc)
+            return fallback_method(*args, **kwargs)
+
+    def insert_one(self, collection: str, payload: dict[str, Any]) -> str:
+        return self._call("insert_one", collection, payload)
+
+    def find_one(self, collection: str, document_id: str | None) -> dict[str, Any] | None:
+        return self._call("find_one", collection, document_id)
+
+    def update_one(self, collection: str, document_id: str, payload: dict[str, Any]) -> str:
+        return self._call("update_one", collection, document_id, payload)
+
+    def delete_one(self, collection: str, document_id: str | None) -> None:
+        self._call("delete_one", collection, document_id)
+
+
 def init_document_store(app) -> None:
     use_mock = app.config.get("USE_MONGO_MOCK", False) or MongoClient is None
     if use_mock:
         app.extensions["document_store"] = InMemoryDocumentStore()
         return
 
-    app.extensions["document_store"] = MongoDocumentStore(
-        mongo_uri=app.config["MONGO_URI"],
-        db_name=app.config["MONGO_DB_NAME"],
-    )
+    fallback = InMemoryDocumentStore()
+    try:
+        primary = MongoDocumentStore(
+            mongo_uri=app.config["MONGO_URI"],
+            db_name=app.config["MONGO_DB_NAME"],
+        )
+        primary.client.admin.command("ping")
+        app.extensions["document_store"] = ResilientDocumentStore(primary, fallback)
+    except Exception as exc:  # pragma: no cover - depends on runtime infra
+        app.logger.warning("MongoDB unavailable during startup, using in-memory document store fallback. Reason: %s", exc)
+        app.extensions["document_store"] = fallback
 
 
 def get_document_store():

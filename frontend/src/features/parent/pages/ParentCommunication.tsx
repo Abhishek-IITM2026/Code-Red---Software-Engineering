@@ -2,7 +2,7 @@ import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
 
 const ParentCommunication = function() {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, facultyContacts } = useParentChildren();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, facultyContacts, isLoading } = useParentChildren();
 
   return (
     <div className="space-y-6">
@@ -29,6 +29,11 @@ const ParentCommunication = function() {
             <p className="mt-2 text-sm text-slate-600">{contact.phone}</p>
           </div>
         ))}
+        {!facultyContacts.length && !isLoading ? (
+          <div className="rounded-2xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+            Faculty contact information is not available yet.
+          </div>
+        ) : null}
       </div>
     </div>
   );

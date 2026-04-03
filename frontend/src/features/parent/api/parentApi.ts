@@ -115,6 +115,64 @@ export interface FeeInvoice {
   updatedAt: string;
 }
 
+export interface ParentChildWorkspace {
+  child: ChildInfo & {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    classId?: string;
+  };
+  attendance: {
+    total: number;
+    present: number;
+    absent: number;
+    percentage: number;
+  };
+  attendanceRows: Array<{
+    subject: string;
+    attended: string;
+    total: string;
+    percentage: string;
+  }>;
+  performance: {
+    average: number;
+    rank: number;
+    totalStudents: number;
+  };
+  performanceSubjects: Array<{
+    id: string;
+    name: string;
+    score: string;
+    teacher: string;
+    report: string[];
+    syllabus: string[];
+  }>;
+  feeTransactions: Array<{
+    month: string;
+    amount: string;
+    status: 'Paid' | 'Pending' | 'Overdue';
+    date: string;
+  }>;
+  facultyContacts: Array<{
+    subject: string;
+    faculty: string;
+    phone: string;
+  }>;
+  upcomingCourses: Array<{
+    id: string;
+    title: string;
+    description: string;
+    className: string;
+    section: string;
+    startDate: string;
+    endDate: string;
+    instructor: string;
+    mode: 'Online' | 'Offline' | 'Hybrid' | string;
+    seats: number;
+    createdBy: string;
+  }>;
+}
+
 export const parentApi = createApi({
   reducerPath: 'parentApi',
   baseQuery: fetchBaseQuery({
@@ -156,8 +214,33 @@ export const parentApi = createApi({
 
     // Student Access
     getLinkedStudents: builder.query<StudentAccess[], void>({
-      query: () => '/parent/students',
+      query: () => '/parent/children',
+      transformResponse: (
+        response: Array<{
+          id: string;
+          firstName?: string;
+          lastName?: string;
+          class?: string;
+          section?: string;
+          rollNumber?: string;
+        }>
+      ) =>
+        response.map((child) => ({
+          studentId: child.id,
+          studentName: [child.firstName, child.lastName].filter(Boolean).join(' ').trim() || 'Student',
+          class: child.class || '',
+          section: child.section || '',
+          rollNumber: child.rollNumber,
+          avgAttendance: 0,
+          currentMarks: 0,
+          lastUpdated: new Date().toISOString(),
+        })),
       providesTags: ['Profile'],
+    }),
+
+    getChildWorkspace: builder.query<ParentChildWorkspace, string>({
+      query: (studentId) => `/parent/children/${studentId}/dashboard`,
+      providesTags: ['Profile', 'Attendance', 'Performance', 'Fees', 'Communications'],
     }),
 
     getStudentOverview: builder.query<StudentAccess, string>({
@@ -373,6 +456,7 @@ export const {
   useGetParentProfileQuery,
   useUpdateParentProfileMutation,
   useGetLinkedStudentsQuery,
+  useGetChildWorkspaceQuery,
   useGetStudentOverviewQuery,
   useLinkChildToAccountMutation,
   useGetStudentAttendanceQuery,

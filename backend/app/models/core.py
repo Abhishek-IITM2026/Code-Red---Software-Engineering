@@ -375,22 +375,32 @@ class Schedule(db.Model):
     faculty = db.relationship("Faculty")
 
     def to_dict(self):
+        class_name = self.institute_class.name if self.institute_class else None
+        section_name = self.institute_class.section if self.institute_class else ""
+        subject_name = self.subject.name if self.subject else None
+        faculty_user = self.faculty.user if self.faculty and self.faculty.user else None
+        faculty_name = (
+            f"{faculty_user.first_name} {faculty_user.last_name}".strip()
+            if faculty_user is not None
+            else None
+        )
+
         return {
             "id": str(self.id),
             "classId": str(self.class_id),
-            "className": self.institute_class.name,
-            "sectionId": self.institute_class.section or "",
-            "sectionName": self.institute_class.section or "",
+            "className": class_name,
+            "sectionId": section_name or "",
+            "sectionName": section_name or "",
             "dayOfWeek": self.day_of_week,
             "timeSlot": {
                 "id": f"{self.day_of_week}-{self.start_time}-{self.end_time}",
                 "startTime": self.start_time,
                 "endTime": self.end_time,
             },
-            "subject": self.subject.name,
+            "subject": subject_name,
             "subjectId": str(self.subject_id),
             "facultyId": str(self.faculty_id),
-            "facultyName": f"{self.faculty.user.first_name} {self.faculty.user.last_name}",
+            "facultyName": faculty_name,
             "roomNumber": self.room_number,
             "createdAt": self.created_at.isoformat(),
             "updatedAt": self.updated_at.isoformat(),
@@ -462,6 +472,52 @@ class Assessment(db.Model):
         }
 
 
+class UpcomingCourse(db.Model):
+    __tablename__ = "upcoming_courses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
+    start_date = db.Column(db.String(30), nullable=False)
+    end_date = db.Column(db.String(30), nullable=False)
+    instructor = db.Column(db.String(200), nullable=False)
+    mode = db.Column(db.String(30), nullable=False, default="Offline")
+    seats = db.Column(db.Integer, nullable=False, default=0)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="active")
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    institute_class = db.relationship("InstituteClass")
+    creator = db.relationship("User")
+
+    def to_dict(self):
+        class_name = self.institute_class.name if self.institute_class else None
+        section = self.institute_class.section if self.institute_class else ""
+        creator_name = "Administration"
+        if self.creator is not None:
+            creator_name = f"{self.creator.first_name} {self.creator.last_name}".strip()
+
+        return {
+            "id": str(self.id),
+            "title": self.title,
+            "description": self.description,
+            "classId": str(self.class_id),
+            "className": class_name,
+            "section": section,
+            "startDate": self.start_date,
+            "endDate": self.end_date,
+            "instructor": self.instructor,
+            "mode": self.mode,
+            "seats": self.seats,
+            "createdBy": creator_name,
+            "status": self.status,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
 class Assignment(db.Model):
     __tablename__ = "assignments"
 
@@ -495,6 +551,43 @@ class AssignmentSubmission(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     submission_url = db.Column(db.String(500), nullable=False)
     submitted_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class AssessmentSubmission(db.Model):
+    __tablename__ = "assessment_submissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    assessment_id = db.Column(db.Integer, db.ForeignKey("assessments.id"), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    answers_document_id = db.Column(db.String(128), unique=True)
+    status = db.Column(db.String(20), nullable=False, default="submitted")
+    score = db.Column(db.Float, nullable=False, default=0)
+    total_marks = db.Column(db.Float, nullable=False, default=0)
+    submitted_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    evaluated_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    assessment = db.relationship("Assessment")
+    student = db.relationship("Student")
+
+    def to_dict(self, answers=None):
+        student_name = ""
+        if self.student and self.student.user:
+            student_name = f"{self.student.user.first_name} {self.student.user.last_name}".strip()
+        return {
+            "id": str(self.id),
+            "assessmentId": str(self.assessment_id),
+            "studentId": str(self.student_id),
+            "studentName": student_name,
+            "status": self.status,
+            "score": self.score,
+            "totalMarks": self.total_marks,
+            "submittedAt": self.submitted_at.isoformat() if self.submitted_at else None,
+            "evaluatedAt": self.evaluated_at.isoformat() if self.evaluated_at else None,
+            "answersDocumentId": self.answers_document_id,
+            "answers": answers or [],
+        }
 
 
 class NotificationBatch(db.Model):

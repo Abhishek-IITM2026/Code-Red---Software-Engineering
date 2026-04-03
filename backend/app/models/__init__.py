@@ -21,10 +21,12 @@ from .core import (
     Schedule,
     Student,
     Subject,
+    UpcomingCourse,
     User,
     UserContactProfile,
     UserStatus,
     Assessment,
+    AssessmentSubmission,
     user_roles,
 )
 
@@ -34,6 +36,7 @@ __all__ = [
     "Assignment",
     "AssignmentSubmission",
     "Assessment",
+    "AssessmentSubmission",
     "Attendance",
     "ClassEnrollment",
     "Faculty",
@@ -52,6 +55,7 @@ __all__ = [
     "Schedule",
     "Student",
     "Subject",
+    "UpcomingCourse",
     "User",
     "UserContactProfile",
     "UserStatus",

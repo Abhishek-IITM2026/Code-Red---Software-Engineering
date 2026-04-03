@@ -1,13 +1,23 @@
 from .assessments import (
     AssessmentCreateRequest,
     AssessmentListQuery,
+    AssessmentSubmissionCreateRequest,
     AssessmentUpdateRequest,
     AssignmentListQuery,
     AssignmentSubmissionRequest,
     GenerateQuestionsRequest,
     ModifyQuestionsRequest,
 )
-from .administration import AuthorityAssignmentWriteRequest, MaterialCreateRequest, PromotionActionRequest
+from .administration import (
+    AuthorityAssignmentWriteRequest,
+    CourseWriteRequest,
+    MaterialCreateRequest,
+    PromotionActionRequest,
+    StaffStatusRequest,
+    StaffWriteRequest,
+    StudentStatusRequest,
+    StudentWriteRequest,
+)
 from .attendance import AttendanceSubmissionRequest
 from .auth import (
     ChangePasswordRequest,
@@ -32,8 +42,10 @@ from .validation import parse_json, parse_query
 __all__ = [
     "AssessmentCreateRequest",
     "AssessmentListQuery",
+    "AssessmentSubmissionCreateRequest",
     "AssessmentUpdateRequest",
     "AuthorityAssignmentWriteRequest",
+    "CourseWriteRequest",
     "AssignmentListQuery",
     "AssignmentSubmissionRequest",
     "AttendanceSubmissionRequest",
@@ -51,6 +63,10 @@ __all__ = [
     "ProfilePictureUpdateRequest",
     "ProfileUpdateRequest",
     "PromotionActionRequest",
+    "StaffStatusRequest",
+    "StaffWriteRequest",
+    "StudentStatusRequest",
+    "StudentWriteRequest",
     "RegisterRequest",
     "SalarySlipListQuery",
     "ScheduleListQuery",

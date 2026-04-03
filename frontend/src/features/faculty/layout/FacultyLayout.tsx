@@ -37,20 +37,22 @@ const FacultyLayout = function () {
       setAuthorityVersion((current) => current + 1);
     };
 
-    // Listen for custom authority update event from AuthorityManagement
-    window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
-
-    // Also listen for storage changes in case admin updates authorities in another tab
-    window.addEventListener("storage", (event) => {
+    const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "administration-authority-assignments") {
         console.log("[FacultyLayout] Storage change detected for authorities, refreshing routes...");
         handleAssignmentsUpdated();
       }
-    });
+    };
+
+    // Listen for custom authority update event from AuthorityManagement
+    window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+
+    // Also listen for storage changes in case admin updates authorities in another tab
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
-      window.removeEventListener("storage", handleAssignmentsUpdated);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
@@ -67,6 +69,14 @@ const FacultyLayout = function () {
   }, [authorityVersion]);
 
   const primaryLinks = useMemo(() => {
+    const normalizeId = (id: string | number | undefined): string => {
+      return String(id || "").trim();
+    };
+
+    const userAssignment = authorityAssignments.find(
+      (a) => normalizeId(a.staffId) === normalizeId(user?.id),
+    );
+
     const filtered = facultyRoutes.filter(
       (route) => route.path !== facultyProfilePath && userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
     );
@@ -75,16 +85,13 @@ const FacultyLayout = function () {
     const hidden = facultyRoutes.filter(
       (route) => route.path !== facultyProfilePath && !userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
     );
-
-    const userAssignment = authorityAssignments.find(
-      (a) => a.staffId === user?.id || a.staffId === user?.email,
-    );
     
     console.log("[FacultyLayout] Route filtering details:", {
       user: `${user?.firstName} ${user?.lastName}`,
       userId: user?.id,
-      userStaffId: userAssignment?.staffId,
+      normalizedUserId: normalizeId(user?.id),
       userAssignment: userAssignment,
+      userAuthorities: userAssignment?.authorities || {},
       totalRoutes: facultyRoutes.length,
       visibleRoutes: filtered.length,
       hiddenRoutes: hidden.length,
@@ -95,7 +102,7 @@ const FacultyLayout = function () {
       hiddenRoutesList: hidden.map((r) => ({
         name: r.name,
         requiredAuthorities: r.requiredAuthorities,
-        hasAuthority: userAssignment ? Object.entries(userAssignment.authorities)
+        userHasAuth: userAssignment ? Object.entries(userAssignment.authorities)
           .filter(([key, value]) => value && (r.requiredAuthorities?.includes(key as AuthorityKey) || r.requiredAuthorities === undefined))
           .map(([key]) => key) : [],
       })),

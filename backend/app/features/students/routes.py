@@ -3,7 +3,7 @@ from flask import Blueprint, g, request
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
-from ...models import Material, Student
+from ...models import Material, Student, UpcomingCourse
 from ...services.query import get_current_student, get_performance_summary, get_student_subjects
 
 
@@ -64,6 +64,17 @@ def get_me_subject_content(subject_id: int):
 def get_me_performance():
     student = get_current_student()
     return success_response(get_performance_summary(student.id))
+
+
+@students_bp.get("/me/upcoming-courses")
+@roles_required("student")
+def get_me_upcoming_courses():
+    student = get_current_student()
+    enrollment = student.current_enrollment()
+    if enrollment is None:
+        return success_response([])
+    courses = UpcomingCourse.query.filter_by(class_id=enrollment.class_id, status="active").order_by(UpcomingCourse.start_date.asc()).all()
+    return success_response([course.to_dict() for course in courses])
 
 
 @students_bp.get("/<int:student_id>")

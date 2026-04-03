@@ -12,6 +12,9 @@ interface ScheduleViewProps {
   classId?: string;
   sectionId?: string;
   facultyId?: string;
+  schedulesOverride?: ClassSchedule[];
+  isLoadingOverride?: boolean;
+  errorOverride?: unknown;
 }
 
 const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -67,7 +70,15 @@ const DEMO_SCHEDULES: ClassSchedule[] = [
   },
 ];
 
-const ScheduleView: React.FC<ScheduleViewProps> = ({ userRole, classId, sectionId, facultyId }) => {
+const ScheduleView: React.FC<ScheduleViewProps> = ({
+  userRole,
+  classId,
+  sectionId,
+  facultyId,
+  schedulesOverride,
+  isLoadingOverride,
+  errorOverride,
+}) => {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -77,18 +88,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ userRole, classId, sectionI
   // Fetch schedules based on role using optimized queries
   // Faculty query: runs when we have a valid facultyId and userRole is 'faculty'
   const { data: facultySchedules = [], isLoading: isFacultyLoading, error: facultyError } = useGetScheduleByFacultyQuery(facultyIdStr, {
-    skip: !facultyIdStr || userRole !== 'faculty',
+    skip: !facultyIdStr || userRole !== 'faculty' || !!schedulesOverride,
   });
 
   // Class query: runs for students/parents with class and section
   const { data: classSchedules = [], isLoading: isClassLoading, error: classError } = useGetScheduleByClassQuery(
     { classId: classId || '', sectionId: sectionId || '' },
-    { skip: !classId || !sectionId || userRole === 'faculty' }
+    { skip: !!schedulesOverride || !classId || !sectionId || userRole === 'faculty' }
   );
 
   // Fallback query: runs only if the above queries are skipped
   const { data: allSchedules = [], isLoading: isAllLoading, error: allError } = useGetAllSchedulesQuery(undefined, {
-    skip: !!(userRole === 'faculty' && facultyIdStr) || !!((userRole !== 'faculty') && classId && sectionId),
+    skip: !!schedulesOverride || !!(userRole === 'faculty' && facultyIdStr) || !!((userRole !== 'faculty') && classId && sectionId),
   });
 
   // Select appropriate data based on role - prioritize backend API data
@@ -96,7 +107,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ userRole, classId, sectionI
   let isLoading = false;
   let error: any = null;
 
-  if (userRole === 'faculty' && facultyIdStr) {
+  if (schedulesOverride) {
+    schedules = schedulesOverride;
+    isLoading = isLoadingOverride ?? false;
+    error = errorOverride;
+  } else if (userRole === 'faculty' && facultyIdStr) {
     // Faculty view: use backend faculty schedules
     schedules = facultySchedules.length > 0 ? facultySchedules : [];
     isLoading = isFacultyLoading;
@@ -126,7 +141,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ userRole, classId, sectionI
   // Filter schedules based on selected day and search query
   // Role-based filtering is already handled by backend queries
   const filteredSchedules = useMemo(() => {
-    let filtered = schedules;
+    let filtered = [...schedules];
 
     if (selectedDay !== null) {
       filtered = filtered.filter((s: ClassSchedule) => s.dayOfWeek === selectedDay);
