@@ -134,7 +134,7 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/1
 
 # MongoDB (if used for assessments)
 MONGO_URI=mongodb://localhost:27017
-MONGO_DB_NAME=code_red
+MONGO_DB_NAME=ciop_db
 
 # API
 API_PREFIX=/api
@@ -168,6 +168,17 @@ Simply press `Ctrl+C` to stop all running servers.
 
 Once Flask server is running, access:
 - **Base URL:** http://localhost:3500
+
+## Local MongoDB Without Docker
+
+On Ubuntu 24.04, install MongoDB Community Edition locally, then you can run it from this repo with:
+
+```bash
+cd backend
+./start_mongo_local.sh
+```
+
+This stores local Mongo files under `backend/.mongo/` and the backend is configured to use database `ciop_db`.
 - **API Prefix:** http://localhost:3500/api/v1
 
 ## Celery Monitoring

@@ -1,4 +1,6 @@
+import io
 from datetime import date
+from urllib.parse import urlsplit
 
 
 def _verified_otp_payload(client, email: str, purpose: str):
@@ -137,6 +139,56 @@ def test_auth_endpoints(client, student_auth_header):
         headers=student_auth_header,
     )
     assert password_response.status_code == 200
+
+
+def test_email_notification_endpoints(client, admin_auth_header):
+    status_response = client.get("/api/v1/notifications/email/status", headers=admin_auth_header)
+    assert status_response.status_code == 200
+    assert "enabled" in status_response.get_json()
+
+    send_response = client.post(
+        "/api/v1/notifications/email/send",
+        json={
+            "to": ["student@example.com"],
+            "subject": "Testing email delivery",
+            "text": "This is a backend email test.",
+            "category": "test",
+        },
+        headers=admin_auth_header,
+    )
+    assert send_response.status_code == 201
+    assert send_response.get_json()["status"] in {"sent", "skipped", "failed"}
+
+    list_response = client.get("/api/v1/notifications/email/messages", headers=admin_auth_header)
+    assert list_response.status_code == 200
+    assert len(list_response.get_json()) >= 1
+
+
+def test_uploads_endpoints(client, student_auth_header, admin_auth_header):
+    upload_response = client.post(
+        "/api/v1/uploads/documents",
+        data={
+            "category": "identity",
+            "file": (io.BytesIO(b"sample document"), "identity-proof.pdf"),
+        },
+        headers=student_auth_header,
+        content_type="multipart/form-data",
+    )
+    assert upload_response.status_code == 201
+    upload_payload = upload_response.get_json()
+    assert upload_payload["category"] == "identity"
+    assert "/uploads/documents/" in upload_payload["url"]
+
+    student_list_response = client.get("/api/v1/uploads/documents", headers=student_auth_header)
+    assert student_list_response.status_code == 200
+    assert len(student_list_response.get_json()) >= 1
+
+    admin_list_response = client.get("/api/v1/uploads/documents", headers=admin_auth_header)
+    assert admin_list_response.status_code == 200
+
+    uploaded_path = urlsplit(upload_payload["url"]).path
+    static_file_response = client.get(uploaded_path)
+    assert static_file_response.status_code == 200
 
 
 def test_students_endpoints(student_auth_header, faculty_auth_header, admin_auth_header, client):

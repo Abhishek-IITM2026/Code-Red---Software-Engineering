@@ -18,6 +18,8 @@ from ...schemas import (
     RegisterRequest,
     parse_json,
 )
+from ...services.email import send_email_message
+from ...upload_storage import save_profile_picture_value, save_uploaded_file
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -120,9 +122,27 @@ def send_otp():
     db.session.add(challenge)
     db.session.commit()
 
-    return success_response(
-        {"success": True, "message": f"OTP sent to {email}", "expiresAt": challenge.expires_at.isoformat(), "otp": challenge.otp_code}
+    delivery = send_email_message(
+        recipients=[email],
+        subject="Your CIOP verification code",
+        text_body=(
+            f"Your one-time password for {purpose} is {challenge.otp_code}. "
+            f"It expires at {challenge.expires_at.isoformat()}."
+        ),
+        category="otp",
+        related_user_id=user.id if (user := User.query.filter_by(email=email).first()) is not None else None,
     )
+
+    response_payload = {
+        "success": True,
+        "message": f"OTP sent to {email}",
+        "expiresAt": challenge.expires_at.isoformat(),
+        "deliveryStatus": delivery.status,
+        "emailMessageId": str(delivery.id),
+    }
+    if current_app.config.get("EMAIL_DEBUG_INCLUDE_OTP", True):
+        response_payload["otp"] = challenge.otp_code
+    return success_response(response_payload)
 
 
 @auth_bp.post("/otp/verify")
@@ -176,8 +196,13 @@ def update_profile():
 @auth_required
 def update_profile_picture():
     _require_verified_otp(g.current_user.email, "profile_picture_update")
-    payload = parse_json(ProfilePictureUpdateRequest, request.get_json())
-    g.current_user.profile_image_url = payload.profile_picture
+    uploaded_file = request.files.get("file")
+    if uploaded_file is not None:
+        file_record = save_uploaded_file(uploaded_file, category="profile-pictures", kind="image")
+        g.current_user.profile_image_url = file_record["storagePath"]
+    else:
+        payload = parse_json(ProfilePictureUpdateRequest, request.get_json())
+        g.current_user.profile_image_url = save_profile_picture_value(payload.profile_picture)
     db.session.commit()
     return success_response({"success": True, "message": "Profile picture updated successfully", "user": g.current_user.to_dict()})
 

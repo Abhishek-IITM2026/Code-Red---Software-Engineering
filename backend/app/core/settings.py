@@ -31,10 +31,30 @@ class Settings(BaseSettings):
     API_VERSION: str = "v1"
 
     MONGO_URI: str = "mongodb://localhost:27017"
-    MONGO_DB_NAME: str = "code_red"
+    MONGO_DB_NAME: str = "ciop_db"
     MONGO_ASSESSMENT_COLLECTION: str = "assessment_questions"
     MONGO_ASSESSMENT_SUBMISSION_COLLECTION: str = "assessment_submissions"
     USE_MONGO_MOCK: bool = False
+    UPLOAD_ROOT: str = str(BACKEND_DIR / "uploads")
+    UPLOAD_URL_PREFIX: str = "/uploads"
+    MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
+
+    EMAIL_ENABLED: bool = False
+    EMAIL_FROM_ADDRESS: str = "no-reply@ciop.local"
+    EMAIL_FROM_NAME: str = "CIOP Platform"
+    EMAIL_SMTP_HOST: str = ""
+    EMAIL_SMTP_PORT: int = 587
+    EMAIL_SMTP_USERNAME: str = ""
+    EMAIL_SMTP_PASSWORD: str = ""
+    EMAIL_SMTP_USE_TLS: bool = True
+    EMAIL_SMTP_USE_SSL: bool = False
+    EMAIL_IMAP_HOST: str = ""
+    EMAIL_IMAP_PORT: int = 993
+    EMAIL_IMAP_USERNAME: str = ""
+    EMAIL_IMAP_PASSWORD: str = ""
+    EMAIL_IMAP_MAILBOX: str = "INBOX"
+    EMAIL_IMAP_USE_SSL: bool = True
+    EMAIL_DEBUG_INCLUDE_OTP: bool = True
 
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"

@@ -17,7 +17,12 @@ app.db
 .pytest_cache/
 .pytest_cache/*
 .pytest_cache/**/*
-
+.mongo/
+.mongo/*
+.mongo/**
+backend/uploads/
+backend/uploads/*
+backend/uploads/**
 # ==============================
 # Frontend Environment
 # ==============================

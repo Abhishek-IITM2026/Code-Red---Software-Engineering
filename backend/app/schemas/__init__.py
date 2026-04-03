@@ -34,7 +34,7 @@ from .inventory import (
     MaterialRequestCreateRequest,
     MaterialRequestStatusUpdateRequest,
 )
-from .notifications import ScheduleNotificationRequest
+from .notifications import EmailMessageListQuery, EmailSendRequest, EmailSyncRequest, ScheduleNotificationRequest
 from .payroll import SalarySlipListQuery
 from .schedule import ScheduleListQuery, ScheduleWriteRequest
 from .validation import parse_json, parse_query
@@ -50,6 +50,9 @@ __all__ = [
     "AssignmentSubmissionRequest",
     "AttendanceSubmissionRequest",
     "ChangePasswordRequest",
+    "EmailMessageListQuery",
+    "EmailSendRequest",
+    "EmailSyncRequest",
     "GenerateQuestionsRequest",
     "InventoryItemPatchRequest",
     "InventoryItemWriteRequest",

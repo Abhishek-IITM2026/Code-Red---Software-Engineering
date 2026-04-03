@@ -58,6 +58,20 @@ else
 fi
 echo ""
 
+# Start local MongoDB when mongod is available
+if command -v mongod > /dev/null 2>&1; then
+    echo -e "${BLUE}Checking local MongoDB...${NC}"
+    if ! ./start_mongo_local.sh; then
+        echo -e "${YELLOW}Warning: local MongoDB could not be started.${NC}"
+        echo -e "${YELLOW}The backend will fall back to in-memory document storage.${NC}"
+    fi
+    echo ""
+else
+    echo -e "${YELLOW}mongod not found on PATH. MongoDB will not start locally.${NC}"
+    echo -e "${YELLOW}The backend will fall back to in-memory document storage unless another MongoDB server is available.${NC}"
+    echo ""
+fi
+
 echo -e "${GREEN}Starting Flask API Server...${NC}"
 python run.py &
 FLASK_PID=$!

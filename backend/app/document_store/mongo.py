@@ -110,6 +110,12 @@ def init_document_store(app) -> None:
     use_mock = app.config.get("USE_MONGO_MOCK", False) or MongoClient is None
     if use_mock:
         app.extensions["document_store"] = InMemoryDocumentStore()
+        app.extensions["document_store_status"] = {
+            "backend": "in-memory",
+            "connected": False,
+            "dbName": app.config.get("MONGO_DB_NAME"),
+            "reason": "Mock mode is enabled." if app.config.get("USE_MONGO_MOCK", False) else "pymongo is not installed.",
+        }
         return
 
     fallback = InMemoryDocumentStore()
@@ -120,9 +126,21 @@ def init_document_store(app) -> None:
         )
         primary.client.admin.command("ping")
         app.extensions["document_store"] = ResilientDocumentStore(primary, fallback)
+        app.extensions["document_store_status"] = {
+            "backend": "mongo",
+            "connected": True,
+            "dbName": primary.database.name,
+            "reason": None,
+        }
     except Exception as exc:  # pragma: no cover - depends on runtime infra
         app.logger.warning("MongoDB unavailable during startup, using in-memory document store fallback. Reason: %s", exc)
         app.extensions["document_store"] = fallback
+        app.extensions["document_store_status"] = {
+            "backend": "in-memory",
+            "connected": False,
+            "dbName": app.config.get("MONGO_DB_NAME"),
+            "reason": str(exc),
+        }
 
 
 def get_document_store():

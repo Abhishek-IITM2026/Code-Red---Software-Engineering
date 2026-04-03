@@ -24,6 +24,11 @@ pkill -f "celery.*worker" || echo "Celery worker not running"
 echo -e "${GREEN}Stopping Celery Beat...${NC}"
 pkill -f "celery.*beat" || echo "Celery beat not running"
 
+if [ -x "$SCRIPT_DIR/stop_mongo_local.sh" ]; then
+    echo -e "${GREEN}Stopping local MongoDB...${NC}"
+    "$SCRIPT_DIR/stop_mongo_local.sh" || echo "Local MongoDB not running"
+fi
+
 echo ""
 echo -e "${GREEN}All servers stopped.${NC}"
 

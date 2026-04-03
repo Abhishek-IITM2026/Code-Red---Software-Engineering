@@ -6,6 +6,7 @@ from .core.runtime import apply_local_fallbacks
 from .api.router import register_blueprints
 from .config import get_config
 from .document_store import init_document_store
+from .upload_storage import init_upload_storage
 from .seed import seed_database
 
 
@@ -19,6 +20,7 @@ def create_app(config_name: str | None = None) -> Flask:
     limiter.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://localhost:5173"]}})
     init_document_store(app)
+    init_upload_storage(app)
     init_celery(app)
     register_blueprints(app)
 

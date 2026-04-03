@@ -2,11 +2,13 @@ from flask import Flask
 
 from .errors import register_error_handlers
 from .health import health_bp
+from .static_files import static_files_bp
 from ..modules import MODULE_BLUEPRINTS
 
 
 def register_blueprints(app: Flask) -> None:
     register_error_handlers(app)
+    app.register_blueprint(static_files_bp)
     app.register_blueprint(health_bp)
 
     base_prefix = app.config["API_PREFIX"].rstrip("/")

@@ -105,6 +105,8 @@ class User(db.Model):
         return any(role.strip().lower() in owned for role in role_names)
 
     def to_dict(self):
+        from ..upload_storage import build_public_file_url
+
         return {
             "id": str(self.id),
             "email": self.email,
@@ -115,7 +117,7 @@ class User(db.Model):
             "roleScope": self.role_scope,
             "title": self.title,
             "phone": self.contact_profile.phone_number if self.contact_profile else None,
-            "profilePicture": self.profile_image_url,
+            "profilePicture": build_public_file_url(self.profile_image_url),
         }
 
 
@@ -129,6 +131,36 @@ class UserContactProfile(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     user = db.relationship("User", back_populates="contact_profile")
+
+
+class UploadedDocument(db.Model):
+    __tablename__ = "uploaded_documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    category = db.Column(db.String(100), nullable=False, default="general")
+    original_filename = db.Column(db.String(255), nullable=False)
+    storage_path = db.Column(db.String(500), nullable=False, unique=True)
+    content_type = db.Column(db.String(150))
+    size_bytes = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    user = db.relationship("User", backref=db.backref("uploaded_documents", lazy="dynamic"))
+
+    def to_dict(self):
+        from ..upload_storage import build_public_file_url
+
+        return {
+            "id": str(self.id),
+            "userId": str(self.user_id),
+            "category": self.category,
+            "originalName": self.original_filename,
+            "contentType": self.content_type,
+            "sizeBytes": self.size_bytes,
+            "storagePath": self.storage_path,
+            "url": build_public_file_url(self.storage_path),
+            "createdAt": self.created_at.isoformat(),
+        }
 
 
 class AdministrationStaff(db.Model):
@@ -599,6 +631,63 @@ class NotificationBatch(db.Model):
     message = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class EmailMessage(db.Model):
+    __tablename__ = "email_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    direction = db.Column(db.String(20), nullable=False, index=True)
+    category = db.Column(db.String(50), nullable=False, default="general")
+    subject = db.Column(db.String(255))
+    sender = db.Column(db.String(255))
+    recipients = db.Column(db.JSON, nullable=False, default=list)
+    cc = db.Column(db.JSON, nullable=False, default=list)
+    bcc = db.Column(db.JSON, nullable=False, default=list)
+    text_body = db.Column(db.Text)
+    html_body = db.Column(db.Text)
+    status = db.Column(db.String(30), nullable=False, default="pending")
+    provider_message_id = db.Column(db.String(255), index=True)
+    imap_uid = db.Column(db.String(128), unique=True)
+    mailbox = db.Column(db.String(100))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    related_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    batch_id = db.Column(db.Integer, db.ForeignKey("notification_batches.id"))
+    error_message = db.Column(db.Text)
+    sent_at = db.Column(db.DateTime)
+    received_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    creator = db.relationship("User", foreign_keys=[created_by])
+    related_user = db.relationship("User", foreign_keys=[related_user_id])
+    batch = db.relationship("NotificationBatch")
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "direction": self.direction,
+            "category": self.category,
+            "subject": self.subject,
+            "sender": self.sender,
+            "recipients": self.recipients or [],
+            "cc": self.cc or [],
+            "bcc": self.bcc or [],
+            "textBody": self.text_body,
+            "htmlBody": self.html_body,
+            "status": self.status,
+            "providerMessageId": self.provider_message_id,
+            "imapUid": self.imap_uid,
+            "mailbox": self.mailbox,
+            "createdBy": str(self.created_by) if self.created_by is not None else None,
+            "relatedUserId": str(self.related_user_id) if self.related_user_id is not None else None,
+            "batchId": str(self.batch_id) if self.batch_id is not None else None,
+            "errorMessage": self.error_message,
+            "sentAt": self.sent_at.isoformat() if self.sent_at else None,
+            "receivedAt": self.received_at.isoformat() if self.received_at else None,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
 
 
 class OtpChallenge(db.Model):
