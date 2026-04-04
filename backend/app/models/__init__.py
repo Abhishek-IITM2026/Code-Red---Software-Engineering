@@ -31,6 +31,7 @@ from .core import (
     AssessmentSubmission,
     user_roles,
 )
+from .leave import LeaveRequest
 
 __all__ = [
     "AdministrationStaff",
@@ -46,6 +47,7 @@ __all__ = [
     "FacultySubjectAssignment",
     "InventoryItem",
     "InstituteClass",
+    "LeaveRequest",
     "Material",
     "MaterialRequest",
     "MaterialRequestItem",

@@ -8,7 +8,7 @@ import type { AppDispatch, RootState } from "../../../app/store";
 
 const demoUsers = [
   { email: "student001@example.com", password: "student123", role: "Student", icon: FiUser },
-  { email: "faculty01@example.com", password: "faculty123", role: "Faculty", icon: FiShield },
+  { email: "duttakrishna1955@gmail.com", password: "faculty123", role: "Faculty", icon: FiShield },
   { email: "parent001@example.com", password: "parent123", role: "Parent", icon: FiUser },
   { email: "dheerajkumarvishwakarma5@gmail.com", password: "admin123", role: "Admin", icon: FiShield },
 ];

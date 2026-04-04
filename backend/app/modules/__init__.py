@@ -7,6 +7,7 @@ from ..features.auth.routes import auth_bp
 from ..features.faculty.routes import faculty_bp
 from ..features.inventory.routes import inventory_bp
 from ..features.jobs.routes import jobs_bp
+from ..features.leave.routes import leave_bp
 from ..features.marks.routes import marks_bp
 from ..features.notifications.routes import notifications_bp
 from ..features.parent.routes import parent_bp
@@ -28,7 +29,8 @@ MODULE_BLUEPRINTS = (
     ("authority", authority_bp, "authority"),
     ("administration", administration_bp, "administration"),
     ("payroll", payroll_bp, "payroll"),
-    ("jobs", jobs_bp, "jobs"),
+("jobs", jobs_bp, "jobs"),
+    ("leave", leave_bp, ""),
     ("parent", parent_bp, "parent"),
     ("assessments", assessments_bp, ""),
     ("notifications", notifications_bp, "notifications"),

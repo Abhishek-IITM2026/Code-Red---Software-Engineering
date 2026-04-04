@@ -2,8 +2,11 @@ import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { FiCalendar, FiCheckCircle, FiClock, FiFileText, FiSend } from "react-icons/fi";
 import type { RootState } from "../../app/store";
-import { getLeaveRequestsForApplicant, submitLeaveRequest } from "./leaveStore";
-import type { LeaveApplicantRole, LeaveRequest } from "./types";
+import {
+  useGetLeaveRequestsQuery,
+  useCreateLeaveRequestMutation,
+} from "./api";
+import type { LeaveApplicantRole, LeaveRequest } from "./api";
 
 const inputClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -34,9 +37,24 @@ const LeaveRequestPortal = function ({
   supportingNotePlaceholder,
 }: LeaveRequestPortalProps) {
   const user = useSelector((state: RootState) => state.auth.user);
-  const [requests, setRequests] = useState<LeaveRequest[]>(
-    user ? getLeaveRequestsForApplicant(user.id, applicantRole) : [],
+  
+  // RTK Query - fetch leave requests from backend
+  const { data: allRequests = [], isLoading, refetch } = useGetLeaveRequestsQuery();
+  
+  // Filter requests for current user
+  const requests = useMemo(
+    () =>
+      allRequests.filter(
+        (request) =>
+          request.applicantRole === applicantRole &&
+          request.applicantId === user?.id
+      ),
+    [allRequests, applicantRole, user?.id]
   );
+  
+  // RTK Query - mutation for creating leave request
+  const [createLeaveRequest, { isLoading: isSubmitting }] = useCreateLeaveRequestMutation();
+
   const [form, setForm] = useState({
     leaveType: leaveTypeOptions[0],
     fromDate: today,
@@ -55,33 +73,36 @@ const LeaveRequestPortal = function ({
     [requests],
   );
 
-  const handleSubmit = () => {
-    if (!user || !form.contactNumber.trim() || !form.reason.trim() || !form.fromDate || !form.toDate) {
+  const handleSubmit = async () => {
+    if (!form.contactNumber.trim() || !form.reason.trim() || !form.fromDate || !form.toDate) {
       return;
     }
 
-    submitLeaveRequest({
-      applicantId: user.id,
-      applicantName: `${user.firstName} ${user.lastName}`,
-      applicantRole,
-      applicantContext: contextValue,
-      leaveType: form.leaveType,
-      fromDate: form.fromDate,
-      toDate: form.toDate,
-      reason: form.reason,
-      contactNumber: form.contactNumber,
-      supportingNote: form.supportingNote,
-    });
+    try {
+      await createLeaveRequest({
+        leaveType: form.leaveType,
+        fromDate: form.fromDate,
+        toDate: form.toDate,
+        reason: form.reason,
+        contactNumber: form.contactNumber,
+        supportingNote: form.supportingNote,
+      }).unwrap();
 
-    setRequests(getLeaveRequestsForApplicant(user.id, applicantRole));
-    setForm({
-      leaveType: leaveTypeOptions[0],
-      fromDate: today,
-      toDate: today,
-      contactNumber: "",
-      reason: "",
-      supportingNote: "",
-    });
+      // Reset form
+      setForm({
+        leaveType: leaveTypeOptions[0],
+        fromDate: today,
+        toDate: today,
+        contactNumber: "",
+        reason: "",
+        supportingNote: "",
+      });
+      
+      // Refetch to get updated data
+      refetch();
+    } catch (error) {
+      console.error("Failed to submit leave request:", error);
+    }
   };
 
   return (
@@ -191,10 +212,11 @@ const LeaveRequestPortal = function ({
             <button
               type="button"
               onClick={handleSubmit}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             >
               <FiSend className="h-4 w-4" />
-              Submit Leave Request
+              {isSubmitting ? "Submitting..." : "Submit Leave Request"}
             </button>
           </div>
         </div>
@@ -231,7 +253,11 @@ const LeaveRequestPortal = function ({
             </div>
 
             <div className="space-y-4 p-4">
-              {requests.length === 0 ? (
+              {isLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+                  Loading requests...
+                </div>
+              ) : requests.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
                   No leave requests yet. Submit your first request from the form.
                 </div>

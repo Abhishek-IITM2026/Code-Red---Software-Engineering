@@ -26,8 +26,6 @@ export {
   useUpdateStaffMutation,
   useUpdateStaffStatusMutation,
   useDeleteStaffMutation,
-  useListLeaveRequestsQuery,
-  useReviewLeaveRequestMutation,
   useListCoursesQuery,
   useCreateCourseMutation,
   useUpdateCourseMutation,

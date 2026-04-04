@@ -38,6 +38,7 @@ from .inventory import (
     MaterialRequestCreateRequest,
     MaterialRequestStatusUpdateRequest,
 )
+from .leave import LeaveRequestCreateRequest, LeaveRequestReviewRequest
 from .notifications import EmailMessageListQuery, EmailSendRequest, EmailSyncRequest, ScheduleNotificationRequest
 from .payroll import SalarySlipListQuery
 from .schedule import ScheduleListQuery, ScheduleWriteRequest
@@ -61,6 +62,8 @@ __all__ = [
     "GenerateQuestionsRequest",
     "InventoryItemPatchRequest",
     "InventoryItemWriteRequest",
+    "LeaveRequestCreateRequest",
+    "LeaveRequestReviewRequest",
     "LoginRequest",
     "MaterialCreateRequest",
     "MaterialRequestCreateRequest",

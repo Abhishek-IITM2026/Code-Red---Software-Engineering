@@ -2,15 +2,24 @@ import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { FiCheckCircle, FiClock, FiFilter, FiSend, FiXCircle } from "react-icons/fi";
 import type { RootState } from "../../../app/store";
-import { getLeaveRequests, reviewLeaveRequest } from "../../leave/leaveStore";
-import type { LeaveRequest, LeaveStatus } from "../../leave/types";
+import {
+  useGetLeaveRequestsQuery,
+  useReviewLeaveRequestMutation,
+} from "../../leave/api";
+import type { LeaveRequest, LeaveStatus } from "../../leave/api";
 
 const inputClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
 const LeaveManagement = function () {
   const user = useSelector((state: RootState) => state.auth.user);
-  const [requests, setRequests] = useState<LeaveRequest[]>(getLeaveRequests());
+  
+  // RTK Query - fetch all leave requests (admin sees all)
+  const { data: requests = [], isLoading, refetch } = useGetLeaveRequestsQuery();
+  
+  // RTK Query - mutation for reviewing leave requests
+  const [reviewLeaveRequest, { isLoading: isReviewing }] = useReviewLeaveRequestMutation();
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "faculty">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | LeaveStatus>("all");
@@ -21,9 +30,9 @@ const LeaveManagement = function () {
       const term = search.trim().toLowerCase();
       const matchesSearch =
         !term ||
-        request.applicantName.toLowerCase().includes(term) ||
-        request.leaveType.toLowerCase().includes(term) ||
-        request.applicantContext.toLowerCase().includes(term);
+        request.applicantName?.toLowerCase().includes(term) ||
+        request.leaveType?.toLowerCase().includes(term) ||
+        request.applicantContext?.toLowerCase().includes(term);
       const matchesRole = roleFilter === "all" || request.applicantRole === roleFilter;
       const matchesStatus = statusFilter === "all" || request.status === statusFilter;
       return matchesSearch && matchesRole && matchesStatus;
@@ -34,11 +43,20 @@ const LeaveManagement = function () {
   const approvedRequests = requests.filter((request) => request.status === "Approved");
   const rejectedRequests = requests.filter((request) => request.status === "Rejected");
 
-  const handleDecision = (requestId: string, status: "Approved" | "Rejected") => {
-    const reviewerName = user ? `${user.firstName} ${user.lastName}` : "Admin";
+  const handleDecision = async (requestId: string, status: "Approved" | "Rejected") => {
     const reviewerComment = decisionNotes[requestId]?.trim() || `Leave request ${status.toLowerCase()} by administration.`;
-    const nextRequests = reviewLeaveRequest(requestId, status, reviewerName, reviewerComment);
-    setRequests(nextRequests);
+    
+    try {
+      await reviewLeaveRequest({
+        id: requestId,
+        data: { status, reviewerComment },
+      }).unwrap();
+      
+      // Refetch to get updated data
+      refetch();
+    } catch (error) {
+      console.error("Failed to review leave request:", error);
+    }
   };
 
   return (

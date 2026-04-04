@@ -6,6 +6,7 @@ import { assessmentApi } from '../features/faculty/api/assessmentApi';
 import { facultyApi } from '../features/faculty/api/facultyApi';
 import { parentApi } from '../features/parent/api/parentApi';
 import { adminApi } from '../features/administration/api/adminApi';
+import { leaveApi } from '../features/leave/api/leaveApi';
 import themeReducer from '../theme/themeSlice';
 import authReducer from '../features/auth/store/authSlice';
 
@@ -20,16 +21,18 @@ export const store = configureStore({
     [facultyApi.reducerPath]: facultyApi.reducer,
     [parentApi.reducerPath]: parentApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
+    [leaveApi.reducerPath]: leaveApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
-      authApi.middleware, 
+      authApi.middleware,
       dataApi.middleware,
       studentApi.middleware,
       assessmentApi.middleware,
       facultyApi.middleware,
       parentApi.middleware,
-      adminApi.middleware
+      adminApi.middleware,
+      leaveApi.middleware
     ),
 });
 

@@ -44,22 +44,6 @@ export interface StaffRecord {
   updatedAt: string;
 }
 
-export interface LeaveRequest {
-  id: string;
-  requesterId: string;
-  requesterName: string;
-  requesterRole: string;
-  leaveType: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewerComment?: string;
-  reviewedBy?: string;
-  reviewedAt?: string;
-  createdAt: string;
-}
-
 export interface Course {
   id: string;
   title: string;
@@ -153,7 +137,6 @@ export const adminApi = createApi({
     'Dashboard',
     'Students',
     'Staff',
-    'LeaveRequests',
     'Courses',
     'Finance',
     'Reports',
@@ -261,24 +244,6 @@ export const adminApi = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: ['Staff'],
-    }),
-
-    // Leave Request Management
-    listLeaveRequests: builder.query<LeaveRequest[], void>({
-      query: () => '/administration/leave-requests',
-      providesTags: ['LeaveRequests'],
-    }),
-
-    reviewLeaveRequest: builder.mutation<
-      LeaveRequest,
-      { id: string; status: 'approved' | 'rejected'; comment?: string }
-    >({
-      query: ({ id, status, comment }) => ({
-        url: `/administration/leave-requests/${id}/review`,
-        method: 'PATCH',
-        body: { status, comment },
-      }),
-      invalidatesTags: ['LeaveRequests'],
     }),
 
     // Course Management
@@ -415,8 +380,6 @@ export const {
   useUpdateStaffMutation,
   useUpdateStaffStatusMutation,
   useDeleteStaffMutation,
-  useListLeaveRequestsQuery,
-  useReviewLeaveRequestMutation,
   useListCoursesQuery,
   useCreateCourseMutation,
   useUpdateCourseMutation,
