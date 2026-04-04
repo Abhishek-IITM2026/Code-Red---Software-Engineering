@@ -13,9 +13,19 @@ backend/benv/
 backend/.benv/
 
 app.db
-.DS_Store
-.mongo-*
+
+.pytest_cache/
+.pytest_cache/*
+.pytest_cache/**/*
+.mongo/
 .mongo/*
+.mongo/**
+backend/uploads/
+backend/uploads/*
+backend/uploads/**
+
+backend/server*
+
 # ==============================
 # Frontend Environment
 # ==============================
