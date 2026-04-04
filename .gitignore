@@ -13,7 +13,9 @@ backend/benv/
 backend/.benv/
 
 app.db
-
+.DS_Store
+.mongo-*
+.mongo/*
 # ==============================
 # Frontend Environment
 # ==============================
