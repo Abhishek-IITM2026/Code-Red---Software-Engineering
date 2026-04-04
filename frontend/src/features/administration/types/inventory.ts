@@ -2,7 +2,7 @@
 export interface InventoryItem {
   id: string;
   name: string;
-  category: 'stationery' | 'electronics' | 'furniture' | 'cleaning' | 'other';
+  category: 'stationery' | 'electronics' | 'furniture' | 'cleaning' | 'laboratory' | 'other';
   quantity: number;
   available: number;
   reserved: number;
@@ -65,5 +65,6 @@ export const inventoryCategories = [
   { id: 'electronics', name: 'Electronics', color: '#8b5cf6' },
   { id: 'furniture', name: 'Furniture', color: '#f59e0b' },
   { id: 'cleaning', name: 'Cleaning', color: '#10b981' },
+  { id: 'laboratory', name: 'Laboratory', color: '#ef4444' },
   { id: 'other', name: 'Other', color: '#6b7280' },
 ];

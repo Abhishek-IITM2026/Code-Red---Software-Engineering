@@ -41,6 +41,29 @@ export interface SalaryYearSummary {
   pendingCount: number;
 }
 
+export const calculateSalaryYearSummary = (slips: SalarySlip[]): SalaryYearSummary => {
+  return slips.reduce<SalaryYearSummary>(
+    (summary, slip) => ({
+      totalNet: summary.totalNet + slip.netSalary,
+      totalGross: summary.totalGross + slip.grossSalary,
+      totalDeductions: summary.totalDeductions + slip.totalDeductions,
+      totalOvertime: summary.totalOvertime + slip.overtimeAmount,
+      totalUnpaidLeaveDays: summary.totalUnpaidLeaveDays + slip.unpaidLeaveDays,
+      releasedCount: summary.releasedCount + (slip.payoutStatus === "Released" ? 1 : 0),
+      pendingCount: summary.pendingCount + (slip.payoutStatus === "Pending" ? 1 : 0),
+    }),
+    {
+      totalNet: 0,
+      totalGross: 0,
+      totalDeductions: 0,
+      totalOvertime: 0,
+      totalUnpaidLeaveDays: 0,
+      releasedCount: 0,
+      pendingCount: 0,
+    },
+  );
+};
+
 interface SalarySlipTemplate {
   monthKey: string;
   monthLabel: string;

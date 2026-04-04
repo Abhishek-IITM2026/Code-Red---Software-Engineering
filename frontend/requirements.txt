@@ -1,6 +1,0 @@
-redux
-react-router
-react
-vitest
-axios
-tailwindcss

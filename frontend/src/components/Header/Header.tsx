@@ -1,7 +1,7 @@
 import React from 'react';
+import UserAvatar from '../common/UserAvatar';
 import { Link } from 'react-router-dom';
 import { FiSearch, FiMenu, FiX } from 'react-icons/fi';
-// import './Header.css';
 
 interface NavItem {
   label: string;
@@ -13,8 +13,9 @@ interface HeaderProps {
   navItems?: NavItem[];
   onSearch?: (query: string) => void;
   user?: {
-    name: string;
-    avatar?: string;
+    first_name?: string;
+    last_name?: string;
+    profilePicture?: string;
   } | null;
 }
 
@@ -81,18 +82,15 @@ const Header: React.FC<HeaderProps> = ({
           <div className="hidden md:flex items-center">
             {user ? (
               <div className="flex items-center gap-3">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                
+                {user.profilePicture ? (
+                  <UserAvatar src={user?.profilePicture} name={user?.first_name} size="lg" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold">
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U'}
                   </div>
                 )}
-                <span className="font-medium">{user.name}</span>
+                <span className="font-medium">{user.first_name} {user.last_name}</span>
               </div>
             ) : (
               <div className="flex gap-4">
@@ -166,18 +164,14 @@ const Header: React.FC<HeaderProps> = ({
             {/* Mobile User Section */}
             {user ? (
               <div className="flex items-center gap-3 py-2">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                {user.profilePicture ? (
+                  <UserAvatar src={user.profilePicture} name={user.first_name} size="sm" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold">
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.first_name ? user.first_name.charAt(0).toUpperCase() : "U"}
                   </div>
                 )}
-                <span className="font-medium">{user.name}</span>
+                <span className="font-medium">{user.first_name} {user.last_name}</span>
               </div>
             ) : (
               <div className="flex gap-4">

@@ -46,11 +46,19 @@ const ParentDashboard = function () {
     attendanceRows,
     feeTransactions,
     performanceSubjects,
+    isLoading,
   } = useParentChildren();
   const pendingFee = feeTransactions.find((item) => item.status === "Pending");
   const topSubject = performanceSubjects.reduce((best, subject) => {
+    if (!best) {
+      return subject;
+    }
     return Number.parseInt(subject.score, 10) > Number.parseInt(best.score, 10) ? subject : best;
   }, performanceSubjects[0]);
+
+  if (isLoading && !selectedChildId) {
+    return <div className="rounded-3xl bg-white p-8 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">Loading parent dashboard...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -79,13 +87,13 @@ const ParentDashboard = function () {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Best Attendance</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{attendanceRows[0]?.percentage}</p>
-            <p className="mt-1 text-sm text-slate-600">{attendanceRows[0]?.subject}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{attendanceRows[0]?.percentage ?? "0%"}</p>
+            <p className="mt-1 text-sm text-slate-600">{attendanceRows[0]?.subject ?? "No data yet"}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Top Subject</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{topSubject?.score}</p>
-            <p className="mt-1 text-sm text-slate-600">{topSubject?.name}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{topSubject?.score ?? "0%"}</p>
+            <p className="mt-1 text-sm text-slate-600">{topSubject?.name ?? "No assessments yet"}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Fee Status</p>

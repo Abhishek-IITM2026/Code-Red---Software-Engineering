@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiSearch, FiTrendingUp } from "react-icons/fi";
 import Input from "./Input";
 import {
+  calculateSalaryYearSummary,
   formatCurrency,
-  getAvailableYearsForStaff,
-  getSalarySlipsForStaffByYear,
-  getSalaryYearSummary,
   type SalarySlip,
 } from "../../features/administration/data/payrollData";
+import { useListMySalarySlipsQuery } from "../../features/administration/api/payrollApi";
 import SalarySlipPanel from "./SalarySlipPanel";
 
 interface EmployeeSalaryPortalProps {
@@ -22,24 +21,28 @@ const EmployeeSalaryPortal = ({
   heading,
   eyebrow,
   description,
-  staffId,
+  staffId: _staffId,
   emptyMessage,
 }: EmployeeSalaryPortalProps) => {
-  const availableYears = useMemo(() => (staffId ? getAvailableYearsForStaff(staffId) : []), [staffId]);
+  const { data: salarySlips = [], isLoading: loading } = useListMySalarySlipsQuery();
+  const availableYears = useMemo(
+    () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
+    [salarySlips],
+  );
   const [selectedYear, setSelectedYear] = useState(availableYears[0] ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [isViewingSlip, setIsViewingSlip] = useState(false);
+
   const slipsForYear = useMemo(
     () =>
-      staffId && selectedYear
-        ? getSalarySlipsForStaffByYear(staffId, selectedYear).filter((slip) =>
-            [slip.monthLabel, slip.paymentMode, slip.payoutStatus]
-              .join(" ")
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()),
+      selectedYear
+        ? salarySlips.filter(
+            (slip) =>
+              slip.year === selectedYear &&
+              [slip.monthLabel, slip.paymentMode, slip.payoutStatus].join(" ").toLowerCase().includes(searchQuery.toLowerCase()),
           )
         : [],
-    [searchQuery, selectedYear, staffId],
+    [salarySlips, searchQuery, selectedYear],
   );
   const [selectedMonthKey, setSelectedMonthKey] = useState(slipsForYear[0]?.monthKey ?? "");
 
@@ -58,9 +61,19 @@ const EmployeeSalaryPortal = ({
   const selectedSlip: SalarySlip | null =
     slipsForYear.find((slip) => slip.monthKey === selectedMonthKey) ?? slipsForYear[0] ?? null;
   const yearSummary = useMemo(
-    () => (staffId && selectedYear ? getSalaryYearSummary(staffId, selectedYear) : null),
-    [selectedYear, staffId],
+    () => (selectedYear ? calculateSalaryYearSummary(slipsForYear) : null),
+    [selectedYear, slipsForYear],
   );
+
+  if (loading) {
+    return (
+      <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">{eyebrow}</p>
+        <h1 className="mt-3 text-3xl font-bold text-slate-900">{heading}</h1>
+        <p className="mt-3 max-w-2xl text-slate-600">Loading payroll records...</p>
+      </div>
+    );
+  }
 
   if (!selectedSlip || !yearSummary) {
     return (
@@ -312,7 +325,7 @@ const EmployeeSalaryPortal = ({
             </div>
           </div>
 
-          <SalarySlipPanel slip={selectedSlip} />
+          <SalarySlipPanel slip={selectedSlip} yearSummary={yearSummary} />
         </section>
       )}
     </div>

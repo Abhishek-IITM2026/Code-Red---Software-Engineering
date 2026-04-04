@@ -1,35 +1,45 @@
 import { useMemo, useState } from "react";
 import { FiAlertTriangle, FiArrowUpCircle, FiCheckCircle, FiClock, FiUsers, FiX } from "react-icons/fi";
-import { promotionStudents, type PromotionCandidate } from "./adminData";
+import {
+  useListPromotionCandidatesQuery,
+  usePromoteStudentMutation,
+  type PromotionCandidate,
+} from "../api/adminApi";
 
 const PromoteStudents = function () {
-  const [students, setStudents] = useState(
-    promotionStudents.map((student) => ({
-      ...student,
-      promoted: false,
-    })),
-  );
-  const [selectedStudent, setSelectedStudent] = useState<(PromotionCandidate & { promoted: boolean }) | null>(null);
+  const { data: candidates = [], isLoading } = useListPromotionCandidatesQuery();
+  const [promoteStudent, { isLoading: isPromoting }] = usePromoteStudentMutation();
+  const [selectedStudent, setSelectedStudent] = useState<PromotionCandidate | null>(null);
+  const [promotionError, setPromotionError] = useState<string | null>(null);
 
-  const eligibleCount = students.filter((student) => student.resultStatus === "Eligible").length;
-  const reviewCount = students.filter((student) => student.resultStatus === "Review Required").length;
-  const promotedCount = students.filter((student) => student.promoted).length;
+  const eligibleCount = candidates.filter((student) => student.resultStatus === "Eligible").length;
+  const reviewCount = candidates.filter((student) => student.resultStatus === "Review Required").length;
 
   const groupedByTarget = useMemo(() => {
-    return students.reduce<Record<string, Array<PromotionCandidate & { promoted: boolean }>>>((groups, student) => {
+    return candidates.reduce<Record<string, PromotionCandidate[]>>((groups, student) => {
       if (!groups[student.targetClass]) {
         groups[student.targetClass] = [];
       }
       groups[student.targetClass].push(student);
       return groups;
     }, {});
-  }, [students]);
+  }, [candidates]);
 
-  const handlePromoteStudent = (studentId: string) => {
-    setStudents((current) =>
-      current.map((student) => (student.id === studentId ? { ...student, promoted: true } : student)),
-    );
-    setSelectedStudent(null);
+  const handlePromoteStudent = async () => {
+    if (!selectedStudent) {
+      return;
+    }
+
+    try {
+      setPromotionError(null);
+      await promoteStudent({ id: selectedStudent.id, targetClass: selectedStudent.targetClass }).unwrap();
+      setSelectedStudent(null);
+    } catch (error: any) {
+      const details = Array.isArray(error?.data?.detail)
+        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
+        : null;
+      setPromotionError(details || error?.data?.message || error?.error || "Failed to promote student.");
+    }
   };
 
   return (
@@ -40,13 +50,13 @@ const PromoteStudents = function () {
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">Administration</p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">Promote Students</h1>
             <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-              Review students one by one, confirm their current record, and promote only the students who are ready for the next academic level.
+              Candidate visibility, eligibility logic, and promotion actions now come directly from the backend instead of local page fixtures.
             </p>
           </div>
 
           <div className="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-500">Students already promoted</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{promotedCount}</p>
+            <p className="text-sm text-slate-500">Promotion Groups</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{Object.keys(groupedByTarget).length}</p>
           </div>
         </div>
 
@@ -60,13 +70,19 @@ const PromoteStudents = function () {
             <p className="mt-2 text-3xl font-bold text-slate-900">{reviewCount}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-500">Promotion Groups</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{Object.keys(groupedByTarget).length}</p>
+            <p className="text-sm text-slate-500">Visible Candidates</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{candidates.length}</p>
           </div>
         </div>
       </section>
 
       <section className="space-y-6">
+        {isLoading ? (
+          <div className="rounded-3xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+            Loading promotion candidates...
+          </div>
+        ) : null}
+
         {Object.entries(groupedByTarget).map(([targetClass, targetStudents]) => (
           <div key={targetClass} className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -96,11 +112,6 @@ const PromoteStudents = function () {
                         >
                           {student.resultStatus}
                         </span>
-                        {student.promoted && (
-                          <span className="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
-                            Promoted
-                          </span>
-                        )}
                       </div>
                       <p className="mt-2 text-sm text-slate-500">
                         {student.id} • {student.admissionNo}
@@ -122,7 +133,7 @@ const PromoteStudents = function () {
                     </div>
                     <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                       <p className="text-sm text-slate-500">Guardian</p>
-                      <p className="mt-2 font-semibold text-slate-900">{student.guardian}</p>
+                      <p className="mt-2 font-semibold text-slate-900">{student.guardian || "Not linked"}</p>
                     </div>
                     <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                       <p className="text-sm text-slate-500">Attendance</p>
@@ -153,12 +164,14 @@ const PromoteStudents = function () {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedStudent(student)}
-                      disabled={student.promoted || student.resultStatus !== "Eligible"}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      onClick={() => {
+                        setPromotionError(null);
+                        setSelectedStudent(student);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
                     >
                       <FiArrowUpCircle className="h-4 w-4" />
-                      {student.promoted ? "Promoted" : "Promote Student"}
+                      Promote Student
                     </button>
                   </div>
                 </article>
@@ -168,7 +181,7 @@ const PromoteStudents = function () {
         ))}
       </section>
 
-      {selectedStudent && (
+      {selectedStudent ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
           <div className="flex min-h-full items-start justify-center py-2 sm:items-center sm:py-6">
             <div className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -193,26 +206,23 @@ const PromoteStudents = function () {
               </div>
 
               <div className="space-y-4 px-6 py-5">
+                {promotionError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">
+                    {promotionError}
+                  </div>
+                ) : null}
+
                 <p className="text-sm leading-6 text-slate-600">
-                  You are about to promote <span className="font-semibold text-slate-900">{selectedStudent.name}</span> from{" "}
+                  Promote <span className="font-semibold text-slate-900">{selectedStudent.name}</span> from{" "}
                   <span className="font-semibold text-slate-900">
                     {selectedStudent.className} - Section {selectedStudent.section}
                   </span>{" "}
                   to <span className="font-semibold text-slate-900">{selectedStudent.targetClass}</span>.
                 </p>
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                  This action marks the student as promoted in the current academic list. Please verify results, attendance,
-                  and promotion note before continuing.
-                </div>
-                <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Attendance</p>
-                    <p className="mt-1 font-semibold text-slate-900">{selectedStudent.attendance}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Average</p>
-                    <p className="mt-1 font-semibold text-slate-900">{selectedStudent.average}</p>
-                  </div>
+                  {selectedStudent.resultStatus === "Eligible"
+                    ? "This action writes a new enrollment for the target class in the backend."
+                    : "This student is marked for academic review, but you can still submit the backend promotion from this screen."}
                 </div>
               </div>
 
@@ -226,17 +236,18 @@ const PromoteStudents = function () {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePromoteStudent(selectedStudent.id)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+                  onClick={() => void handlePromoteStudent()}
+                  disabled={isPromoting}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FiArrowUpCircle className="h-4 w-4" />
-                  Promote Student
+                  Confirm Promotion
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

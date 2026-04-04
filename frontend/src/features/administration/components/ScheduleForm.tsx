@@ -11,6 +11,7 @@ interface ScheduleFormProps {
   editingSchedule?: ClassSchedule | null;
   onSave: (schedule: ClassSchedule) => void;
   onCancel?: () => void;
+  isSubmitting?: boolean;
 }
 
 const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -56,7 +57,7 @@ const emptyForm = {
   roomNumber: '',
 };
 
-const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, onCancel }) => {
+const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, onCancel, isSubmitting = false }) => {
   const [formData, setFormData] = useState(emptyForm);
 
   const { data: apiClasses = [] } = useGetClassesQuery();
@@ -95,27 +96,38 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
     const selectedSection = sections.find((item: any) => item.id === formData.sectionId);
     const selectedFaculty = faculty.find((item: any) => item.id === formData.facultyId);
 
-    const scheduleData: ClassSchedule = {
-      id: editingSchedule?.id || `schedule-${Date.now()}`,
+    // Only send fields that the backend accepts in ScheduleWriteRequest
+    const scheduleData = {
       classId: formData.classId,
+      subjectId: 1, // Default subject ID
+      facultyId: formData.facultyId,
+      dayOfWeek: formData.dayOfWeek,
+      timeSlot: {
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      },
+      roomNumber: formData.roomNumber || undefined,
+    };
+
+    // Enrich the data for display after backend response
+    const displayData = {
+      ...scheduleData,
+      id: editingSchedule?.id || `schedule-${Date.now()}`,
       className: selectedClass?.name || `Class ${formData.classId}`,
       sectionId: formData.sectionId,
       sectionName: selectedSection?.name || formData.sectionId.replace(`${formData.classId}-`, ''),
-      dayOfWeek: formData.dayOfWeek,
+      subject: formData.subject,
+      facultyName: selectedFaculty ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}` : '',
       timeSlot: {
         id: editingSchedule?.timeSlot.id || `slot-${Date.now()}`,
         startTime: formData.startTime,
         endTime: formData.endTime,
       },
-      subject: formData.subject,
-      facultyId: formData.facultyId,
-      facultyName: selectedFaculty ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}` : '',
-      roomNumber: formData.roomNumber || undefined,
       createdAt: editingSchedule?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    } as ClassSchedule;
 
-    onSave(scheduleData);
+    onSave(displayData);
   };
 
   return (
@@ -242,12 +254,12 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
 
       <div className="flex justify-end gap-3 pt-4">
         {onCancel && (
-          <button type="button" onClick={onCancel} className={btnSecondary}>
+          <button type="button" onClick={onCancel} className={btnSecondary} disabled={isSubmitting}>
             Cancel
           </button>
         )}
-        <button type="submit" className={btnPrimary}>
-          {editingSchedule ? 'Save Schedule' : 'Create Schedule'}
+        <button type="submit" className={btnPrimary} disabled={isSubmitting}>
+          {isSubmitting ? (editingSchedule ? 'Saving...' : 'Creating...') : (editingSchedule ? 'Save Schedule' : 'Create Schedule')}
         </button>
       </div>
     </form>

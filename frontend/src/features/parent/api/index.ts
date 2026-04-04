@@ -1,0 +1,37 @@
+// Parent APIs
+export { parentApi } from './parentApi';
+export type {
+  ParentProfile,
+  ChildInfo,
+  StudentAccess,
+  AttendanceInfo,
+  PerformanceInfo,
+  AssignmentInfo,
+  NotificationPreference,
+  Communication,
+  FeeInvoice,
+} from './parentApi';
+export {
+  useGetParentProfileQuery,
+  useUpdateParentProfileMutation,
+  useGetLinkedStudentsQuery,
+  useGetStudentOverviewQuery,
+  useLinkChildToAccountMutation,
+  useGetStudentAttendanceQuery,
+  useGetStudentPerformanceQuery,
+  useGetPerformanceSummaryQuery,
+  useGetStudentAssignmentsQuery,
+  useGetMessagesQuery,
+  useGetUnreadMessagesCountQuery,
+  useMarkMessageAsReadMutation,
+  useSendMessageMutation,
+  useGetStudentFeeInvoicesQuery,
+  useGetFeeInvoiceQuery,
+  useDownloadFeeInvoiceMutation,
+  useRecordFeePaymentMutation,
+  useGetNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
+  useGetSchoolAnnouncementsQuery,
+  useGetUpcomingEventsQuery,
+  useRsvpEventMutation,
+} from './parentApi';

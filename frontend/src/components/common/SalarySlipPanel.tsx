@@ -1,14 +1,14 @@
 import { FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiHash, FiPrinter, FiTrendingUp, FiUser } from "react-icons/fi";
-import type { SalarySlip } from "../../features/administration/data/payrollData";
-import { formatCurrency, getSalaryYearSummary } from "../../features/administration/data/payrollData";
+import type { SalarySlip, SalaryYearSummary } from "../../features/administration/data/payrollData";
+import { formatCurrency } from "../../features/administration/data/payrollData";
 import Button from "./Button";
 
 interface SalarySlipPanelProps {
   slip: SalarySlip;
+  yearSummary: SalaryYearSummary;
 }
 
-const SalarySlipPanel = ({ slip }: SalarySlipPanelProps) => {
-  const yearSummary = getSalaryYearSummary(slip.staffId, slip.year);
+const SalarySlipPanel = ({ slip, yearSummary }: SalarySlipPanelProps) => {
   const handlePrint = () => {
     window.print();
   };
@@ -88,7 +88,11 @@ const SalarySlipPanel = ({ slip }: SalarySlipPanelProps) => {
 
       <div className="grid gap-4 px-6 py-6 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-          <p className="text-sm text-slate-500">Net Salary</p>
+          <p className="text-sm text-slate-500">Financial Record Salary</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900">{formatCurrency(slip.baseSalary)}</p>
+        </div>
+        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+          <p className="text-sm text-slate-500">Net Payout</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">{formatCurrency(slip.netSalary)}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
@@ -101,7 +105,7 @@ const SalarySlipPanel = ({ slip }: SalarySlipPanelProps) => {
             {formatCurrency(slip.unpaidLeaveDeduction)}
           </p>
         </div>
-        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 md:col-span-2 xl:col-span-1">
           <p className="text-sm text-slate-500">Overtime Added</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">{formatCurrency(slip.overtimeAmount)}</p>
         </div>
@@ -176,7 +180,7 @@ const SalarySlipPanel = ({ slip }: SalarySlipPanelProps) => {
         <div className="rounded-2xl border border-slate-200 p-5">
           <p className="text-lg font-semibold text-slate-900">Earnings and Deductions</p>
           <p className="mt-1 text-sm text-slate-500">
-            Base salary, recurring allowances, leave deductions, and the final payout.
+            Financial-record salary, recurring allowances, leave deductions, and the final payout.
           </p>
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">

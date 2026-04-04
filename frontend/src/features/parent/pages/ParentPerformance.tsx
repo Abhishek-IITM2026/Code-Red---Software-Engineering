@@ -6,7 +6,7 @@ import { useParentChildren } from "../useParentChildren";
 
 const ParentPerformance = function() {
   const navigate = useNavigate();
-  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects } = useParentChildren();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects, isLoading } = useParentChildren();
   const [filteredSubjects, setFilteredSubjects] = useState(performanceSubjects);
 
   useEffect(() => {
@@ -64,6 +64,11 @@ const ParentPerformance = function() {
             <p className="mt-2 text-sm text-slate-600">{subject.teacher}</p>
           </button>
         ))}
+        {!filteredSubjects.length && !isLoading ? (
+          <div className="rounded-2xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+            No subject performance data is available yet.
+          </div>
+        ) : null}
       </div>
     </div>
   );

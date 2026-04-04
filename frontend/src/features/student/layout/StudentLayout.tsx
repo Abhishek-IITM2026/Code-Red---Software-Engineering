@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { UserAvatar } from '../../../components/common';
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -17,8 +18,10 @@ import {
   FiClock,
 } from "react-icons/fi";
 import { logout } from "../../auth/store/authSlice";
+import { setCredentials } from "../../auth/store/authSlice";
 import type { RootState, AppDispatch } from "../../../app/store";
 import { Preferences, Button } from "../../../components/common";
+import { useGetProfileQuery } from "../api/studentApi";
 
 const appName = import.meta.env.VITE_APP_NAME || "CIOM";
 const appLogo = import.meta.env.VITE_APP_LOGO || "C";
@@ -39,9 +42,44 @@ const StudentLayout = function () {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const token = useSelector((state: RootState) => state.auth.token);
+  const { data: profile } = useGetProfileQuery(undefined, { skip: !token });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+
+  const resolvedUser = useMemo(() => {
+    if (!profile) {
+      return user;
+    }
+    return {
+      ...user,
+      ...profile,
+      role: user?.role || profile.role,
+    };
+  }, [profile, user]);
+
+  useEffect(() => {
+    if (!profile || !token) {
+      return;
+    }
+
+    const nextUser = {
+      ...user,
+      ...profile,
+      role: user?.role || profile.role,
+    };
+
+    const hasChanged =
+      nextUser.firstName !== user?.firstName ||
+      nextUser.lastName !== user?.lastName ||
+      nextUser.email !== user?.email;
+
+    if (hasChanged) {
+      localStorage.setItem("user", JSON.stringify(nextUser));
+      dispatch(setCredentials({ user: nextUser, token }));
+    }
+  }, [dispatch, profile, token, user]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -92,10 +130,10 @@ const StudentLayout = function () {
                 className="hidden md:flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-[var(--secondary)]"
               >
                 <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm">
-                  {user?.firstName?.charAt(0) || "S"}
+                  {resolvedUser?.firstName?.charAt(0) || "S"}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-sm font-medium">{resolvedUser?.firstName} {resolvedUser?.lastName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">Student</p>
                 </div>
               </Link>
@@ -131,11 +169,11 @@ const StudentLayout = function () {
               <div className={`p-4 bg-[var(--card-bg)] rounded-xl border border-[var(--border)] ${isCollapsed ? "p-2" : ""}`}>
                 <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
                   <div className="w-12 h-12 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                    {user?.firstName?.charAt(0) || "S"}
+                    {resolvedUser?.firstName?.charAt(0) || "S"}
                   </div>
                   {!isCollapsed && (
                     <div>
-                      <p className="font-semibold truncate max-w-[140px]">{user?.firstName} {user?.lastName}</p>
+                      <p className="font-semibold truncate max-w-[140px]">{resolvedUser?.firstName} {resolvedUser?.lastName}</p>
                       <p className="text-sm text-[var(--text-secondary)]">Student</p>
                     </div>
                   )}

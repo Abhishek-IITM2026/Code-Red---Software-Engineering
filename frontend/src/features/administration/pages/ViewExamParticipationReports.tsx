@@ -1,39 +1,23 @@
 import { useMemo, useState } from "react";
 import { FiBarChart2, FiSearch, FiUsers } from "react-icons/fi";
-
-type ExamStudentStatus = {
-  id: string;
-  name: string;
-  className: string;
-  examName: string;
-  status: "Attended" | "Absent";
-  section: string;
-};
-
-const examStudentRows: ExamStudentStatus[] = [
-  { id: "S-101", name: "Aarav Reddy", className: "Class 10", examName: "Mid Term", status: "Attended", section: "A" },
-  { id: "S-102", name: "Meera Nair", className: "Class 10", examName: "Mid Term", status: "Attended", section: "B" },
-  { id: "S-103", name: "Diya Sharma", className: "Class 9", examName: "Mid Term", status: "Attended", section: "B" },
-  { id: "S-104", name: "Kabir Das", className: "Class 9", examName: "Mid Term", status: "Absent", section: "A" },
-  { id: "S-105", name: "Vikram Rao", className: "Class 8", examName: "Unit Test", status: "Absent", section: "A" },
-  { id: "S-106", name: "Riya Menon", className: "Class 8", examName: "Unit Test", status: "Attended", section: "C" },
-];
+import { useGetExamParticipationReportsQuery } from "../api/adminApi";
 
 const ViewExamParticipationReports = function () {
+  const { data: examStudentRows = [], isLoading } = useGetExamParticipationReportsQuery();
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [examFilter, setExamFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const uniqueClasses = Array.from(new Set(examStudentRows.map((row) => row.className)));
+  const uniqueClasses = Array.from(new Set(examStudentRows.map((row) => row.class)));
   const uniqueExams = Array.from(new Set(examStudentRows.map((row) => row.examName)));
 
   const classSummary = useMemo(() => {
     const grouped = examStudentRows.reduce<Record<string, { className: string; examName: string; registered: number; attended: number; absent: number }>>((accumulator, row) => {
-      const key = `${row.className}-${row.examName}`;
+      const key = `${row.class}-${row.examName}`;
       if (!accumulator[key]) {
         accumulator[key] = {
-          className: row.className,
+          className: row.class,
           examName: row.examName,
           registered: 0,
           attended: 0,
@@ -42,7 +26,7 @@ const ViewExamParticipationReports = function () {
       }
 
       accumulator[key].registered += 1;
-      if (row.status === "Attended") {
+      if (row.participationStatus === "participated") {
         accumulator[key].attended += 1;
       } else {
         accumulator[key].absent += 1;
@@ -52,7 +36,7 @@ const ViewExamParticipationReports = function () {
     }, {});
 
     return Object.values(grouped);
-  }, []);
+  }, [examStudentRows]);
 
   const filteredSummary = useMemo(() => {
     return classSummary.filter((row) => {
@@ -68,17 +52,18 @@ const ViewExamParticipationReports = function () {
 
   const filteredStudents = useMemo(() => {
     return examStudentRows.filter((row) => {
+      const statusLabel = row.participationStatus === "participated" ? "Attended" : "Absent";
       const matchesSearch =
         !search ||
-        row.name.toLowerCase().includes(search.toLowerCase()) ||
-        row.id.toLowerCase().includes(search.toLowerCase()) ||
-        row.className.toLowerCase().includes(search.toLowerCase());
-      const matchesClass = !classFilter || row.className === classFilter;
+        row.studentName.toLowerCase().includes(search.toLowerCase()) ||
+        row.studentId.toLowerCase().includes(search.toLowerCase()) ||
+        row.class.toLowerCase().includes(search.toLowerCase());
+      const matchesClass = !classFilter || row.class === classFilter;
       const matchesExam = !examFilter || row.examName === examFilter;
-      const matchesStatus = !statusFilter || row.status === statusFilter;
+      const matchesStatus = !statusFilter || statusLabel === statusFilter;
       return matchesSearch && matchesClass && matchesExam && matchesStatus;
     });
-  }, [classFilter, examFilter, search, statusFilter]);
+  }, [classFilter, examFilter, examStudentRows, search, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -86,7 +71,7 @@ const ViewExamParticipationReports = function () {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">Exam Participation</p>
         <h1 className="mt-3 text-3xl font-bold">Exam Participation Reports</h1>
         <p className="mt-3 text-[var(--text)]/75">
-          Use criteria-based search, review class-wise exam participation, and see exactly which students attended or were absent.
+          Participation rows and summary totals are now generated from backend exam records instead of hardcoded page data.
         </p>
       </div>
 
@@ -167,6 +152,13 @@ const ViewExamParticipationReports = function () {
                     <td className="px-6 py-4 text-slate-700">{row.absent}</td>
                   </tr>
                 ))}
+                {!isLoading && filteredSummary.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                      No summary rows matched the selected filters.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -180,7 +172,7 @@ const ViewExamParticipationReports = function () {
               </div>
               <div>
                 <p className="text-lg font-semibold text-slate-900">Student Exam Data</p>
-                <p className="text-sm text-slate-500">Student-level attended and absent visibility.</p>
+                <p className="text-sm text-slate-500">Student-level participation fed by the reports endpoint.</p>
               </div>
             </div>
           </div>
@@ -192,24 +184,40 @@ const ViewExamParticipationReports = function () {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Class</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Exam</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Marks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredStudents.map((row) => (
-                  <tr key={`${row.id}-${row.examName}`}>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-900">{row.name}</div>
-                      <p className="text-sm text-slate-500">{row.id}</p>
-                    </td>
-                    <td className="px-6 py-4 text-slate-700">{row.className} - {row.section}</td>
-                    <td className="px-6 py-4 text-slate-700">{row.examName}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${row.status === "Attended" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                        {row.status}
-                      </span>
+                {filteredStudents.map((row) => {
+                  const attended = row.participationStatus === "participated";
+                  return (
+                    <tr key={`${row.studentId}-${row.examName}`}>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-900">{row.studentName}</div>
+                        <p className="text-sm text-slate-500">{row.studentId}</p>
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">
+                        {row.class} - {row.section}
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">{row.examName}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${attended ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                          {attended ? "Attended" : "Absent"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">
+                        {row.marksObtained != null && row.totalMarks != null ? `${row.marksObtained}/${row.totalMarks}` : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!isLoading && filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                      No student participation rows matched the selected filters.
                     </td>
                   </tr>
-                ))}
+                ) : null}
               </tbody>
             </table>
           </div>

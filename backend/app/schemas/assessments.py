@@ -8,6 +8,9 @@ class GenerateQuestionsRequest(StrictModel):
     question_count: int = Field(default=1, alias="questionCount")
     total_marks: int = Field(default=1, alias="totalMarks")
     difficulty_level: str = Field(default="medium", alias="difficultyLevel")
+    materials: list[dict] = Field(default_factory=list)
+    question_types: dict[str, int] = Field(default_factory=dict, alias="questionTypes")
+    custom_prompt: str | None = Field(default=None, alias="customPrompt")
 
 
 class QuestionPayload(StrictModel):
@@ -58,3 +61,13 @@ class AssignmentListQuery(StrictModel):
 
 class AssignmentSubmissionRequest(StrictModel):
     submission_url: str = Field(alias="submissionUrl")
+
+
+class AssessmentAnswerRequest(StrictModel):
+    question_id: str = Field(alias="questionId")
+    answer: str | list[str] | None = None
+
+
+class AssessmentSubmissionCreateRequest(StrictModel):
+    answers: list[AssessmentAnswerRequest]
+    status: str = "submitted"

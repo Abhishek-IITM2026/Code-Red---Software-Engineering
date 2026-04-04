@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { UserAvatar } from '../../../components/common';
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { FiLogOut, FiMenu, FiX, FiSettings, FiChevronRight, FiChevronLeft, FiUser } from "react-icons/fi";
@@ -10,6 +11,7 @@ import {
   AUTHORITY_ASSIGNMENTS_UPDATED_EVENT,
   readAuthorityAssignments,
   userHasAnyAuthority,
+  type AuthorityKey,
 } from "../../administration/utils/authorityAccess";
 
 const appName = import.meta.env.VITE_APP_NAME || "CIOM";
@@ -31,15 +33,86 @@ const FacultyLayout = function () {
   };
 
   useEffect(() => {
-    const handleAssignmentsUpdated = () => setAuthorityVersion((current) => current + 1);
+    const handleAssignmentsUpdated = () => {
+      console.log("[FacultyLayout] Authority update detected, refreshing routes...");
+      setAuthorityVersion((current) => current + 1);
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "administration-authority-assignments") {
+        console.log("[FacultyLayout] Storage change detected for authorities, refreshing routes...");
+        handleAssignmentsUpdated();
+      }
+    };
+
+    // Listen for custom authority update event from AuthorityManagement
     window.addEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
-    return () => window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+
+    // Also listen for storage changes in case admin updates authorities in another tab
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener(AUTHORITY_ASSIGNMENTS_UPDATED_EVENT, handleAssignmentsUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
-  const authorityAssignments = useMemo(() => readAuthorityAssignments(), [authorityVersion]);
-  const primaryLinks = facultyRoutes.filter(
-    (route) => route.path !== facultyProfilePath && userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
-  );
+  const authorityAssignments = useMemo(() => {
+    const assignments = readAuthorityAssignments();
+    console.log("[FacultyLayout] Authority assignments loaded:", {
+      user: `${user?.firstName} ${user?.lastName} (${user?.email})`,
+      userId: user?.id,
+      totalAssignments: assignments.length,
+      assignments: assignments,
+      timestamp: new Date().toISOString(),
+    });
+    return assignments;
+  }, [authorityVersion]);
+
+  const primaryLinks = useMemo(() => {
+    const normalizeId = (id: string | number | undefined): string => {
+      return String(id || "").trim();
+    };
+
+    const userAssignment = authorityAssignments.find(
+      (a) => normalizeId(a.staffId) === normalizeId(user?.id),
+    );
+
+    const filtered = facultyRoutes.filter(
+      (route) => route.path !== facultyProfilePath && userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
+    );
+    
+    // Detailed logging for debugging
+    const hidden = facultyRoutes.filter(
+      (route) => route.path !== facultyProfilePath && !userHasAnyAuthority(user, route.requiredAuthorities, authorityAssignments),
+    );
+    
+    console.log("[FacultyLayout] Route filtering details:", {
+      user: `${user?.firstName} ${user?.lastName}`,
+      userId: user?.id,
+      normalizedUserId: normalizeId(user?.id),
+      userAssignment: userAssignment,
+      userAuthorities: userAssignment?.authorities || {},
+      totalRoutes: facultyRoutes.length,
+      visibleRoutes: filtered.length,
+      hiddenRoutes: hidden.length,
+      visibleRoutesList: filtered.map((r) => ({
+        name: r.name,
+        requiredAuthorities: r.requiredAuthorities,
+      })),
+      hiddenRoutesList: hidden.map((r) => ({
+        name: r.name,
+        requiredAuthorities: r.requiredAuthorities,
+        userHasAuth: userAssignment ? Object.entries(userAssignment.authorities)
+          .filter(([key, value]) => value && (r.requiredAuthorities?.includes(key as AuthorityKey) || r.requiredAuthorities === undefined))
+          .map(([key]) => key) : [],
+      })),
+      timestamp: new Date().toISOString(),
+    });
+    
+    return filtered;
+  }, [authorityVersion, user?.id, authorityAssignments]);
+
   const isProfileRoute = location.pathname === facultyProfilePath;
 
   return (
@@ -73,7 +146,7 @@ const FacultyLayout = function () {
                 to={facultyProfilePath}
                 className="hidden md:flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-[var(--secondary)]"
               >
-                <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm">{user?.firstName?.charAt(0) || "F"}</div>
+                <UserAvatar src={user?.profilePicture} name={user?.firstName} size="sm" />
                 <div>
                   <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">Faculty</p>
@@ -93,7 +166,7 @@ const FacultyLayout = function () {
             <div className={`mb-6 px-4 ${isCollapsed ? 'px-2' : ''}`}>
               <div className={`p-4 bg-[var(--card-bg)] rounded-xl border border-[var(--border)] ${isCollapsed ? 'p-2' : ''}`}>
                 <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-                  <div className="w-12 h-12 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold text-lg flex-shrink-0">{user?.firstName?.charAt(0) || "F"}</div>
+                  <UserAvatar src={user?.profilePicture} name={user?.firstName} size="lg" />
                   {!isCollapsed && <div><p className="font-semibold truncate max-w-[120px]">{user?.firstName} {user?.lastName}</p><p className="text-sm text-[var(--text-secondary)]">Faculty</p></div>}
                 </div>
               </div>

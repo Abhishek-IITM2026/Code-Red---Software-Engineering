@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { UserAvatar } from '../../../components/common';
 import { useSelector, useDispatch } from "react-redux";
 import Header from "../../../components/Header/Header";
 import Footer from "../../../components/Footer/Footer";
@@ -42,7 +43,7 @@ const AuthLayout = function () {
       <Header
         logo="Coaching Institute"
         navItems={navItems}
-        user={user ? { name: `${user.firstName} ${user.lastName}` } : null}
+        user={user ? { first_name: user.firstName, last_name: user.lastName } : null}
       />
 
       <div className="flex flex-1 min-w-0">

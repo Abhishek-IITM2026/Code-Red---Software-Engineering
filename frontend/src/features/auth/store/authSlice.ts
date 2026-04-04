@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import type{ AuthState, LoginCredentials , RegisterData, AuthResponse, User} from "../types/index.ts";
+import { AUTH_API_BASE_URL } from "../../../services/api/config";
 import type {
   UpdateProfileRequest,
   UpdateProfilePictureRequest,
@@ -11,39 +12,37 @@ const mockOTPStore: Record<string, { otp: string; expiresAt: number }> = {};
 
 // Mock users for demo
 const mockUsers: Record<string, User & { password: string }> = {
-  "student@demo.com": {
+  "student@example.com": {
     id: "1",
-    email: "student@demo.com",
-    firstName: "John",
-    lastName: "Student",
+    email: "student@example.com",
+    firstName: "Neha",
+    lastName: "Patel",
     role: "student",
-    password: "password"
+    password: "student123"
   },
-  "faculty@demo.com": {
-    id: "ST-201",
-    email: "faculty@demo.com",
-    firstName: "Ananya",
-    lastName: "Menon",
+  "faculty@example.com": {
+    id: "2",
+    email: "faculty@example.com",
+    firstName: "Ravi",
+    lastName: "Sharma",
     role: "faculty",
-    employeeCode: "EMP-010",
-    password: "password"
+    password: "faculty123"
   },
-  "parent@demo.com": {
+  "parent@example.com": {
     id: "3",
-    email: "parent@demo.com",
-    firstName: "Mike",
-    lastName: "Parent",
+    email: "parent@example.com",
+    firstName: "Meera",
+    lastName: "Patel",
     role: "parent",
-    password: "password"
+    password: "parent123"
   },
-  "admin@demo.com": {
-    id: "ST-203",
-    email: "admin@demo.com",
-    firstName: "Sujatha",
-    lastName: "Devi",
+  "admin@example.com": {
+    id: "4",
+    email: "admin@example.com",
+    firstName: "Asha",
+    lastName: "Admin",
     role: "admin",
-    employeeCode: "EMP-022",
-    password: "password"
+    password: "admin123"
   }
 };
 
@@ -75,22 +74,8 @@ const generateToken = (user: User): string => {
 export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
-    // Try to find user in mock data
-    const mockUser = mockUsers[credentials.email];
-    
-    if (mockUser && mockUser.password === credentials.password) {
-      const { password, ...user } = mockUser;
-      const token = generateToken(user);
-      
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      
-      return { user, token };
-    }
-    
-    // If not in mock, try API call (will fail if backend not available)
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
@@ -99,7 +84,7 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
       const data = await response.json();
 
       if (!response.ok) {
-        return rejectWithValue(data.message || "Login failed");
+        return rejectWithValue(data.error?.message || "Login failed");
       }
 
       localStorage.setItem("token", data.token);
@@ -107,8 +92,17 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
 
       return data as AuthResponse;
     } catch {
-      // Return mock success for demo purposes
-      return rejectWithValue("Invalid email or password. Use demo credentials shown below.");
+      const mockUser = mockUsers[credentials.email];
+      if (mockUser && mockUser.password === credentials.password) {
+        const { password, ...user } = mockUser;
+        const token = generateToken(user);
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        return { user, token };
+      }
+      return rejectWithValue("Invalid email or password.");
     }
   }
 );
@@ -119,7 +113,7 @@ export const register = createAsyncThunk<AuthResponse, RegisterData>(
   async (userData, { rejectWithValue }) => {
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/register", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -128,7 +122,7 @@ export const register = createAsyncThunk<AuthResponse, RegisterData>(
       const data = await response.json();
 
       if (!response.ok) {
-        return rejectWithValue(data.message || "Registration failed");
+        return rejectWithValue(data.error?.message || "Registration failed");
       }
 
       localStorage.setItem("token", data.token);
@@ -166,13 +160,13 @@ export const sendOTP = createAsyncThunk(
   async (data: { email: string; purpose: string }, { rejectWithValue }) => {
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/otp/send", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (!response.ok) return rejectWithValue(result.message || "Failed to send OTP");
+      if (!response.ok) return rejectWithValue(result.error?.message || "Failed to send OTP");
       return result;
     } catch {
       // Mock OTP generation
@@ -198,13 +192,13 @@ export const verifyOTP = createAsyncThunk(
   async (data: { email: string; otp: string; purpose: string }, { rejectWithValue }) => {
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/otp/verify", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (!response.ok) return rejectWithValue(result.message || "Invalid OTP");
+      if (!response.ok) return rejectWithValue(result.error?.message || "Invalid OTP");
       return result;
     } catch {
       // Mock OTP verification
@@ -244,7 +238,7 @@ export const updateProfile = createAsyncThunk(
 
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/profile/update", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/profile/update`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -253,7 +247,7 @@ export const updateProfile = createAsyncThunk(
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (!response.ok) return rejectWithValue(result.message || "Update failed");
+      if (!response.ok) return rejectWithValue(result.error?.message || "Update failed");
       return result;
     } catch {
       // Mock profile update
@@ -288,7 +282,7 @@ export const updateProfilePicture = createAsyncThunk(
 
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/profile/picture", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/profile/picture`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -297,7 +291,7 @@ export const updateProfilePicture = createAsyncThunk(
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (!response.ok) return rejectWithValue(result.message || "Update failed");
+      if (!response.ok) return rejectWithValue(result.error?.message || "Update failed");
       return result;
     } catch {
       // Mock profile picture update
@@ -330,7 +324,7 @@ export const changePassword = createAsyncThunk(
 
     // Try API first
     try {
-      const response = await fetch("http://localhost:3000/api/auth/profile/change-password", {
+      const response = await fetch(`${AUTH_API_BASE_URL}/profile/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -339,7 +333,7 @@ export const changePassword = createAsyncThunk(
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (!response.ok) return rejectWithValue(result.message || "Password change failed");
+      if (!response.ok) return rejectWithValue(result.error?.message || "Password change failed");
       return result;
     } catch {
       // Mock password change - in real app, verify current password

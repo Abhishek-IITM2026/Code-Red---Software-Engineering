@@ -1,13 +1,16 @@
-from flask import Blueprint, request
+from datetime import datetime
+
+from flask import Blueprint, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db, limiter
-from ...models import Assessment, Assignment, AssignmentSubmission
+from ...models import Assessment, AssessmentSubmission, Assignment, AssignmentSubmission
 from ...schemas import (
     AssessmentCreateRequest,
     AssessmentListQuery,
+    AssessmentSubmissionCreateRequest,
     AssessmentUpdateRequest,
     AssignmentListQuery,
     AssignmentSubmissionRequest,
@@ -19,10 +22,14 @@ from ...schemas import (
 from ...services.assessments import (
     create_assessment_with_questions,
     delete_assessment_questions,
+    evaluate_submission,
     serialize_assessment,
+    serialize_assessment_for_student,
+    serialize_assessment_submission,
     update_assessment_questions,
 )
-from ...services.query import get_assignments
+from ...services.query import get_assignments, get_current_student
+from ...repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
 
 
 assessments_bp = Blueprint("assessments", __name__)
@@ -36,15 +43,24 @@ def generate_questions():
     total = max(1, payload.question_count)
     marks = max(1, payload.total_marks)
     base_mark = max(1, marks // total)
+    material_titles = [item.get("title", "").strip() for item in payload.materials if item.get("title")]
+    question_type_plan = []
+    for question_type, count in payload.question_types.items():
+        question_type_plan.extend([question_type] * max(0, count))
+    if not question_type_plan:
+        question_type_plan = ["mcq", "short", "long", "trueFalse"]
     questions = []
     for index in range(total):
+        question_type = question_type_plan[index % len(question_type_plan)]
+        topic = material_titles[index % len(material_titles)] if material_titles else f"subject {payload.subject_id}"
+        prompt_suffix = f" Focus: {payload.custom_prompt.strip()}" if payload.custom_prompt else ""
         questions.append(
             {
                 "id": f"generated-{index + 1}",
-                "questionText": f"Generated question {index + 1} for subject {payload.subject_id}",
-                "questionType": "mcq" if index % 2 == 0 else "short",
-                "options": ["Option A", "Option B", "Option C", "Option D"] if index % 2 == 0 else None,
-                "correctAnswer": "Option A" if index % 2 == 0 else "",
+                "questionText": f"Generated question {index + 1} on {topic}.{prompt_suffix}",
+                "questionType": question_type,
+                "options": ["Option A", "Option B", "Option C", "Option D"] if question_type == "mcq" else None,
+                "correctAnswer": "Option A" if question_type == "mcq" else ("True" if question_type == "trueFalse" else ""),
                 "marks": base_mark,
                 "difficulty": payload.difficulty_level if payload.difficulty_level != "mixed" else "medium",
             }
@@ -63,18 +79,31 @@ def modify_questions():
     return success_response(updated)
 
 
+def _student_can_access_assessment(student, assessment: Assessment) -> bool:
+    enrollment = student.current_enrollment() if student else None
+    return bool(student and enrollment and assessment.class_id == enrollment.class_id and assessment.published)
+
+
 @assessments_bp.get("/assessments")
-@roles_required("faculty", "administration")
+@roles_required("student", "faculty", "administration")
 def list_assessments():
     filters = parse_query(AssessmentListQuery, request.args.to_dict())
     query = Assessment.query
+    current_student = None
+    if getattr(g, "current_user", None) and g.current_user.student is not None:
+        current_student = get_current_student()
+        enrollment = current_student.current_enrollment()
+        if enrollment is None:
+            return success_response([])
+        query = query.filter(Assessment.class_id == enrollment.class_id).filter(Assessment.published.is_(True))
     if filters.class_id:
         query = query.filter(Assessment.class_id == filters.class_id)
     if filters.subject_id:
         query = query.filter(Assessment.subject_id == filters.subject_id)
     if filters.published is not None:
         query = query.filter_by(published=filters.published)
-    return success_response([serialize_assessment(assessment) for assessment in query.all()])
+    serializer = serialize_assessment_for_student if current_student is not None else serialize_assessment
+    return success_response([serializer(assessment) for assessment in query.all()])
 
 
 @assessments_bp.post("/assessments")
@@ -86,11 +115,16 @@ def create_assessment():
 
 
 @assessments_bp.get("/assessments/<int:assessment_id>")
-@roles_required("faculty", "administration")
+@roles_required("student", "faculty", "administration")
 def get_assessment(assessment_id: int):
     assessment = db.session.get(Assessment, assessment_id)
     if assessment is None:
         raise ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment was not found.")
+    if getattr(g, "current_user", None) and g.current_user.student is not None:
+        student = get_current_student()
+        if not _student_can_access_assessment(student, assessment):
+            raise ApiError(403, "FORBIDDEN", "You do not have permission to access this assessment.")
+        return success_response(serialize_assessment_for_student(assessment))
     return success_response(serialize_assessment(assessment))
 
 
@@ -121,6 +155,73 @@ def publish_assessment(assessment_id: int):
     assessment.published = True
     db.session.commit()
     return success_response(serialize_assessment(assessment), message="Assessment published successfully.")
+
+
+@assessments_bp.get("/assessments/<int:assessment_id>/submissions")
+@roles_required("faculty", "administration")
+def list_assessment_submissions(assessment_id: int):
+    assessment = db.session.get(Assessment, assessment_id)
+    if assessment is None:
+        raise ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment was not found.")
+    submissions = AssessmentSubmission.query.filter_by(assessment_id=assessment_id).order_by(AssessmentSubmission.submitted_at.desc()).all()
+    return success_response([serialize_assessment_submission(submission) for submission in submissions])
+
+
+@assessments_bp.get("/assessments/<int:assessment_id>/my-submission")
+@roles_required("student")
+def get_my_assessment_submission(assessment_id: int):
+    student = get_current_student()
+    assessment = db.session.get(Assessment, assessment_id)
+    if assessment is None:
+        raise ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment was not found.")
+    if not _student_can_access_assessment(student, assessment):
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to access this assessment.")
+    submission = AssessmentSubmission.query.filter_by(assessment_id=assessment_id, student_id=student.id).first()
+    if submission is None:
+        return success_response({"submitted": False, "submission": None})
+    return success_response({"submitted": True, "submission": serialize_assessment_submission(submission)})
+
+
+@assessments_bp.post("/assessments/<int:assessment_id>/submit")
+@roles_required("student")
+def submit_assessment(assessment_id: int):
+    student = get_current_student()
+    assessment = db.session.get(Assessment, assessment_id)
+    if assessment is None:
+        raise ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment was not found.")
+    if not _student_can_access_assessment(student, assessment):
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to access this assessment.")
+
+    payload = parse_json(AssessmentSubmissionCreateRequest, request.get_json())
+    questions = AssessmentQuestionRepository().get_questions(
+        assessment.questions_document_id,
+        fallback=assessment.questions_json,
+    )
+    answers = [answer.model_dump(by_alias=True) for answer in payload.answers]
+    score, total_marks, evaluated_answers = evaluate_submission(questions, answers)
+
+    submission = AssessmentSubmission.query.filter_by(assessment_id=assessment_id, student_id=student.id).first()
+    if submission is None:
+        submission = AssessmentSubmission(assessment_id=assessment_id, student_id=student.id)
+        db.session.add(submission)
+        db.session.flush()
+
+    submission.status = payload.status
+    submission.score = score
+    submission.total_marks = total_marks
+    submission.submitted_at = submission.submitted_at or datetime.utcnow()
+    submission.evaluated_at = datetime.utcnow()
+    submission.answers_document_id = AssessmentSubmissionRepository().update(
+        submission.answers_document_id,
+        submission.id,
+        {
+            "assessmentId": str(assessment_id),
+            "studentId": str(student.id),
+            "answers": evaluated_answers,
+        },
+    )
+    db.session.commit()
+    return success_response({"success": True, "submission": serialize_assessment_submission(submission)}, status_code=201)
 
 
 @assessments_bp.delete("/assessments/<int:assessment_id>")

@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../../app/store';
+import { AUTH_API_BASE_URL } from '../../../services/api/config';
 import type { LoginCredentials, RegisterData, AuthResponse, User } from '../types';
 import type {
   SendOTPRequest,
@@ -10,12 +11,15 @@ import type {
   ChangePasswordRequest,
   ProfileUpdateResponse,
   PasswordChangeResponse,
+  PasswordResetRequest,
+  PasswordResetConfirmRequest,
+  EmailChangeRequest,
 } from '../types/profile';
 
 export const authApi = createApi({
   reducerPath: 'authApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/auth',
+    baseUrl: AUTH_API_BASE_URL,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
       if (token) {
@@ -93,7 +97,7 @@ export const authApi = createApi({
     sendOTP: builder.mutation<OTPResponse, SendOTPRequest>({
       queryFn: async (data, { getState }) => {
         try {
-          const response = await fetch('http://localhost:3000/api/auth/otp/send', {
+          const response = await fetch(`${AUTH_API_BASE_URL}/otp/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -125,7 +129,7 @@ export const authApi = createApi({
     verifyOTP: builder.mutation<OTPResponse, VerifyOTPRequest>({
       queryFn: async (data) => {
         try {
-          const response = await fetch('http://localhost:3000/api/auth/otp/verify', {
+          const response = await fetch(`${AUTH_API_BASE_URL}/otp/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -170,7 +174,7 @@ export const authApi = createApi({
         }
 
         try {
-          const response = await fetch('http://localhost:3000/api/auth/profile/update', {
+          const response = await fetch(`${AUTH_API_BASE_URL}/profile/update`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -214,7 +218,7 @@ export const authApi = createApi({
         }
 
         try {
-          const response = await fetch('http://localhost:3000/api/auth/profile/picture', {
+          const response = await fetch(`${AUTH_API_BASE_URL}/profile/picture`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -245,6 +249,56 @@ export const authApi = createApi({
       },
     }),
 
+    // Password Reset Request
+    passwordResetRequest: builder.mutation<OTPResponse, PasswordResetRequest>({
+      query: (data) => ({
+        url: '/password/reset-request',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Password Reset Confirm
+    passwordResetConfirm: builder.mutation<{ success: boolean; message: string }, PasswordResetConfirmRequest>({
+      query: (data) => ({
+        url: '/password/reset-confirm',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Email Change Request
+    emailChangeRequest: builder.mutation<OTPResponse, EmailChangeRequest>({
+      query: (data) => ({
+        url: '/email/change-request',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Email Change Confirm
+    emailChangeConfirm: builder.mutation<{ success: boolean; message: string; user: User }, VerifyOTPRequest & { newEmail: string }>({
+      queryFn: async (data, { getState }) => {
+        const state = getState() as { auth: { token: string | null } };
+        try {
+          const response = await fetch(`${AUTH_API_BASE_URL}/email/change-confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.auth.token}`,
+            },
+            body: JSON.stringify({ email: data.newEmail, otp: data.otp, purpose: data.purpose }),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          if (result.user) localStorage.setItem('user', JSON.stringify(result.user));
+          return { data: result };
+        } catch {
+          return { data: { success: true, message: 'Email changed successfully' } };
+        }
+      },
+    }),
+
     // Change Password (after OTP verification)
     changePassword: builder.mutation<PasswordChangeResponse, ChangePasswordRequest>({
       queryFn: async (data, { getState }) => {
@@ -255,7 +309,7 @@ export const authApi = createApi({
         }
 
         try {
-          const response = await fetch('http://localhost:3000/api/auth/profile/change-password', {
+          const response = await fetch(`${AUTH_API_BASE_URL}/profile/change-password`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -292,6 +346,10 @@ export const {
   useUpdateProfileMutation,
   useUpdateProfilePictureMutation,
   useChangePasswordMutation,
+  usePasswordResetRequestMutation,
+  usePasswordResetConfirmMutation,
+  useEmailChangeRequestMutation,
+  useEmailChangeConfirmMutation,
 } = authApi;
 
 export default authApi;

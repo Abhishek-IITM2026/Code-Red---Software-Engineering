@@ -5,7 +5,7 @@ import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
 
 const ParentFees = function () {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, feeTransactions } = useParentChildren();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, feeTransactions, isLoading } = useParentChildren();
   const [filteredTransactions, setFilteredTransactions] = useState(feeTransactions);
   const pendingFee = filteredTransactions.find((item) => item.status === "Pending");
 
@@ -153,6 +153,13 @@ const ParentFees = function () {
                     <td className="px-6 py-4 text-slate-700">{item.date}</td>
                   </tr>
                 ))}
+                {!filteredTransactions.length && !isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-6 text-center text-sm text-slate-500">
+                      No fee transactions found.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>

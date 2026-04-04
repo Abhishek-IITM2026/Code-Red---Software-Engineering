@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiPlus, FiX } from 'react-icons/fi';
 import ScheduleForm from '../components/ScheduleForm';
-import ScheduleList, { DEMO_SCHEDULES } from '../components/ScheduleList';
+import ScheduleList from '../components/ScheduleList';
 import ScheduleNotification from '../components/ScheduleNotification';
+import {
+  useGetAllSchedulesQuery,
+  useCreateScheduleMutation,
+  useUpdateScheduleMutation,
+  useDeleteScheduleMutation,
+} from '../../../services/api/dataApi';
 import type { ClassSchedule } from '../../../services/api/dataApi';
 
 type ViewMode = 'list' | 'notification';
@@ -14,7 +20,12 @@ const ScheduleManagement = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClassSchedule | null>(null);
-  const [schedules, setSchedules] = useState<ClassSchedule[]>(DEMO_SCHEDULES);
+
+  // API Hooks
+  const { data: schedules = [], isLoading, error } = useGetAllSchedulesQuery();
+  const [createSchedule, { isLoading: isCreating }] = useCreateScheduleMutation();
+  const [updateSchedule, { isLoading: isUpdating }] = useUpdateScheduleMutation();
+  const [deleteSchedule, { isLoading: isDeleting }] = useDeleteScheduleMutation();
 
   const handleEdit = (schedule: ClassSchedule) => {
     setEditingSchedule(schedule);
@@ -26,17 +37,31 @@ const ScheduleManagement = () => {
     setIsFormOpen(true);
   };
 
-  const handleSaveSchedule = (schedule: ClassSchedule) => {
-    setSchedules((current) => {
-      const exists = current.some((item) => item.id === schedule.id);
-      if (exists) {
-        return current.map((item) => (item.id === schedule.id ? schedule : item));
-      }
+  const handleSaveSchedule = async (schedule: ClassSchedule) => {
+    try {
+      // Extract only the fields that the backend accepts for ScheduleWriteRequest
+      const apiPayload = {
+        classId: schedule.classId,
+        subjectId: 1, // Default subject ID
+        facultyId: schedule.facultyId,
+        dayOfWeek: schedule.dayOfWeek,
+        timeSlot: {
+          startTime: schedule.timeSlot.startTime,
+          endTime: schedule.timeSlot.endTime,
+        },
+        roomNumber: schedule.roomNumber,
+      };
 
-      return [schedule, ...current];
-    });
-    setIsFormOpen(false);
-    setEditingSchedule(null);
+      if (editingSchedule) {
+        await updateSchedule({ id: editingSchedule.id, data: apiPayload }).unwrap();
+      } else {
+        await createSchedule(apiPayload).unwrap();
+      }
+      setIsFormOpen(false);
+      setEditingSchedule(null);
+    } catch (err) {
+      console.error('Failed to save schedule:', err);
+    }
   };
 
   const handleSelectForNotification = (nextSchedules: ClassSchedule[]) => {
@@ -44,13 +69,17 @@ const ScheduleManagement = () => {
     setShowNotificationModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) {
       return;
     }
 
-    setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      await deleteSchedule(deleteTarget.id).unwrap();
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error('Failed to delete schedule:', err);
+    }
   };
 
   return (
@@ -69,20 +98,36 @@ const ScheduleManagement = () => {
         <button
           type="button"
           onClick={handleCreateOpen}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+          disabled={isLoading}
         >
           <FiPlus className="h-5 w-5" />
           Create Schedule
         </button>
       </div>
 
-      {viewMode === 'list' && (
-        <ScheduleList
-          schedules={schedules}
-          onEdit={handleEdit}
-          onDelete={setDeleteTarget}
-          onSelectForNotification={handleSelectForNotification}
-        />
+      {error && (
+        <div className="rounded-2xl bg-red-50 p-4 border border-red-200">
+          <p className="text-sm font-semibold text-red-700">Error loading schedules</p>
+          <p className="mt-1 text-sm text-red-600">Failed to fetch schedules from server</p>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+          <p className="text-center text-slate-500">Loading schedules...</p>
+        </div>
+      ) : (
+        viewMode === 'list' && (
+          <ScheduleList
+            schedules={schedules}
+            isLoading={isLoading}
+            isDeleting={isDeleting}
+            onEdit={handleEdit}
+            onDelete={setDeleteTarget}
+            onSelectForNotification={handleSelectForNotification}
+          />
+        )
       )}
 
       {isFormOpen && (
@@ -107,7 +152,8 @@ const ScheduleManagement = () => {
                   setIsFormOpen(false);
                   setEditingSchedule(null);
                 }}
-                className="rounded-2xl border border-slate-200 p-3 text-slate-500 transition hover:bg-slate-50"
+                disabled={isCreating || isUpdating}
+                className="rounded-2xl border border-slate-200 p-3 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 <FiX className="h-5 w-5" />
               </button>
@@ -117,6 +163,7 @@ const ScheduleManagement = () => {
               <ScheduleForm
                 editingSchedule={editingSchedule}
                 onSave={handleSaveSchedule}
+                isSubmitting={isCreating || isUpdating}
                 onCancel={() => {
                   setIsFormOpen(false);
                   setEditingSchedule(null);
@@ -147,16 +194,18 @@ const ScheduleManagement = () => {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+                disabled={isDeleting}
+                className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="rounded-2xl bg-rose-600 px-5 py-3 font-semibold text-white transition hover:bg-rose-700"
+                disabled={isDeleting}
+                className="rounded-2xl bg-rose-600 px-5 py-3 font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
               >
-                Confirm Delete
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
               </button>
             </div>
           </div>

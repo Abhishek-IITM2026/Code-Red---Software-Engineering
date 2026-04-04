@@ -3,7 +3,7 @@ import { FiArrowRight, FiAward, FiBook, FiCalendar, FiCheckCircle, FiClock, FiTr
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
 import { studentSubjects } from "../data/subjectContent";
-import { getCoursesForClass } from "../../courses/courseStore";
+import { useGetAttendanceStatsQuery, useGetPerformanceSummaryQuery, useGetProfileQuery, useGetUpcomingCoursesQuery } from "../api/studentApi";
 
 const quickCards = [
   {
@@ -53,10 +53,13 @@ const quickCards = [
 const StudentDashboard = function () {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
+  const { data: profile } = useGetProfileQuery();
   const totalPending = studentSubjects
     .flatMap((subject) => subject.assignments)
     .filter((assignment) => assignment.status === "pending").length;
-  const upcomingCourses = getCoursesForClass("Class 10", "A");
+  const { data: upcomingCourses = [] } = useGetUpcomingCoursesQuery();
+  const { data: attendanceStats } = useGetAttendanceStatsQuery();
+  const { data: performanceSummary } = useGetPerformanceSummaryQuery();
 
   return (
     <div className="space-y-8">
@@ -67,7 +70,7 @@ const StudentDashboard = function () {
               Student Dashboard
             </p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-              Welcome back, {user?.firstName || "Student"}
+              Welcome back, {profile?.firstName || user?.firstName || "Student"}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-white/85 md:text-base">
               Your student area is now organized around subjects, so chapter content, study resources, and assessments stay connected instead of being split across multiple pages.
@@ -87,11 +90,11 @@ const StudentDashboard = function () {
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl bg-white/12 p-4 backdrop-blur-sm">
             <p className="text-sm text-white/75">Attendance</p>
-            <p className="mt-2 text-3xl font-bold">85%</p>
+            <p className="mt-2 text-3xl font-bold">{Math.round(attendanceStats?.percentage || 0)}%</p>
           </div>
           <div className="rounded-2xl bg-white/12 p-4 backdrop-blur-sm">
             <p className="text-sm text-white/75">Average marks</p>
-            <p className="mt-2 text-3xl font-bold">78%</p>
+            <p className="mt-2 text-3xl font-bold">{Math.round(performanceSummary?.average || 0)}%</p>
           </div>
           <div className="rounded-2xl bg-white/12 p-4 backdrop-blur-sm">
             <p className="text-sm text-white/75">Pending tasks</p>
