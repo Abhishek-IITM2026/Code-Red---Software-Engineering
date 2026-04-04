@@ -9,6 +9,7 @@ import RecordAttendance from "../pages/RecordAttendance";
 import ViewStudentPerformance from "../pages/ViewStudentPerformance";
 import ClassStudents from "../pages/ClassStudents";
 import FacultySchedule from "../pages/FacultySchedule";
+import CreateSchedule from "../pages/CreateSchedule";
 import AssessmentBuilder from "../pages/AssessmentBuilder";
 import FacultySalarySlip from "../pages/FacultySalarySlip";
 import PromoteStudents from "../../administration/pages/PromoteStudents";
@@ -96,6 +97,14 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultySchedule />,
     icon: FiCalendar,
     description: "View your teaching schedule"
+  },
+  {
+    name: "Create Schedule",
+    path: "/faculty/create-schedule",
+    element: <CreateSchedule />,
+    icon: FiPlusCircle,
+    description: "Create and manage class schedules",
+    requiredAuthorities: ["scheduleCreation"],
   },
   {
     name: "Apply Leave",

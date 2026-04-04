@@ -6,7 +6,7 @@ from ...api.errors import ApiError
 from ...common.auth import roles_required, user_role_names
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import Attendance, Student
+from ...models import Attendance, FacultySubjectAssignment, Student
 from ...schemas import AttendanceSubmissionRequest, parse_json
 from ...services.query import get_attendance_stats, get_current_student
 
@@ -46,6 +46,17 @@ def _save_attendance(status_code: int):
     if not payload.attendance_date or not payload.class_id or not records:
         raise ApiError(400, "VALIDATION_ERROR", "date, class and at least one attendance record are required.")
 
+    subject_assignment = None
+    if getattr(g.current_user, "faculty", None) is not None:
+        subject_assignment = FacultySubjectAssignment.query.filter_by(
+            class_id=payload.class_id,
+            faculty_id=g.current_user.faculty.id,
+        ).first()
+    if subject_assignment is None:
+        subject_assignment = FacultySubjectAssignment.query.filter_by(class_id=payload.class_id).first()
+    if subject_assignment is None:
+        raise ApiError(404, "SUBJECT_ASSIGNMENT_NOT_FOUND", "No subject assignment exists for the selected class.")
+
     saved = 0
     for record in records:
         attendance = Attendance.query.filter_by(
@@ -57,13 +68,15 @@ def _save_attendance(status_code: int):
             attendance = Attendance(
                 student_id=record.student_id,
                 class_id=payload.class_id,
-                subject_id=record.subject_id or 1,
+                subject_id=record.subject_id or subject_assignment.subject_id,
                 attendance_date=date.fromisoformat(payload.attendance_date),
-                marked_by=2,
+                marked_by=g.current_user.id,
                 status=record.status.upper(),
             )
             db.session.add(attendance)
         else:
+            attendance.subject_id = record.subject_id or attendance.subject_id or subject_assignment.subject_id
+            attendance.marked_by = g.current_user.id
             attendance.status = record.status.upper()
         saved += 1
 

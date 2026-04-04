@@ -1,11 +1,10 @@
 import { FiBookOpen, FiCalendar, FiUsers } from "react-icons/fi";
-import { getCoursesForClass } from "../../courses/courseStore";
 import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
 
 const ParentUpcomingCourses = function () {
-  const { children, selectedChild, selectedChildId, setSelectedChildId } = useParentChildren();
-  const courses = getCoursesForClass(selectedChild.className, selectedChild.section);
+  const { children, selectedChild, selectedChildId, setSelectedChildId, upcomingCourses } = useParentChildren();
+  const courses = upcomingCourses;
 
   return (
     <div className="space-y-8">

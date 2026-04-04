@@ -6,7 +6,7 @@ import { useParentChildren } from "../useParentChildren";
 const ParentSubjectReport = function () {
   const navigate = useNavigate();
   const { subjectId } = useParams();
-  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects } = useParentChildren();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, performanceSubjects, isLoading } = useParentChildren();
   const subject = performanceSubjects.find((item) => item.id === subjectId);
 
   if (!subjectId) {
@@ -67,6 +67,11 @@ const ParentSubjectReport = function () {
               <p className="mt-3 text-sm leading-6 text-slate-600">{item.report[0]}</p>
             </button>
           ))}
+          {!performanceSubjects.length && !isLoading ? (
+            <div className="rounded-3xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+              Subject reports will appear here once marks are available.
+            </div>
+          ) : null}
         </section>
       </div>
     );

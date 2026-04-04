@@ -1,13 +1,9 @@
 import { FiBookOpen, FiCalendar, FiUsers } from "react-icons/fi";
-import { getCoursesForClass } from "../../courses/courseStore";
-
-const studentProfile = {
-  className: "Class 10",
-  section: "A",
-};
+import { useGetProfileQuery, useGetUpcomingCoursesQuery } from "../api/studentApi";
 
 const UpcomingCourses = function () {
-  const courses = getCoursesForClass(studentProfile.className, studentProfile.section);
+  const { data: studentProfile } = useGetProfileQuery();
+  const { data: courses = [], isLoading } = useGetUpcomingCoursesQuery();
 
   return (
     <div className="space-y-8">
@@ -17,9 +13,15 @@ const UpcomingCourses = function () {
         </p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">Upcoming Courses</h1>
         <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-          Explore new courses published for {studentProfile.className} Section {studentProfile.section} and plan your next learning track early.
+          Explore new courses published for {studentProfile?.class || "your class"} Section {studentProfile?.section || ""} and plan your next learning track early.
         </p>
       </section>
+
+      {isLoading ? (
+        <div className="rounded-3xl bg-white p-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+          Loading upcoming courses...
+        </div>
+      ) : null}
 
       <section className="grid gap-5 md:grid-cols-2">
         {courses.map((course) => (

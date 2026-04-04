@@ -17,9 +17,9 @@ app.db
 .pytest_cache/
 .pytest_cache/*
 .pytest_cache/**/*
-backend/.mongo
-backend/.mongo/*
-backend/.mongo/**
+.mongo/
+.mongo/*
+.mongo/**
 backend/uploads/
 backend/uploads/*
 backend/uploads/**
@@ -56,4 +56,4 @@ frontend/.env.*.local
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?uploads/
+*.sw?

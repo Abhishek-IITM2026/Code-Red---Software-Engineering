@@ -1,47 +1,33 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "../../../components/common";
-
-interface Student {
-  name: string;
-  grade: string;
-  attendance: string;
-}
-
-const allStudents: Student[] = [
-  { name: "Sahith Reddy", grade: "A", attendance: "88%" },
-  { name: "Rahul", grade: "B+", attendance: "82%" },
-  { name: "Ananya", grade: "A+", attendance: "92%" },
-  { name: "John Smith", grade: "B", attendance: "75%" },
-  { name: "Emma Wilson", grade: "A", attendance: "90%" },
-  { name: "Michael Brown", grade: "C", attendance: "68%" },
-  { name: "Sarah Davis", grade: "A-", attendance: "85%" },
-  { name: "David Lee", grade: "B+", attendance: "78%" },
-];
+import { useGetPerformanceStudentsQuery } from "../api/facultyApi";
 
 const ClassStudents = function() {
-  const [students, setStudents] = useState<Student[]>(allStudents);
+  const { data: allStudents = [] } = useGetPerformanceStudentsQuery();
+  const [students, setStudents] = useState(allStudents);
+
+  useEffect(() => {
+    setStudents(allStudents);
+  }, [allStudents]);
+
+  const gradeOptions = useMemo(
+    () => Array.from(new Set(allStudents.map((student) => student.overallGrade))).map((grade) => ({ value: grade, label: grade })),
+    [allStudents],
+  );
 
   const searchConfig = {
     fields: [
       { key: 'name', label: 'Student Name', type: 'text' as const, placeholder: 'Search by name...' },
-      { key: 'grade', label: 'Grade', type: 'select' as const,
-        options: [
-          { value: 'A+', label: 'A+' },
-          { value: 'A', label: 'A' },
-          { value: 'A-', label: 'A-' },
-          { value: 'B+', label: 'B+' },
-          { value: 'B', label: 'B' },
-          { value: 'C', label: 'C' }
-        ]
-      }
+      { key: 'grade', label: 'Grade', type: 'select' as const, options: gradeOptions }
     ],
     placeholder: 'Search students...',
     showAdvancedToggle: true,
     onSearch: (values: Record<string, string> = {}) => {
       const filtered = allStudents.filter(student => {
-        const matchesName = !values.name || 
-          student.name.toLowerCase().includes(values.name.toLowerCase());
-        const matchesGrade = !values.grade || student.grade === values.grade;
+        const matchesName = !values.name ||
+          student.name.toLowerCase().includes(values.name.toLowerCase()) ||
+          student.rollNumber.toLowerCase().includes(values.name.toLowerCase());
+        const matchesGrade = !values.grade || student.overallGrade === values.grade;
         return matchesName && matchesGrade;
       });
       setStudents(filtered);
@@ -54,10 +40,9 @@ const ClassStudents = function() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
           Class Roster
         </p>
-        <h2 className="mt-2 text-3xl font-bold">Students - Class 10 Mathematics</h2>
+        <h2 className="mt-2 text-3xl font-bold">Students Performance View</h2>
       </div>
 
-      {/* Search */}
       <Search config={searchConfig} />
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -66,18 +51,30 @@ const ClassStudents = function() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Student</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Class</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Grade</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Avg Attendance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {students.map((student) => (
-                <tr key={student.name} className="text-slate-700">
-                  <td className="px-6 py-4">{student.name}</td>
-                  <td className="px-6 py-4">{student.grade}</td>
-                  <td className="px-6 py-4">{student.attendance}</td>
+                <tr key={student.id} className="text-slate-700">
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-slate-900">{student.name}</p>
+                    <p className="text-sm text-slate-500">{student.rollNumber}</p>
+                  </td>
+                  <td className="px-6 py-4">{student.class} - {student.section}</td>
+                  <td className="px-6 py-4">{student.overallGrade}</td>
+                  <td className="px-6 py-4">{student.attendance}%</td>
                 </tr>
               ))}
+              {students.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-slate-500">
+                    No students matched the selected filters.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>

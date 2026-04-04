@@ -1,14 +1,14 @@
 import { FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiHash, FiPrinter, FiTrendingUp, FiUser } from "react-icons/fi";
-import type { SalarySlip } from "../../features/administration/data/payrollData";
-import { formatCurrency, getSalaryYearSummary } from "../../features/administration/data/payrollData";
+import type { SalarySlip, SalaryYearSummary } from "../../features/administration/data/payrollData";
+import { formatCurrency } from "../../features/administration/data/payrollData";
 import Button from "./Button";
 
 interface SalarySlipPanelProps {
   slip: SalarySlip;
+  yearSummary: SalaryYearSummary;
 }
 
-const SalarySlipPanel = ({ slip }: SalarySlipPanelProps) => {
-  const yearSummary = getSalaryYearSummary(slip.staffId, slip.year);
+const SalarySlipPanel = ({ slip, yearSummary }: SalarySlipPanelProps) => {
   const handlePrint = () => {
     window.print();
   };

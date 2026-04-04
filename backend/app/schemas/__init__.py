@@ -1,42 +1,88 @@
 from .assessments import (
     AssessmentCreateRequest,
     AssessmentListQuery,
+    AssessmentSubmissionCreateRequest,
     AssessmentUpdateRequest,
     AssignmentListQuery,
     AssignmentSubmissionRequest,
     GenerateQuestionsRequest,
     ModifyQuestionsRequest,
 )
+from .administration import (
+    AuthorityAssignmentWriteRequest,
+    CourseWriteRequest,
+    MaterialCreateRequest,
+    PromotionActionRequest,
+    StaffStatusRequest,
+    StaffWriteRequest,
+    StudentStatusRequest,
+    StudentWriteRequest,
+)
 from .attendance import AttendanceSubmissionRequest
 from .auth import (
     ChangePasswordRequest,
+    EmailChangeRequest,
     LoginRequest,
     OtpSendRequest,
     OtpVerifyRequest,
+    OTP_PURPOSES,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     ProfilePictureUpdateRequest,
     ProfileUpdateRequest,
     RegisterRequest,
 )
-from .notifications import ScheduleNotificationRequest
+from .inventory import (
+    InventoryItemPatchRequest,
+    InventoryItemWriteRequest,
+    MaterialRequestCreateRequest,
+    MaterialRequestStatusUpdateRequest,
+)
+from .leave import LeaveRequestCreateRequest, LeaveRequestReviewRequest
+from .notifications import EmailMessageListQuery, EmailSendRequest, EmailSyncRequest, ScheduleNotificationRequest
+from .payroll import SalarySlipListQuery
 from .schedule import ScheduleListQuery, ScheduleWriteRequest
 from .validation import parse_json, parse_query
 
 __all__ = [
     "AssessmentCreateRequest",
     "AssessmentListQuery",
+    "AssessmentSubmissionCreateRequest",
     "AssessmentUpdateRequest",
+    "AuthorityAssignmentWriteRequest",
+    "CourseWriteRequest",
     "AssignmentListQuery",
     "AssignmentSubmissionRequest",
     "AttendanceSubmissionRequest",
     "ChangePasswordRequest",
+    "EmailChangeRequest",
+    "EmailMessageListQuery",
+    "EmailSendRequest",
+    "EmailSyncRequest",
     "GenerateQuestionsRequest",
+    "InventoryItemPatchRequest",
+    "InventoryItemWriteRequest",
+    "LeaveRequestCreateRequest",
+    "LeaveRequestReviewRequest",
     "LoginRequest",
+    "MaterialCreateRequest",
+    "MaterialRequestCreateRequest",
+    "MaterialRequestStatusUpdateRequest",
     "ModifyQuestionsRequest",
     "OtpSendRequest",
     "OtpVerifyRequest",
+    "OTP_PURPOSES",
+    "PasswordResetConfirmRequest",
+    "PasswordResetRequest",
     "ProfilePictureUpdateRequest",
     "ProfileUpdateRequest",
+    "PromotionActionRequest",
+    "StaffStatusRequest",
+    "StaffWriteRequest",
+    "StudentStatusRequest",
+    "StudentWriteRequest",
     "RegisterRequest",
+    "SalarySlipListQuery",
     "ScheduleListQuery",
     "ScheduleNotificationRequest",
     "ScheduleWriteRequest",

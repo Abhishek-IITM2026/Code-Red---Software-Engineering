@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiClock, FiCheck, FiX, FiPackage, FiShoppingCart } from 'react-icons/fi';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Card, Button, Input, Select } from '../../../components/common';
 import inventoryApi from '../../administration/api/inventoryApi';
 import type { InventoryItem, MaterialRequest, RequestItem } from '../../administration/types/inventory';
 import { inventoryCategories } from '../../administration/types/inventory';
-import type { RootState, AppDispatch } from '../../../app/store';
+import type { RootState } from '../../../app/store';
 
 const RequestMaterials = () => {
-  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
   const [availableItems, setAvailableItems] = useState<InventoryItem[]>([]);
   const [myRequests, setMyRequests] = useState<MaterialRequest[]>([]);
@@ -30,9 +29,10 @@ const RequestMaterials = () => {
       inventoryApi.getRequests(),
     ]);
     setAvailableItems(items);
-    // Filter requests for current faculty (using user id)
-    const userId = user?.id || '2'; // Default to faculty user
-    setMyRequests(requests.filter(r => r.facultyId === userId));
+    const currentUserName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim().toLowerCase();
+    setMyRequests(
+      requests.filter((request) => request.facultyName.trim().toLowerCase() === currentUserName)
+    );
     setLoading(false);
   };
 
@@ -69,9 +69,8 @@ const RequestMaterials = () => {
     if (selectedItems.length === 0) return;
     
     await inventoryApi.createRequest({
-      facultyId: user?.id || '2',
       facultyName: `${user?.firstName} ${user?.lastName}`,
-      department: 'Faculty Department',
+      department: 'Mathematics',
       items: selectedItems,
     });
     

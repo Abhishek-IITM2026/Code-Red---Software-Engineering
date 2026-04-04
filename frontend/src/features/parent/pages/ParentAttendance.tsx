@@ -4,7 +4,7 @@ import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
 
 const ParentAttendance = function() {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, attendanceRows } = useParentChildren();
+  const { children, selectedChild, selectedChildId, setSelectedChildId, attendanceRows, isLoading } = useParentChildren();
   const [filteredRows, setFilteredRows] = useState(attendanceRows);
 
   useEffect(() => {
@@ -43,6 +43,12 @@ const ParentAttendance = function() {
 
       <Search config={searchConfig} />
 
+      {isLoading ? (
+        <div className="rounded-3xl bg-white p-8 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+          Loading attendance records...
+        </div>
+      ) : null}
+
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
@@ -63,6 +69,13 @@ const ParentAttendance = function() {
                   <td className="px-6 py-4 text-slate-700">{row.percentage}</td>
                 </tr>
               ))}
+              {!filteredRows.length ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-6 text-center text-sm text-slate-500">
+                    No attendance records available for this child.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>

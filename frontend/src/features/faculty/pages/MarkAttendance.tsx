@@ -17,54 +17,6 @@ interface StudentAttendance {
   status: AttendanceStatus;
 }
 
-// Demo data for classes (will be replaced by API data)
-const DEMO_CLASSES = [
-  { id: '9', name: 'Class 9', level: 9 },
-  { id: '10', name: 'Class 10', level: 10 },
-  { id: '11', name: 'Class 11', level: 11 },
-  { id: '12', name: 'Class 12', level: 12 },
-];
-
-// Demo data for sections (will be replaced by API data)
-const DEMO_SECTIONS: Record<string, { id: string; name: string }[]> = {
-  '9': [
-    { id: '9-A', name: 'A' },
-    { id: '9-B', name: 'B' },
-  ],
-  '10': [
-    { id: '10-A', name: 'A' },
-    { id: '10-B', name: 'B' },
-    { id: '10-C', name: 'C' },
-  ],
-  '11': [
-    { id: '11-A', name: 'A' },
-    { id: '11-B', name: 'B' },
-  ],
-  '12': [
-    { id: '12-A', name: 'A' },
-    { id: '12-B', name: 'B' },
-  ],
-};
-
-// Demo data for students (will be replaced by API data)
-const DEMO_STUDENTS = [
-  { id: '1', firstName: 'Sahith', lastName: 'Reddy', class: '10', section: 'A', rollNumber: '001' },
-  { id: '2', firstName: 'Rahul', lastName: 'Sharma', class: '10', section: 'A', rollNumber: '002' },
-  { id: '3', firstName: 'Ananya', lastName: 'Patel', class: '10', section: 'A', rollNumber: '003' },
-  { id: '4', firstName: 'Mohammad', lastName: 'Ali', class: '10', section: 'A', rollNumber: '004' },
-  { id: '5', firstName: 'Priya', lastName: 'Singh', class: '10', section: 'A', rollNumber: '005' },
-  { id: '6', firstName: 'Arjun', lastName: 'Reddy', class: '10', section: 'B', rollNumber: '001' },
-  { id: '7', firstName: 'Sneha', lastName: 'Gupta', class: '10', section: 'B', rollNumber: '002' },
-  { id: '8', firstName: 'Vikram', lastName: 'Kumar', class: '10', section: 'B', rollNumber: '003' },
-  { id: '9', firstName: 'Aisha', lastName: 'Begum', class: '9', section: 'A', rollNumber: '001' },
-  { id: '10', firstName: 'Rohan', lastName: 'Mehta', class: '9', section: 'A', rollNumber: '002' },
-  { id: '11', firstName: 'Kiran', lastName: 'Reddy', class: '9', section: 'B', rollNumber: '001' },
-  { id: '12', firstName: 'Divya', lastName: 'Sharma', class: '11', section: 'A', rollNumber: '001' },
-  { id: '13', firstName: 'Naveen', lastName: 'Kumar', class: '11', section: 'A', rollNumber: '002' },
-  { id: '14', firstName: 'Madhavi', lastName: 'Lakshmi', class: '12', section: 'A', rollNumber: '001' },
-  { id: '15', firstName: 'Sanjay', lastName: 'Bose', class: '12', section: 'B', rollNumber: '001' },
-];
-
 const selectClass =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
@@ -94,15 +46,14 @@ const MarkAttendance = function() {
     return dates;
   }, []);
 
-  // Get classes from API (or use demo data)
   const { data: apiClasses = [] } = useGetClassesQuery();
-  const classes = apiClasses.length > 0 ? apiClasses : DEMO_CLASSES;
+  const classes = apiClasses;
   
   // Get sections based on selected class
   const { data: apiSections = [] } = useGetSectionsQuery(selectedClass, {
     skip: !selectedClass,
   });
-  const sections = apiSections.length > 0 ? apiSections : (DEMO_SECTIONS[selectedClass] || []);
+  const sections = apiSections;
 
   // Get students by class and section
   const { data: apiStudents = [] } = useGetStudentsByClassSectionQuery(
@@ -113,20 +64,22 @@ const MarkAttendance = function() {
   // Get existing attendance for update mode
   const { data: existingAttendance = [] } = useGetAttendanceByDateQuery(
     { date: selectedDate, class: selectedClass, section: selectedSection },
-    { skip: !selectedClass || !selectedSection || !isUpdateMode }
+    { skip: !selectedClass || !selectedSection }
   );
 
   // Mutation hooks for submit and update
   const [submitAttendance] = useSubmitAttendanceMutation();
   const [updateAttendance] = useUpdateAttendanceMutation();
 
-  // Use demo students if API returns empty
-  const students = apiStudents.length > 0 ? apiStudents : DEMO_STUDENTS;
+  const students = apiStudents;
 
   // Filter students based on class and section
   const filteredStudents = useMemo(() => {
     return students.filter((student: any) => {
-      const matchClass = !selectedClass || student.class === selectedClass;
+      const matchClass =
+        !selectedClass ||
+        student.classId === selectedClass ||
+        student.class === selectedClass;
       const matchSection = !selectedSection || student.section === selectedSection;
       return matchClass && matchSection;
     });
@@ -142,25 +95,8 @@ const MarkAttendance = function() {
 
   // Handle search
   const handleSearch = () => {
-    // Check if attendance exists for the selected date
-    const studentsWithAttendance = filteredStudents.map((student: any) => {
-      // Check if there's existing attendance
-      const existingRecord = existingAttendance.find(
-        (att: any) => att.studentId === student.id
-      );
-      
-      return {
-        id: student.id,
-        name: `${student.firstName} ${student.lastName}`,
-        rollNumber: student.rollNumber || '-',
-        status: (existingRecord?.status as AttendanceStatus) || '' as AttendanceStatus,
-      };
-    });
-    
-    setStudentAttendance(studentsWithAttendance);
     setIsSearched(true);
     setSubmitStatus('idle');
-    setIsUpdateMode(existingAttendance.length > 0);
   };
 
   // Reset sections when class changes
@@ -168,7 +104,28 @@ const MarkAttendance = function() {
     setSelectedSection('');
     setStudentAttendance([]);
     setIsSearched(false);
+    setIsUpdateMode(false);
   }, [selectedClass]);
+
+  useEffect(() => {
+    if (!isSearched) {
+      return;
+    }
+
+    const studentsWithAttendance = filteredStudents.map((student: any) => {
+      const existingRecord = existingAttendance.find((att: any) => att.studentId === student.id);
+
+      return {
+        id: student.id,
+        name: `${student.firstName} ${student.lastName}`,
+        rollNumber: student.rollNumber || '-',
+        status: ((existingRecord?.status as AttendanceStatus) || '') as AttendanceStatus,
+      };
+    });
+
+    setStudentAttendance(studentsWithAttendance);
+    setIsUpdateMode(existingAttendance.length > 0);
+  }, [existingAttendance, filteredStudents, isSearched]);
 
   // Mark all students with same status
   const handleMarkAll = (status: AttendanceStatus) => {
@@ -272,7 +229,7 @@ const MarkAttendance = function() {
                 type="button"
                 onClick={() => {
                   setSelectedDate(date);
-                  handleSearch();
+                  setIsSearched(true);
                   setShowPreviousDates(false);
                 }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
@@ -501,20 +458,22 @@ const MarkAttendance = function() {
         <div className="flex flex-wrap gap-4">
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={isUpdateMode ? handleUpdate : handleSubmit}
             disabled={submitStatus === 'success'}
             className="inline-flex items-center justify-center rounded-xl bg-[var(--primary)] px-6 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {submitStatus === 'success' ? 'Submitted!' : 'Submit Attendance'}
+            {submitStatus === 'success' ? 'Saved!' : isUpdateMode ? 'Save Attendance Update' : 'Submit Attendance'}
           </button>
           
-          <button
-            type="button"
-            onClick={handleUpdate}
-            className="inline-flex items-center justify-center rounded-xl border border-[var(--primary)] bg-transparent px-6 py-3 font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/10"
-          >
-            Update Attendance
-          </button>
+          {isUpdateMode ? (
+            <button
+              type="button"
+              onClick={handleUpdate}
+              className="inline-flex items-center justify-center rounded-xl border border-[var(--primary)] bg-transparent px-6 py-3 font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)]/10"
+            >
+              Update Attendance
+            </button>
+          ) : null}
         </div>
       )}
 

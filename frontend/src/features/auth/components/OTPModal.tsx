@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSendOTPMutation, useVerifyOTPMutation } from '../api/authApi';
-import type { SendOTPRequest, VerifyOTPRequest } from '../types/profile';
+import type { SendOTPRequest, VerifyOTPRequest, OtpPurposeType } from '../types/profile';
 
 interface OTPModalProps {
   isOpen: boolean;
   onClose: () => void;
   email: string;
-  purpose: 'profile_update' | 'password_change' | 'profile_picture_update';
+  purpose: OtpPurposeType;
   onVerifySuccess: () => void;
 }
 
@@ -24,10 +24,13 @@ const OTPModal: React.FC<OTPModalProps> = ({
   const [sendOTP, { isLoading: isSending }] = useSendOTPMutation();
   const [verifyOTP, { isLoading: isVerifying }] = useVerifyOTPMutation();
 
-  const purposeMessages = {
+  const purposeMessages: Record<OtpPurposeType, string> = {
     profile_update: 'update your profile information',
     password_change: 'change your password',
     profile_picture_update: 'update your profile picture',
+    email_change: 'change your email address',
+    password_reset: 'reset your password',
+    account_verification: 'verify your account',
   };
 
   useEffect(() => {
@@ -48,7 +51,7 @@ const OTPModal: React.FC<OTPModalProps> = ({
       setError('');
       const data: SendOTPRequest = { email, purpose };
       await sendOTP(data).unwrap();
-      setTimer(60); // 60 seconds cooldown
+      setTimer(60);
     } catch (err) {
       setError('Failed to send OTP. Please try again.');
       console.error('Send OTP error:', err);
