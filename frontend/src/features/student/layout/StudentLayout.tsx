@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { UserAvatar } from '../../../components/common';
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {

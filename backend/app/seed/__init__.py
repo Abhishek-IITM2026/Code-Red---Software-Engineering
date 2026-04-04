@@ -175,7 +175,7 @@ def seed_database(force: bool = False):
     users: dict[str, User] = {}
 
     users["admin"] = _create_user(
-        "admin@example.com",
+        "dheerajkumarvishwakarma5@gmail.com",
         "Administration Staff",
         "Asha",
         "Admin",

@@ -8,6 +8,7 @@ import Filter from './Filter';
 import ProtectedRoute, { useRoleRedirect } from './ProtectedRoute';
 import Search, { type SearchProps, type SearchField, type SearchConfig } from './Search';
 import EmployeeSalaryPortal from './EmployeeSalaryPortal';
+import UserAvatar from './UserAvatar';
 import SalarySlipPanel from './SalarySlipPanel';
 
 export {
@@ -26,7 +27,8 @@ export {
   useRoleRedirect,
   Search,
   EmployeeSalaryPortal,
-  SalarySlipPanel
+  SalarySlipPanel,
+  UserAvatar
 };
 
 // Re-export types

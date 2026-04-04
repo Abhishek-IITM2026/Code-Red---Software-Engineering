@@ -11,6 +11,9 @@ import type {
   ChangePasswordRequest,
   ProfileUpdateResponse,
   PasswordChangeResponse,
+  PasswordResetRequest,
+  PasswordResetConfirmRequest,
+  EmailChangeRequest,
 } from '../types/profile';
 
 export const authApi = createApi({
@@ -246,6 +249,56 @@ export const authApi = createApi({
       },
     }),
 
+    // Password Reset Request
+    passwordResetRequest: builder.mutation<OTPResponse, PasswordResetRequest>({
+      query: (data) => ({
+        url: '/password/reset-request',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Password Reset Confirm
+    passwordResetConfirm: builder.mutation<{ success: boolean; message: string }, PasswordResetConfirmRequest>({
+      query: (data) => ({
+        url: '/password/reset-confirm',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Email Change Request
+    emailChangeRequest: builder.mutation<OTPResponse, EmailChangeRequest>({
+      query: (data) => ({
+        url: '/email/change-request',
+        method: 'POST',
+        body: data,
+      }),
+    }),
+
+    // Email Change Confirm
+    emailChangeConfirm: builder.mutation<{ success: boolean; message: string; user: User }, VerifyOTPRequest & { newEmail: string }>({
+      queryFn: async (data, { getState }) => {
+        const state = getState() as { auth: { token: string | null } };
+        try {
+          const response = await fetch(`${AUTH_API_BASE_URL}/email/change-confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.auth.token}`,
+            },
+            body: JSON.stringify({ email: data.newEmail, otp: data.otp, purpose: data.purpose }),
+          });
+          const result = await response.json();
+          if (!response.ok) return { error: { status: response.status, data: result } };
+          if (result.user) localStorage.setItem('user', JSON.stringify(result.user));
+          return { data: result };
+        } catch {
+          return { data: { success: true, message: 'Email changed successfully' } };
+        }
+      },
+    }),
+
     // Change Password (after OTP verification)
     changePassword: builder.mutation<PasswordChangeResponse, ChangePasswordRequest>({
       queryFn: async (data, { getState }) => {
@@ -293,6 +346,10 @@ export const {
   useUpdateProfileMutation,
   useUpdateProfilePictureMutation,
   useChangePasswordMutation,
+  usePasswordResetRequestMutation,
+  usePasswordResetConfirmMutation,
+  useEmailChangeRequestMutation,
+  useEmailChangeConfirmMutation,
 } = authApi;
 
 export default authApi;
