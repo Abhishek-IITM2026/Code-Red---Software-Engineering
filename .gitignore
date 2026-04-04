@@ -23,6 +23,9 @@ app.db
 backend/uploads/
 backend/uploads/*
 backend/uploads/**
+
+backend/server*
+
 # ==============================
 # Frontend Environment
 # ==============================
