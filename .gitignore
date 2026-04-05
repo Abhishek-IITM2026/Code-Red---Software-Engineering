@@ -57,3 +57,4 @@ frontend/.env.*.local
 *.njsproj
 *.sln
 *.sw?
+backend/.server_pids
