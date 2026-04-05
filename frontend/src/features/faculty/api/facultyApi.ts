@@ -51,6 +51,22 @@ export interface ClassSchedule {
   roomNumber?: string;
 }
 
+export interface UpcomingCourse {
+  id: string;
+  title: string;
+  description: string;
+  classId?: string;
+  className: string;
+  section: string;
+  startDate: string;
+  endDate: string;
+  instructor: string;
+  mode: 'Online' | 'Offline' | 'Hybrid' | string;
+  seats: number;
+  createdBy: string;
+  status: 'active' | 'inactive';
+}
+
 export interface AttendanceEntry {
   studentId: string;
   studentName: string;
@@ -183,6 +199,12 @@ export const facultyApi = createApi({
     getClassSchedule: builder.query<ClassSchedule[], void>({
       query: () => '/faculty/schedule',
       providesTags: ['Schedule'],
+    }),
+
+    // Upcoming Courses
+    getUpcomingCourses: builder.query<UpcomingCourse[], void>({
+      query: () => '/faculty/upcoming-courses',
+      providesTags: ['Courses'],
     }),
 
     getPerformanceStudents: builder.query<PerformanceStudent[], { classId?: string } | void>({
@@ -408,6 +430,7 @@ export const {
   useGetFacultyClassOverviewQuery,
   useGetClassSubjectsQuery,
   useGetClassScheduleQuery,
+  useGetUpcomingCoursesQuery,
   useGetPerformanceStudentsQuery,
   useListAssignmentsQuery,
   useGetAssignmentQuery,

@@ -1,4 +1,5 @@
 import FacultyDashboard from "../pages/FacultyDashboard";
+import FacultyUpcomingCourses from "../pages/FacultyUpcomingCourses";
 import FacultyLeave from "../pages/FacultyLeave";
 import FacultyClasses from "../pages/FacultyClasses";
 import FacultyAttendance from "../pages/FacultyAttendance";
@@ -14,7 +15,7 @@ import AssessmentBuilder from "../pages/AssessmentBuilder";
 import FacultySalarySlip from "../pages/FacultySalarySlip";
 import PromoteStudents from "../../administration/pages/PromoteStudents";
 import Profile from "../../auth/pages/Profile";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign, FiArrowUpCircle } from "react-icons/fi";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign, FiArrowUpCircle, FiBookOpen } from "react-icons/fi";
 import type { AuthorityKey } from "../../administration/utils/authorityAccess";
 
 export interface FacultyRouteConfig {
@@ -33,6 +34,13 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultyDashboard />,
     icon: FiGrid,
     description: "Overview of your classes and activities"
+  },
+  {
+    name: "Upcoming Courses",
+    path: "/faculty/upcoming-courses",
+    element: <FacultyUpcomingCourses />,
+    icon: FiBookOpen,
+    description: "View upcoming courses for your assigned classes"
   },
   {
     name: "My Classes",

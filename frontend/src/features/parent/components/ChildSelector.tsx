@@ -17,7 +17,7 @@ const ChildSelector = ({ children, selectedChildId, onChange }: ChildSelectorPro
             Child Selector
           </p>
           <p className="mt-2 text-lg font-semibold text-slate-900">
-            Viewing details for {selectedChild.name}
+            Viewing details for {selectedChild?.name ?? "Student"}
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {children.length} children linked to this parent account.

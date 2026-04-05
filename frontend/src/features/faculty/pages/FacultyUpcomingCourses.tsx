@@ -1,28 +1,26 @@
 import { FiBookOpen, FiCalendar, FiUsers } from "react-icons/fi";
-import ChildSelector from "../components/ChildSelector";
-import { useParentChildren } from "../useParentChildren";
+import { useGetUpcomingCoursesQuery } from "../api/facultyApi";
 
-const ParentUpcomingCourses = function () {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, upcomingCourses } = useParentChildren();
-  const courses = upcomingCourses;
+const FacultyUpcomingCourses = function () {
+  const { data: courses = [], isLoading } = useGetUpcomingCoursesQuery();
 
   return (
     <div className="space-y-8">
       <section className="rounded-3xl bg-[var(--secondary)] p-6 shadow-sm ring-1 ring-[var(--text)]/10 md:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
-          Parent Courses
+          Faculty Courses
         </p>
         <h1 className="mt-3 text-3xl font-bold md:text-4xl">Upcoming Courses</h1>
         <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-          Review new courses published for each child and stay aligned with the next academic opportunities.
+          Review upcoming courses assigned to your classes and stay aligned with the academic schedule.
         </p>
       </section>
 
-      <ChildSelector
-        children={children}
-        selectedChildId={selectedChildId}
-        onChange={setSelectedChildId}
-      />
+      {isLoading ? (
+        <div className="rounded-3xl bg-white p-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+          Loading upcoming courses...
+        </div>
+      ) : null}
 
       <section className="grid gap-5 md:grid-cols-2">
         {courses.map((course) => (
@@ -31,9 +29,6 @@ const ParentUpcomingCourses = function () {
               <FiBookOpen className="h-5 w-5" />
             </div>
             <h2 className="mt-5 text-2xl font-semibold text-slate-900">{course.title}</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              For {selectedChild?.name ?? "Student"} • {selectedChild?.className ?? ""} Section {selectedChild?.section ?? ""}
-            </p>
             <p className="mt-3 text-sm leading-6 text-slate-600">{course.description}</p>
             <div className="mt-5 grid gap-3 text-sm text-slate-600">
               <div className="inline-flex items-center gap-2">
@@ -42,20 +37,20 @@ const ParentUpcomingCourses = function () {
               </div>
               <div className="inline-flex items-center gap-2">
                 <FiUsers className="h-4 w-4 text-slate-500" />
-                {course.instructor} • {course.mode} • {course.seats} seats
+                {course.className} Section {course.section} • {course.instructor} • {course.mode} • {course.seats} seats
               </div>
             </div>
           </article>
         ))}
       </section>
 
-      {courses.length === 0 ? (
+      {courses.length === 0 && !isLoading ? (
         <div className="rounded-3xl bg-white p-8 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-          No upcoming courses are available for {selectedChild?.name ?? "Student"} yet.
+          No upcoming courses are available for your assigned classes yet.
         </div>
       ) : null}
     </div>
   );
 };
 
-export default ParentUpcomingCourses;
+export default FacultyUpcomingCourses;

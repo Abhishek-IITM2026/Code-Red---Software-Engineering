@@ -1,10 +1,10 @@
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import ClassEnrollment, Faculty, FacultySubjectAssignment, Mark, Material, Student, Subject
+from ...models import ClassEnrollment, Faculty, FacultySubjectAssignment, Mark, Material, Student, Subject, UpcomingCourse
 from ...schemas import MaterialCreateRequest, parse_json
 from ...services.query import get_attendance_stats
 
@@ -74,6 +74,30 @@ def class_subjects(class_id: int):
 
 
 @faculty_bp.get("/subjects/<int:subject_id>/materials")
+
+
+@faculty_bp.get("/upcoming-courses")
+@roles_required("faculty", "administration")
+def get_faculty_upcoming_courses():
+    faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+    if faculty is None:
+        raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+
+    assigned_class_ids = [a.class_id for a in FacultySubjectAssignment.query.filter_by(faculty_id=faculty.id).all()]
+    if not assigned_class_ids:
+        return success_response([])
+
+    courses = (
+        UpcomingCourse.query.filter(
+            UpcomingCourse.class_id.in_(assigned_class_ids),
+            UpcomingCourse.status == "active",
+        )
+        .order_by(UpcomingCourse.start_date.asc())
+        .all()
+    )
+    return success_response([course.to_dict() for course in courses])
+
+
 @roles_required("faculty", "administration")
 def subject_materials(subject_id: int):
     materials = Material.query.filter_by(subject_id=subject_id).all()
