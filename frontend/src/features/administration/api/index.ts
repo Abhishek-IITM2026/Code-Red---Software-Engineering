@@ -4,7 +4,6 @@ export type {
   DashboardStats,
   StudentRecord,
   StaffRecord,
-  LeaveRequest,
   Course,
   PromotionCandidate,
   PromotionData,

@@ -27,6 +27,10 @@ export interface LeaveRequest {
 }
 
 export interface LeaveRequestInput {
+  applicantId: string;
+  applicantName: string;
+  applicantRole: LeaveApplicantRole;
+  applicantContext: string;
   leaveType: string;
   fromDate: string;
   toDate: string;

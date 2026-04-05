@@ -80,6 +80,10 @@ const LeaveRequestPortal = function ({
 
     try {
       await createLeaveRequest({
+        applicantId: user?.id?.toString() || '',
+        applicantName: user ? `${user.firstName} ${user.lastName}` : '',
+        applicantRole,
+        applicantContext: contextValue,
         leaveType: form.leaveType,
         fromDate: form.fromDate,
         toDate: form.toDate,
