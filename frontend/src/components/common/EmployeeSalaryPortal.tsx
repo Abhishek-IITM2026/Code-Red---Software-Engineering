@@ -6,7 +6,7 @@ import {
   formatCurrency,
   type SalarySlip,
 } from "../../features/administration/data/payrollData";
-import { payrollApi } from "../../features/administration/api/payrollApi";
+import { salarySlips as mockSalarySlips } from "../../features/administration/data/payrollData";
 import SalarySlipPanel from "./SalarySlipPanel";
 
 interface EmployeeSalaryPortalProps {
@@ -24,8 +24,7 @@ const EmployeeSalaryPortal = ({
   staffId: _staffId,
   emptyMessage,
 }: EmployeeSalaryPortalProps) => {
-  const [salarySlips, setSalarySlips] = useState<SalarySlip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const salarySlips = mockSalarySlips;
   const availableYears = useMemo(
     () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
     [salarySlips],
@@ -33,20 +32,6 @@ const EmployeeSalaryPortal = ({
   const [selectedYear, setSelectedYear] = useState(availableYears[0] ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [isViewingSlip, setIsViewingSlip] = useState(false);
-
-  useEffect(() => {
-    const loadSalarySlips = async () => {
-      try {
-        setLoading(true);
-        const data = await payrollApi.getMySalarySlips();
-        setSalarySlips(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadSalarySlips();
-  }, []);
 
   const slipsForYear = useMemo(
     () =>
@@ -79,16 +64,6 @@ const EmployeeSalaryPortal = ({
     () => (selectedYear ? calculateSalaryYearSummary(slipsForYear) : null),
     [selectedYear, slipsForYear],
   );
-
-  if (loading) {
-    return (
-      <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">{eyebrow}</p>
-        <h1 className="mt-3 text-3xl font-bold text-slate-900">{heading}</h1>
-        <p className="mt-3 max-w-2xl text-slate-600">Loading payroll records...</p>
-      </div>
-    );
-  }
 
   if (!selectedSlip || !yearSummary) {
     return (

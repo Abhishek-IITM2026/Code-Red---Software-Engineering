@@ -120,6 +120,11 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
       facultyName: selectedFaculty ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}` : '',
       createdAt: editingSchedule?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      timeSlot: {
+        id: editingSchedule?.timeSlot?.id || `slot-${Date.now()}`,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      },
     } as ClassSchedule;
 
     onSave(displayData);

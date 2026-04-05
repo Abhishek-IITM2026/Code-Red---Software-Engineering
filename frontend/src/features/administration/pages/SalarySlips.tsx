@@ -4,13 +4,12 @@ import { Input, SalarySlipPanel } from "../../../components/common";
 import {
   calculateSalaryYearSummary,
   formatCurrency,
+  salarySlips as mockSalarySlips,
   type SalarySlip,
 } from "../data/payrollData";
-import { payrollApi } from "../api/payrollApi";
 
 const SalarySlips = function () {
-  const [salarySlips, setSalarySlips] = useState<SalarySlip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const salarySlips = mockSalarySlips;
   const yearOptions = useMemo(
     () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
     [salarySlips],
@@ -33,20 +32,6 @@ const SalarySlips = function () {
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [detailYear, setDetailYear] = useState(selectedYear);
   const [detailMonth, setDetailMonth] = useState(selectedMonth);
-
-  useEffect(() => {
-    const loadSalarySlips = async () => {
-      try {
-        setLoading(true);
-        const data = await payrollApi.getSalarySlips();
-        setSalarySlips(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadSalarySlips();
-  }, []);
 
   useEffect(() => {
     if (!selectedYear && yearOptions.length > 0) {
@@ -138,10 +123,6 @@ const SalarySlips = function () {
   const handleBackToList = () => {
     setSelectedStaffId("");
   };
-
-  if (loading) {
-    return <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">Loading salary slips...</div>;
-  }
 
   return (
     <div className="space-y-8">
