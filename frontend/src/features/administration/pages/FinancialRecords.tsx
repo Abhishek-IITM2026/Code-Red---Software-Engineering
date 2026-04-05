@@ -1,68 +1,115 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiArrowRight, FiBriefcase, FiCreditCard, FiEdit3, FiTrendingUp, FiUsers, FiX } from "react-icons/fi";
-import { staffFinancialRecords, type StaffFinancialRecord } from "./adminData";
+import {
+  useGetFinancialRecordQuery,
+  useListFinancialRecordsQuery,
+  useUpdateFinancialRecordMutation,
+  type FinancialRecord,
+  type FinancialRecordWritePayload,
+} from "../api/adminApi";
 
-type SalaryForm = {
-  currentSalary: string;
-  lastIncrement: string;
-  nextReview: string;
-};
+const parseCurrency = (value: string) => Number(String(value).replace(/[^0-9.-]/g, "")) || 0;
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(value));
 
 const FinancialRecords = function () {
   const navigate = useNavigate();
   const { staffId } = useParams();
-  const [records, setRecords] = useState<StaffFinancialRecord[]>(staffFinancialRecords);
+  const { data: records = [], isLoading } = useListFinancialRecordsQuery();
+  const { data: detailRecord, isLoading: isDetailLoading } = useGetFinancialRecordQuery(staffId ?? "", {
+    skip: !staffId,
+  });
+  const [updateFinancialRecord, { isLoading: isSaving }] = useUpdateFinancialRecordMutation();
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
-  const [salaryForm, setSalaryForm] = useState<SalaryForm>({
+  const [salaryForm, setSalaryForm] = useState<FinancialRecordWritePayload>({
+    basePay: "",
     currentSalary: "",
     lastIncrement: "",
     nextReview: "",
+    bankAccount: "",
+    earningsBreakdown: [],
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedRecord = useMemo(
-    () => records.find((record) => record.staffId === staffId),
-    [records, staffId],
+    () => staffId ? (detailRecord ?? records.find((record) => record.id === staffId) ?? null) : null,
+    [detailRecord, records, staffId],
   );
 
-  const openSalaryEditor = (record: StaffFinancialRecord) => {
-    setEditingRecordId(record.staffId);
+  const openSalaryEditor = (record: FinancialRecord) => {
+    setEditingRecordId(record.id);
     setSalaryForm({
+      basePay: record.basePay,
       currentSalary: record.currentSalary,
       lastIncrement: record.lastIncrement,
       nextReview: record.nextReview,
+      bankAccount: record.bankAccount,
+      earningsBreakdown: record.earningsBreakdown,
     });
+    setFormError(null);
   };
 
   const closeSalaryEditor = () => {
     setEditingRecordId(null);
     setSalaryForm({
+      basePay: "",
       currentSalary: "",
       lastIncrement: "",
       nextReview: "",
+      bankAccount: "",
+      earningsBreakdown: [],
+    });
+    setFormError(null);
+  };
+
+  const updateBasePay = (value: string) => {
+    setSalaryForm((current) => {
+      const next = { ...current, basePay: value };
+      const total = parseCurrency(value) + next.earningsBreakdown.reduce((sum, item) => sum + parseCurrency(item.amount), 0);
+      next.currentSalary = `Rs. ${formatCurrency(total)}`;
+      return next;
     });
   };
 
-  const handleSaveSalary = () => {
+  const updateBreakdown = (index: number, key: "label" | "amount", value: string) => {
+    setSalaryForm((current) => {
+      const earningsBreakdown = current.earningsBreakdown.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item,
+      );
+      const total = parseCurrency(current.basePay) + earningsBreakdown.reduce((sum, item) => sum + parseCurrency(item.amount), 0);
+      return { ...current, earningsBreakdown, currentSalary: `Rs. ${formatCurrency(total)}` };
+    });
+  };
+
+  const handleSaveSalary = async () => {
     if (!editingRecordId) {
       return;
     }
 
-    setRecords((current) =>
-      current.map((record) =>
-        record.staffId === editingRecordId
-          ? {
-              ...record,
-              currentSalary: salaryForm.currentSalary,
-              lastIncrement: salaryForm.lastIncrement,
-              nextReview: salaryForm.nextReview,
-            }
-          : record,
-      ),
-    );
+    if (!salaryForm.basePay || !salaryForm.lastIncrement || !salaryForm.nextReview) {
+      setFormError("Please fill in all required salary fields.");
+      return;
+    }
 
-    closeSalaryEditor();
+    try {
+      setFormError(null);
+      await updateFinancialRecord({
+        id: editingRecordId,
+        data: salaryForm,
+      }).unwrap();
+      closeSalaryEditor();
+    } catch (error: any) {
+      const details = Array.isArray(error?.data?.detail)
+        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
+        : null;
+      setFormError(details || error?.data?.message || error?.error || "Failed to save salary changes.");
+    }
   };
+
+  if (isLoading || (staffId && isDetailLoading && !selectedRecord)) {
+    return <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">Loading financial records...</div>;
+  }
 
   if (staffId && !selectedRecord) {
     return (
@@ -117,6 +164,10 @@ const FinancialRecords = function () {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <p className="text-sm text-slate-500">Base Pay</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{selectedRecord.basePay}</p>
+              </div>
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <p className="text-sm text-slate-500">Current Salary</p>
                 <p className="mt-2 text-3xl font-bold text-slate-900">{selectedRecord.currentSalary}</p>
@@ -213,7 +264,7 @@ const FinancialRecords = function () {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedRecord.salaryHistory.map((entry) => (
-                      <tr key={entry.month}>
+                      <tr key={`${entry.month}-${entry.revisedSalary}`}>
                         <td className="px-6 py-4 text-slate-700">{entry.month}</td>
                         <td className="px-6 py-4 text-slate-700">{entry.previousSalary}</td>
                         <td className="px-6 py-4 text-slate-700">{entry.increment}</td>
@@ -269,7 +320,7 @@ const FinancialRecords = function () {
 
           <section className="grid gap-5 md:grid-cols-2">
             {records.map((record) => (
-              <div key={record.staffId} className="rounded-3xl bg-white p-6 text-left shadow-sm ring-1 ring-slate-200">
+              <div key={record.id} className="rounded-3xl bg-white p-6 text-left shadow-sm ring-1 ring-slate-200">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xl font-semibold text-slate-900">{record.staffName}</p>
@@ -304,7 +355,7 @@ const FinancialRecords = function () {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate(`/administration/financial-records/${record.staffId}`)}
+                    onClick={() => navigate(`/administration/financial-records/${record.id}`)}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Open financial details
@@ -338,8 +389,17 @@ const FinancialRecords = function () {
 
             <div className="overflow-y-auto px-6 py-6 md:px-8">
             <div className="grid gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">Current Salary</label>
+                  {formError ? (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {formError}
+                    </div>
+                  ) : null}
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Base Pay</label>
+                    <input value={salaryForm.basePay} onChange={(event) => updateBasePay(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Current Salary</label>
                 <input value={salaryForm.currentSalary} onChange={(event) => setSalaryForm((current) => ({ ...current, currentSalary: event.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20" />
               </div>
               <div>
@@ -356,7 +416,7 @@ const FinancialRecords = function () {
               <button type="button" onClick={closeSalaryEditor} className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
                 Cancel
               </button>
-              <button type="button" onClick={handleSaveSalary} className="rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90">
+              <button type="button" onClick={() => void handleSaveSalary()} disabled={isSaving} className="rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
                 Save Salary Change
               </button>
             </div>

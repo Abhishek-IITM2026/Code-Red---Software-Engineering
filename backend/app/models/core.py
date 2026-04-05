@@ -880,3 +880,20 @@ class SalarySlip(db.Model):
             "totalDeductions": self.total_deductions,
             "netSalary": self.net_salary,
         }
+
+
+class StaffFinancialProfile(db.Model):
+    __tablename__ = "staff_financial_profiles"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
+    bank_account = db.Column(db.String(100), nullable=True)
+    base_pay = db.Column(db.Float, nullable=True)
+    current_salary = db.Column(db.Float, nullable=False, default=0)
+    last_increment = db.Column(db.Float, nullable=False, default=0)
+    next_review = db.Column(db.Date, nullable=True)
+    earnings_breakdown_json = db.Column(db.JSON, nullable=False, default=list)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    user = db.relationship("User", backref=db.backref("financial_profile", uselist=False))

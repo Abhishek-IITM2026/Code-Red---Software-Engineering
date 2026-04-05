@@ -27,6 +27,7 @@ const emptyForm: StudentForm = {
 };
 
 const ManageStudentRecords = function () {
+  const [formError, setFormError] = useState<string | null>(null);
   const { data: students = [], isLoading } = useListStudentsQuery();
   const [createStudent, { isLoading: isCreating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: isUpdating }] = useUpdateStudentMutation();
@@ -70,6 +71,7 @@ const ManageStudentRecords = function () {
   const openCreate = () => {
     setEditingStudent(null);
     setForm(emptyForm);
+    setFormError(null);
     setIsFormOpen(true);
   };
 
@@ -86,6 +88,7 @@ const ManageStudentRecords = function () {
       guardianName: student.guardianName ?? "",
       status: student.status,
     });
+    setFormError(null);
     setIsFormOpen(true);
   };
 
@@ -93,22 +96,32 @@ const ManageStudentRecords = function () {
     setIsFormOpen(false);
     setEditingStudent(null);
     setForm(emptyForm);
+    setFormError(null);
   };
 
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.class || !form.section || !form.enrollmentNo) {
+      setFormError("Please fill in all required fields.");
       return;
     }
 
-    if (editingStudent) {
-      await updateStudent({
-        ...editingStudent,
-        ...form,
-      }).unwrap();
-    } else {
-      await createStudent(form).unwrap();
+    try {
+      setFormError(null);
+      if (editingStudent) {
+        await updateStudent({
+          id: editingStudent.id,
+          data: form,
+        }).unwrap();
+      } else {
+        await createStudent(form).unwrap();
+      }
+      closeForm();
+    } catch (error: any) {
+      const details = Array.isArray(error?.data?.detail)
+        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
+        : null;
+      setFormError(details || error?.data?.message || error?.error || "Failed to save student changes.");
     }
-    closeForm();
   };
 
   const handleStatusChange = async (student: StudentRecord, status: StudentRecord["status"]) => {
@@ -305,6 +318,11 @@ const ManageStudentRecords = function () {
             </div>
 
             <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+              {formError ? (
+                <div className="md:col-span-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {formError}
+                </div>
+              ) : null}
               <label>
                 <span className="text-sm font-medium text-slate-700">First Name</span>
                 <input value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} className={fieldClass} />

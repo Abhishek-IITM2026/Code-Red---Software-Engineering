@@ -70,3 +70,22 @@ class CourseWriteRequest(StrictModel):
     mode: Literal["Online", "Offline", "Hybrid"]
     seats: int
     status: Literal["active", "inactive"] = "active"
+
+
+class FinancialRecordCreateRequest(StrictModel):
+    staff_id: int = Field(alias="staffId")
+    base_pay: str = Field(alias="basePay")
+    current_salary: str = Field(alias="currentSalary")
+    last_increment: str = Field(alias="lastIncrement")
+    next_review: str = Field(alias="nextReview")
+    bank_account: str | None = Field(default=None, alias="bankAccount")
+    earnings_breakdown: list[dict[str, str]] | None = Field(default=None, alias="earningsBreakdown")
+
+
+class FinancialRecordWriteRequest(StrictModel):
+    base_pay: str = Field(alias="basePay")
+    current_salary: str = Field(alias="currentSalary")
+    last_increment: str = Field(alias="lastIncrement")
+    next_review: str = Field(alias="nextReview")
+    bank_account: str | None = Field(default=None, alias="bankAccount")
+    earnings_breakdown: list[dict[str, str]] | None = Field(default=None, alias="earningsBreakdown")

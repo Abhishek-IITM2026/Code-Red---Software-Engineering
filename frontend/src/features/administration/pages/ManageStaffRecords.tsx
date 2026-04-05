@@ -28,6 +28,7 @@ const emptyForm: StaffForm = {
 };
 
 const ManageStaffRecords = function () {
+  const [formError, setFormError] = useState<string | null>(null);
   const { data: records = [], isLoading } = useListStaffQuery();
   const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
   const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
@@ -70,6 +71,7 @@ const ManageStaffRecords = function () {
   const openCreate = () => {
     setEditingRecord(null);
     setForm(emptyForm);
+    setFormError(null);
     setIsFormOpen(true);
   };
 
@@ -87,28 +89,40 @@ const ManageStaffRecords = function () {
       joiningDate: record.joiningDate,
       status: record.status,
     });
+    setFormError(null);
     setIsFormOpen(true);
   };
 
   const closeForm = () => {
     setEditingRecord(null);
     setForm(emptyForm);
+    setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.employeeCode || !form.designation || !form.department || !form.joiningDate) {
+      setFormError("Please fill in all required fields.");
       return;
     }
-    if (editingRecord) {
-      await updateStaff({
-        ...editingRecord,
-        ...form,
-      }).unwrap();
-    } else {
-      await createStaff(form).unwrap();
+
+    try {
+      setFormError(null);
+      if (editingRecord) {
+        await updateStaff({
+          id: editingRecord.id,
+          data: form,
+        }).unwrap();
+      } else {
+        await createStaff(form).unwrap();
+      }
+      closeForm();
+    } catch (error: any) {
+      const details = Array.isArray(error?.data?.detail)
+        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
+        : null;
+      setFormError(details || error?.data?.message || error?.error || "Failed to save staff changes.");
     }
-    closeForm();
   };
 
   const handleStatusChange = async (record: StaffRecord, status: StaffRecord["status"]) => {
@@ -298,6 +312,11 @@ const ManageStaffRecords = function () {
             </div>
 
             <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+              {formError ? (
+                <div className="md:col-span-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {formError}
+                </div>
+              ) : null}
               <label>
                 <span className="text-sm font-medium text-slate-700">First Name</span>
                 <input value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} className={fieldClass} />

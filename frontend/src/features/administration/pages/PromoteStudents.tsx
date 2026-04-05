@@ -10,6 +10,7 @@ const PromoteStudents = function () {
   const { data: candidates = [], isLoading } = useListPromotionCandidatesQuery();
   const [promoteStudent, { isLoading: isPromoting }] = usePromoteStudentMutation();
   const [selectedStudent, setSelectedStudent] = useState<PromotionCandidate | null>(null);
+  const [promotionError, setPromotionError] = useState<string | null>(null);
 
   const eligibleCount = candidates.filter((student) => student.resultStatus === "Eligible").length;
   const reviewCount = candidates.filter((student) => student.resultStatus === "Review Required").length;
@@ -28,8 +29,17 @@ const PromoteStudents = function () {
     if (!selectedStudent) {
       return;
     }
-    await promoteStudent({ id: selectedStudent.id, targetClass: selectedStudent.targetClass }).unwrap();
-    setSelectedStudent(null);
+
+    try {
+      setPromotionError(null);
+      await promoteStudent({ id: selectedStudent.id, targetClass: selectedStudent.targetClass }).unwrap();
+      setSelectedStudent(null);
+    } catch (error: any) {
+      const details = Array.isArray(error?.data?.detail)
+        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
+        : null;
+      setPromotionError(details || error?.data?.message || error?.error || "Failed to promote student.");
+    }
   };
 
   return (
@@ -154,7 +164,10 @@ const PromoteStudents = function () {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedStudent(student)}
+                      onClick={() => {
+                        setPromotionError(null);
+                        setSelectedStudent(student);
+                      }}
                       disabled={student.resultStatus !== "Eligible"}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
@@ -194,6 +207,12 @@ const PromoteStudents = function () {
               </div>
 
               <div className="space-y-4 px-6 py-5">
+                {promotionError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-700">
+                    {promotionError}
+                  </div>
+                ) : null}
+
                 <p className="text-sm leading-6 text-slate-600">
                   Promote <span className="font-semibold text-slate-900">{selectedStudent.name}</span> from{" "}
                   <span className="font-semibold text-slate-900">
@@ -202,7 +221,9 @@ const PromoteStudents = function () {
                   to <span className="font-semibold text-slate-900">{selectedStudent.targetClass}</span>.
                 </p>
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                  This action writes a new enrollment for the target class in the backend.
+                  {selectedStudent.resultStatus === "Eligible"
+                    ? "This action writes a new enrollment for the target class in the backend."
+                    : "This student is marked for academic review, but you can still submit the backend promotion from this screen."}
                 </div>
               </div>
 

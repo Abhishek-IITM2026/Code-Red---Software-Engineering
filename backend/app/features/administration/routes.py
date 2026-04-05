@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, g, request
 
@@ -16,6 +17,8 @@ from ...models import (
     Mark,
     Parent,
     Role,
+    SalarySlip,
+    StaffFinancialProfile,
     Student,
     UpcomingCourse,
     User,
@@ -24,6 +27,8 @@ from ...models import (
 )
 from ...schemas import (
     CourseWriteRequest,
+    FinancialRecordCreateRequest,
+    FinancialRecordWriteRequest,
     PromotionActionRequest,
     StaffStatusRequest,
     StaffWriteRequest,
@@ -78,6 +83,19 @@ def _attach_role(user: User, role_name: str):
     role = _get_role(role_name)
     if role not in user.roles:
         user.roles.append(role)
+
+
+def _detach_role(user: User, role_name: str):
+    normalized = role_name.strip().lower()
+    user.roles[:] = [role for role in user.roles if role.normalized_name() != normalized]
+
+
+def _ensure_unique_employee_code(employee_code: str, user_id: int | None = None):
+    query = AdministrationStaff.query.filter_by(employee_code=employee_code)
+    if user_id is not None:
+        query = query.filter(AdministrationStaff.user_id != user_id)
+    if query.first() is not None:
+        raise ApiError(409, "EMPLOYEE_CODE_EXISTS", "A staff member with this employee code already exists.")
 
 
 def _sync_contact(user: User, phone: str | None):
@@ -217,6 +235,206 @@ def _staff_payloads():
         )
 
     return payloads
+
+
+def _parse_iso_date(value: str, field_name: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ApiError(422, "VALIDATION_ERROR", f"{field_name} must be a valid ISO date.") from exc
+
+
+def _parse_currency_amount(value: str | int | float, field_name: str) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    normalized_value = str(value).replace(",", "")
+    match = re.search(r"-?\d+(?:\.\d+)?", normalized_value)
+    normalized = match.group(0) if match else ""
+    if not normalized:
+        raise ApiError(422, "VALIDATION_ERROR", f"{field_name} must contain a numeric amount.")
+    try:
+        return float(normalized)
+    except ValueError as exc:
+        raise ApiError(422, "VALIDATION_ERROR", f"{field_name} must contain a numeric amount.") from exc
+
+
+def _format_currency(amount: float | int | None) -> str:
+    return f"Rs. {int(round(float(amount or 0))):,}"
+
+
+def _financial_history(employee_code: str):
+    slips = (
+        SalarySlip.query.filter_by(employee_code=employee_code)
+        .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
+        .all()
+    )
+    history = []
+    for index, slip in enumerate(slips):
+        previous_salary = slips[index + 1].gross_salary if index + 1 < len(slips) else slip.gross_salary
+        history.append(
+            {
+                "month": slip.month_label,
+                "previousSalary": _format_currency(previous_salary),
+                "increment": _format_currency(max(slip.gross_salary - previous_salary, 0)),
+                "revisedSalary": _format_currency(slip.gross_salary),
+                "payoutStatus": slip.payout_status,
+            }
+        )
+    return slips, history
+
+
+def _default_earnings_breakdown(current_salary: float):
+    if current_salary <= 0:
+        return []
+    basic_pay = round(current_salary * 0.75, 2)
+    allowances = round(current_salary - basic_pay, 2)
+    return [
+        {"label": "Basic Pay", "amount": basic_pay},
+        {"label": "Allowances", "amount": allowances},
+    ]
+
+
+def _sum_breakdown(items):
+    return round(sum(float(item.get("amount", 0) or 0) for item in (items or [])), 2)
+
+
+def _normalize_earnings_breakdown(items):
+    normalized = []
+    for item in items or []:
+        label = item.get("label") if isinstance(item, dict) else None
+        amount = item.get("amount") if isinstance(item, dict) else None
+        if not label:
+            continue
+        normalized.append({"label": label, "amount": _parse_currency_amount(amount, f"{label} amount")})
+    return normalized
+
+
+def _resolve_base_pay(profile: StaffFinancialProfile | None, latest_slip: SalarySlip | None):
+    if profile is not None and getattr(profile, "base_pay", None) is not None:
+        return float(profile.base_pay or 0)
+    if latest_slip is not None:
+        return float(latest_slip.base_salary or 0)
+    return 0.0
+
+
+def _resolve_financial_breakdown(profile: StaffFinancialProfile | None, latest_slip: SalarySlip | None, current_salary: float):
+    if profile is not None and profile.earnings_breakdown_json:
+        return profile.earnings_breakdown_json
+    if latest_slip is not None and latest_slip.allowances_json:
+        return latest_slip.allowances_json
+    fallback = _default_earnings_breakdown(current_salary)
+    return fallback[1:] if len(fallback) > 1 else []
+
+
+def _ensure_financial_profile(user: User, staff: dict[str, str] | None = None):
+    profile = getattr(user, "financial_profile", None)
+    if profile is not None:
+        return profile
+    resolved_staff = staff or _get_financial_staff_or_404(user.id)
+    slips, _salary_history = _financial_history(resolved_staff["employeeCode"])
+    latest_slip = slips[0] if slips else None
+    base_pay = float(latest_slip.base_salary or 0) if latest_slip is not None else 0
+    earnings_breakdown = (
+        latest_slip.allowances_json
+        if latest_slip is not None and latest_slip.allowances_json
+        else _resolve_financial_breakdown(None, latest_slip, float(latest_slip.gross_salary or 0) if latest_slip else 0)
+    )
+    current_salary = base_pay + _sum_breakdown(earnings_breakdown)
+    profile = StaffFinancialProfile(
+        user_id=user.id,
+        bank_account=latest_slip.bank_account if latest_slip is not None else None,
+        base_pay=base_pay,
+        current_salary=current_salary,
+        last_increment=(max(slips[0].gross_salary - slips[1].gross_salary, 0) if len(slips) > 1 else 0),
+        next_review=date.today() + timedelta(days=90),
+        earnings_breakdown_json=earnings_breakdown,
+    )
+    db.session.add(profile)
+    db.session.flush()
+    return profile
+
+
+def _financial_record_payload(staff: dict[str, str]):
+    user = db.session.get(User, int(staff["id"]))
+    if user is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    slips, salary_history = _financial_history(staff["employeeCode"])
+    latest_slip = slips[0] if slips else None
+    profile = _ensure_financial_profile(user, staff)
+    base_pay = _resolve_base_pay(profile, latest_slip)
+    raw_breakdown = _resolve_financial_breakdown(profile, latest_slip, profile.current_salary if profile is not None else 0)
+    current_salary = base_pay + _sum_breakdown(raw_breakdown)
+    last_increment = (
+        profile.last_increment
+        if profile is not None
+        else (max(slips[0].gross_salary - slips[1].gross_salary, 0) if len(slips) > 1 else 0)
+    )
+    next_review = (
+        profile.next_review.isoformat()
+        if profile is not None and profile.next_review is not None
+        else (date.today() + timedelta(days=90)).isoformat()
+    )
+    return {
+        "id": staff["id"],
+        "staffId": staff["id"],
+        "staffName": staff["name"],
+        "category": staff["category"],
+        "role": staff["designation"],
+        "department": staff["department"],
+        "employeeCode": staff["employeeCode"],
+        "bankAccount": (
+            profile.bank_account
+            if profile is not None and profile.bank_account
+            else (latest_slip.bank_account if latest_slip is not None else "Not Added")
+        ),
+        "basePay": _format_currency(base_pay),
+        "currentSalary": _format_currency(current_salary),
+        "lastIncrement": _format_currency(last_increment),
+        "nextReview": next_review,
+        "earningsBreakdown": [
+            {
+                "label": item.get("label", "Component"),
+                "amount": _format_currency(item.get("amount", 0)),
+            }
+            for item in raw_breakdown
+        ],
+        "salaryHistory": salary_history,
+    }
+
+
+def _get_financial_staff_or_404(user_id: int):
+    staff = next((item for item in _staff_payloads() if item["id"] == str(user_id)), None)
+    if staff is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    return staff
+
+
+def _sync_payroll_slips_for_staff(staff: dict[str, str], profile: StaffFinancialProfile, earnings_breakdown_override=None):
+    slips = (
+        SalarySlip.query.filter_by(employee_code=staff["employeeCode"])
+        .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
+        .all()
+    )
+    if not slips:
+        return
+    target_slips = [slip for slip in slips if slip.payout_status == "Pending"] or [slips[0]]
+    breakdown = (
+        earnings_breakdown_override
+        if earnings_breakdown_override is not None
+        else (profile.earnings_breakdown_json or None)
+    )
+    bank_account = profile.bank_account
+    for slip in target_slips:
+        allowance_total = _sum_breakdown(breakdown)
+        current_salary = float(profile.base_pay or 0) + allowance_total
+        profile.current_salary = current_salary
+        slip.base_salary = profile.base_pay
+        if breakdown:
+            slip.allowances_json = breakdown
+        if bank_account:
+            slip.bank_account = bank_account
+        slip.gross_salary = current_salary + slip.overtime_amount
+        slip.net_salary = slip.gross_salary - slip.total_deductions
 
 
 def _promotion_candidate(student: Student):
@@ -525,6 +743,8 @@ def create_staff():
     payload = parse_json(StaffWriteRequest, request.get_json())
     if User.query.filter_by(email=payload.email.strip().lower()).first():
         raise ApiError(409, "EMAIL_ALREADY_EXISTS", "A user with this email already exists.")
+    _ensure_unique_employee_code(payload.employee_code)
+    joining_date = _parse_iso_date(payload.joining_date, "joiningDate")
 
     user = User(
         email=payload.email.strip().lower(),
@@ -543,7 +763,7 @@ def create_staff():
         faculty = Faculty(
             user_id=user.id,
             subject_specialization=payload.department,
-            hire_date=datetime.fromisoformat(payload.joining_date).date(),
+            hire_date=joining_date,
         )
         db.session.add(faculty)
 
@@ -556,6 +776,9 @@ def create_staff():
         )
     )
 
+    db.session.flush()
+    created_staff = next(item for item in _staff_payloads() if item["id"] == str(user.id))
+    _ensure_financial_profile(user, created_staff)
     db.session.commit()
     return success_response(next(item for item in _staff_payloads() if item["id"] == str(user.id)), status_code=201)
 
@@ -570,6 +793,8 @@ def update_staff(user_id: int):
     existing_user = User.query.filter(User.email == payload.email.strip().lower(), User.id != user_id).first()
     if existing_user is not None:
         raise ApiError(409, "EMAIL_ALREADY_EXISTS", "A user with this email already exists.")
+    _ensure_unique_employee_code(payload.employee_code, user_id=user_id)
+    joining_date = _parse_iso_date(payload.joining_date, "joiningDate")
 
     user.email = payload.email.strip().lower()
     user.first_name = payload.first_name
@@ -589,14 +814,21 @@ def update_staff(user_id: int):
     faculty = user.faculty
     if payload.category == "Teaching":
         _attach_role(user, "faculty")
+        _detach_role(user, "administration")
+        _detach_role(user, "admin")
         if faculty is None:
             faculty = Faculty(user_id=user.id)
             db.session.add(faculty)
         faculty.subject_specialization = payload.department
-        faculty.hire_date = datetime.fromisoformat(payload.joining_date).date()
-    elif faculty is not None:
-        db.session.delete(faculty)
+        faculty.hire_date = joining_date
+    else:
+        _attach_role(user, "administration")
+        _detach_role(user, "faculty")
+        if faculty is not None:
+            db.session.delete(faculty)
 
+    db.session.flush()
+    _ensure_financial_profile(user, next(item for item in _staff_payloads() if item["id"] == str(user.id)))
     db.session.commit()
     return success_response(next(item for item in _staff_payloads() if item["id"] == str(user.id)))
 
@@ -619,10 +851,16 @@ def delete_staff(user_id: int):
     user = db.session.get(User, user_id)
     if user is None:
         raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    if getattr(user, "financial_profile", None) is not None:
+        db.session.delete(user.financial_profile)
     if user.faculty is not None:
+        for assignment in FacultySubjectAssignment.query.filter_by(faculty_id=user.faculty.id).all():
+            db.session.delete(assignment)
         db.session.delete(user.faculty)
     if getattr(user, "administration_profile", None) is not None:
         db.session.delete(user.administration_profile)
+    if getattr(user, "authority_assignment", None) is not None:
+        db.session.delete(user.authority_assignment)
     if user.contact_profile is not None:
         db.session.delete(user.contact_profile)
     db.session.delete(user)
@@ -641,6 +879,10 @@ def list_courses():
 @roles_required("administration")
 def create_course():
     payload = parse_json(CourseWriteRequest, request.get_json())
+    if _parse_iso_date(payload.end_date, "endDate") < _parse_iso_date(payload.start_date, "startDate"):
+        raise ApiError(422, "VALIDATION_ERROR", "endDate must be on or after startDate.")
+    if payload.seats < 1:
+        raise ApiError(422, "VALIDATION_ERROR", "seats must be at least 1.")
     institute_class = _find_or_create_class(payload.class_name, payload.section)
     creator = getattr(g, "current_user", None) or User.query.first()
     if creator is None:
@@ -670,6 +912,10 @@ def update_course(course_id: int):
     if course is None:
         raise ApiError(404, "COURSE_NOT_FOUND", "Course was not found.")
     payload = parse_json(CourseWriteRequest, request.get_json())
+    if _parse_iso_date(payload.end_date, "endDate") < _parse_iso_date(payload.start_date, "startDate"):
+        raise ApiError(422, "VALIDATION_ERROR", "endDate must be on or after startDate.")
+    if payload.seats < 1:
+        raise ApiError(422, "VALIDATION_ERROR", "seats must be at least 1.")
     institute_class = _find_or_create_class(payload.class_name, payload.section)
     course.title = payload.title
     course.description = payload.description
@@ -713,17 +959,31 @@ def promote_student(student_id: int):
         raise ApiError(404, "STUDENT_NOT_FOUND", "Student was not found.")
     payload = parse_json(PromotionActionRequest, request.get_json())
     enrollment = student.current_enrollment()
-    if enrollment and enrollment.institute_class.name == payload.target_class:
+    target_academic_year = payload.academic_year or (enrollment.institute_class.academic_year if enrollment else _active_academic_year())
+    if enrollment and enrollment.institute_class.name == payload.target_class and enrollment.academic_year == target_academic_year:
         raise ApiError(409, "ALREADY_PROMOTED", "Student is already enrolled in the target class.")
+    target_section = enrollment.institute_class.section if enrollment and enrollment.institute_class.section else "A"
+    existing_target = (
+        ClassEnrollment.query.join(InstituteClass, ClassEnrollment.class_id == InstituteClass.id)
+        .filter(
+            ClassEnrollment.student_id == student.id,
+            ClassEnrollment.academic_year == target_academic_year,
+            InstituteClass.name == payload.target_class,
+            InstituteClass.section == target_section,
+        )
+        .first()
+    )
+    if existing_target is not None:
+        raise ApiError(409, "ALREADY_PROMOTED", "Student already has an enrollment for the target class and academic year.")
     target_class = _find_or_create_class(
         payload.target_class,
-        enrollment.institute_class.section if enrollment and enrollment.institute_class.section else "A",
+        target_section,
     )
     db.session.add(
         ClassEnrollment(
             student_id=student.id,
             class_id=target_class.id,
-            academic_year=payload.academic_year or target_class.academic_year,
+            academic_year=target_academic_year,
         )
     )
     db.session.commit()
@@ -731,7 +991,7 @@ def promote_student(student_id: int):
         {
             "studentId": str(student.id),
             "targetClass": target_class.name,
-            "academicYear": payload.academic_year or target_class.academic_year,
+            "academicYear": target_academic_year,
             "promoted": True,
         }
     )
@@ -751,6 +1011,15 @@ def promote_students_bulk():
     for student_id in student_ids:
         student = db.session.get(Student, int(student_id))
         if student is None:
+            continue
+        existing_target = (
+            ClassEnrollment.query.filter_by(
+                student_id=student.id,
+                class_id=target_class.id,
+                academic_year=target_class.academic_year,
+            ).first()
+        )
+        if existing_target is not None:
             continue
         db.session.add(
             ClassEnrollment(
@@ -781,3 +1050,75 @@ def generate_report():
     payload = request.get_json() or {}
     report_type = payload.get("reportType", "report")
     return success_response({"reportUrl": f"/api/administration/reports/{report_type}.csv"})
+
+@administration_bp.get("/financial-records")
+@roles_required("administration")
+def list_financial_records():
+    return success_response([_financial_record_payload(staff) for staff in _staff_payloads()])
+
+
+@administration_bp.get("/financial-records/<int:user_id>")
+@roles_required("administration")
+def get_financial_record(user_id: int):
+    return success_response(_financial_record_payload(_get_financial_staff_or_404(user_id)))
+
+
+@administration_bp.post("/financial-records")
+@roles_required("administration")
+def create_financial_record():
+    payload = parse_json(FinancialRecordCreateRequest, request.get_json())
+    user_id = int(payload.staff_id)
+    _get_financial_staff_or_404(user_id)
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    if getattr(user, "financial_profile", None) is not None:
+        raise ApiError(409, "FINANCIAL_RECORD_EXISTS", "A financial record already exists for this staff member.")
+
+    normalized_breakdown = (
+        _normalize_earnings_breakdown([item for item in payload.earnings_breakdown])
+        if payload.earnings_breakdown
+        else []
+    )
+    base_pay = _parse_currency_amount(payload.base_pay, "basePay")
+    current_salary = base_pay + _sum_breakdown(normalized_breakdown)
+    profile = StaffFinancialProfile(
+        user_id=user.id,
+        base_pay=base_pay,
+        current_salary=_parse_currency_amount(payload.current_salary, "currentSalary"),
+        last_increment=_parse_currency_amount(payload.last_increment, "lastIncrement"),
+        next_review=_parse_iso_date(payload.next_review, "nextReview"),
+        bank_account=payload.bank_account,
+        earnings_breakdown_json=normalized_breakdown,
+    )
+    profile.current_salary = current_salary
+    db.session.add(profile)
+    _sync_payroll_slips_for_staff(_get_financial_staff_or_404(user_id), profile, normalized_breakdown)
+    db.session.commit()
+    return success_response(_financial_record_payload(_get_financial_staff_or_404(user_id)), status_code=201)
+
+
+@administration_bp.put("/financial-records/<int:user_id>")
+@roles_required("administration")
+def update_financial_record(user_id: int):
+    staff = _get_financial_staff_or_404(user_id)
+    payload = parse_json(FinancialRecordWriteRequest, request.get_json())
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+
+    profile = _ensure_financial_profile(user, staff)
+    profile.base_pay = _parse_currency_amount(payload.base_pay, "basePay")
+    profile.last_increment = _parse_currency_amount(payload.last_increment, "lastIncrement")
+    profile.next_review = _parse_iso_date(payload.next_review, "nextReview")
+    if payload.bank_account is not None:
+        profile.bank_account = payload.bank_account
+    if payload.earnings_breakdown is not None:
+        profile.earnings_breakdown_json = _normalize_earnings_breakdown(
+            [item for item in payload.earnings_breakdown]
+        )
+    profile.current_salary = float(profile.base_pay or 0) + _sum_breakdown(profile.earnings_breakdown_json)
+
+    _sync_payroll_slips_for_staff(staff, profile)
+    db.session.commit()
+    return success_response(_financial_record_payload(staff))

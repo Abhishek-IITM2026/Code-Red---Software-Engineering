@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../../app/store';
+import { payrollApi } from './payrollApi';
 
 // Types
 export interface DashboardStats {
@@ -10,6 +11,11 @@ export interface DashboardStats {
   pendingApprovals: number;
   upcomingEvents: any[];
 }
+
+export type StudentWritePayload = Omit<
+  StudentRecord,
+  'id' | 'createdAt' | 'updatedAt' | 'attendance' | 'average'
+>;
 
 export interface StudentRecord {
   id: string;
@@ -43,6 +49,11 @@ export interface StaffRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export type StaffWritePayload = Omit<
+  StaffRecord,
+  'id' | 'createdAt' | 'updatedAt'
+>;
 
 export interface Course {
   id: string;
@@ -88,17 +99,31 @@ export interface PromotionCandidate {
 
 export interface FinancialRecord {
   id: string;
-  studentId: string;
-  studentName: string;
-  type: 'fee' | 'fine' | 'refund';
-  amount: number;
-  description: string;
-  dueDate?: string;
-  paidDate?: string;
-  status: 'pending' | 'paid' | 'overdue';
-  createdAt: string;
-  updatedAt: string;
+  staffId: string;
+  staffName: string;
+  category: 'Teaching' | 'Non-Teaching';
+  role: string;
+  department: string;
+  employeeCode: string;
+  bankAccount: string;
+  basePay: string;
+  currentSalary: string;
+  lastIncrement: string;
+  nextReview: string;
+  earningsBreakdown: Array<{ label: string; amount: string }>;
+  salaryHistory: Array<{
+    month: string;
+    previousSalary: string;
+    increment: string;
+    revisedSalary: string;
+    payoutStatus: 'Released' | 'Pending';
+  }>;
 }
+
+export type FinancialRecordWritePayload = Pick<
+  FinancialRecord,
+  'basePay' | 'currentSalary' | 'lastIncrement' | 'nextReview' | 'bankAccount' | 'earningsBreakdown'
+>;
 
 export interface AttendanceReport {
   id: string;
@@ -159,7 +184,7 @@ export const adminApi = createApi({
       providesTags: (_result, _err, id) => [{ type: 'Students', id }],
     }),
 
-    createStudent: builder.mutation<StudentRecord, Omit<StudentRecord, 'id' | 'createdAt' | 'updatedAt'>>({
+    createStudent: builder.mutation<StudentRecord, StudentWritePayload>({
       query: (data) => ({
         url: '/administration/students',
         method: 'POST',
@@ -168,13 +193,13 @@ export const adminApi = createApi({
       invalidatesTags: ['Students'],
     }),
 
-    updateStudent: builder.mutation<StudentRecord, StudentRecord>({
-      query: ({ id, ...data }) => ({
+    updateStudent: builder.mutation<StudentRecord, { id: string; data: StudentWritePayload }>({
+      query: ({ id, data }) => ({
         url: `/administration/students/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Students', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Students', { type: 'Students', id }],
     }),
 
     updateStudentStatus: builder.mutation<
@@ -186,7 +211,7 @@ export const adminApi = createApi({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Students', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Students', { type: 'Students', id }],
     }),
 
     deleteStudent: builder.mutation<{ success: boolean }, string>({
@@ -208,7 +233,7 @@ export const adminApi = createApi({
       providesTags: (_result, _err, id) => [{ type: 'Staff', id }],
     }),
 
-    createStaff: builder.mutation<StaffRecord, Omit<StaffRecord, 'id' | 'createdAt' | 'updatedAt'>>({
+    createStaff: builder.mutation<StaffRecord, StaffWritePayload>({
       query: (data) => ({
         url: '/administration/staff',
         method: 'POST',
@@ -217,13 +242,13 @@ export const adminApi = createApi({
       invalidatesTags: ['Staff'],
     }),
 
-    updateStaff: builder.mutation<StaffRecord, StaffRecord>({
-      query: ({ id, ...data }) => ({
+    updateStaff: builder.mutation<StaffRecord, { id: string; data: StaffWritePayload }>({
+      query: ({ id, data }) => ({
         url: `/administration/staff/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Staff', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Staff', { type: 'Staff', id }],
     }),
 
     updateStaffStatus: builder.mutation<
@@ -235,7 +260,7 @@ export const adminApi = createApi({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Staff', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Staff', { type: 'Staff', id }],
     }),
 
     deleteStaff: builder.mutation<{ success: boolean }, string>({
@@ -267,7 +292,7 @@ export const adminApi = createApi({
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Courses', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Courses', { type: 'Courses', id }],
     }),
 
     deleteCourse: builder.mutation<{ success: boolean }, string>({
@@ -323,7 +348,7 @@ export const adminApi = createApi({
 
     createFinancialRecord: builder.mutation<
       FinancialRecord,
-      Omit<FinancialRecord, 'id' | 'createdAt' | 'updatedAt'>
+      { staffId: string } & FinancialRecordWritePayload
     >({
       query: (data) => ({
         url: '/administration/financial-records',
@@ -331,15 +356,26 @@ export const adminApi = createApi({
         body: data,
       }),
       invalidatesTags: ['Finance'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        await queryFulfilled;
+        dispatch(payrollApi.util.invalidateTags(['SalarySlips']));
+      },
     }),
 
-    updateFinancialRecord: builder.mutation<FinancialRecord, FinancialRecord>({
-      query: ({ id, ...data }) => ({
+    updateFinancialRecord: builder.mutation<
+      FinancialRecord,
+      { id: string; data: FinancialRecordWritePayload }
+    >({
+      query: ({ id, data }) => ({
         url: `/administration/financial-records/${id}`,
         method: 'PUT',
         body: data,
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Finance', id }],
+      invalidatesTags: (_result, _err, { id }) => ['Finance', { type: 'Finance', id }],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        await queryFulfilled;
+        dispatch(payrollApi.util.invalidateTags(['SalarySlips']));
+      },
     }),
 
     // Reports
