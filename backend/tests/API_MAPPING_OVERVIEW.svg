@@ -1,0 +1,188 @@
+<svg width="1800" height="2060" viewBox="0 0 1800 2060" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1800" y2="2060" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F2EA"/>
+      <stop offset="1" stop-color="#E6EEF4"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1700" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16324F"/>
+      <stop offset="1" stop-color="#3F6C8D"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#17324D" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font: 700 46px Georgia, 'Times New Roman', serif; fill: #FAF7F0; }
+      .subtitle { font: 500 18px Helvetica, Arial, sans-serif; fill: #D8E5EF; }
+      .section { font: 700 24px Helvetica, Arial, sans-serif; fill: #17324D; }
+      .label { font: 700 20px Helvetica, Arial, sans-serif; fill: #18324A; }
+      .body { font: 500 15px Helvetica, Arial, sans-serif; fill: #35506A; }
+      .endpoint { font: 600 14px 'Courier New', monospace; fill: #214B66; }
+      .pill { font: 700 12px Helvetica, Arial, sans-serif; fill: #FAF7F0; letter-spacing: 0.08em; }
+      .foot { font: 500 12px Helvetica, Arial, sans-serif; fill: #56718A; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="2060" fill="url(#bg)"/>
+
+  <rect x="48" y="40" width="1704" height="210" rx="28" fill="url(#hero)" filter="url(#shadow)"/>
+  <text x="90" y="112" class="title">API Mapping Overview</text>
+  <text x="90" y="150" class="subtitle">Backend route map based on the current Flask blueprint registry.</text>
+  <text x="90" y="182" class="subtitle">Router flow: create_app() -> register_blueprints() -> /api/v1/* and legacy /api mounts.</text>
+
+  <rect x="1265" y="82" width="420" height="120" rx="22" fill="#F5F0E7"/>
+  <text x="1295" y="118" class="label">Top-Level Prefixes</text>
+  <text x="1295" y="148" class="endpoint">/api/v1   current versioned API</text>
+  <text x="1295" y="174" class="endpoint">/api      legacy mirror mount</text>
+
+  <text x="72" y="310" class="section">Router Spine</text>
+
+  <rect x="72" y="336" width="500" height="146" rx="24" fill="#FFF9EE" stroke="#C9B89C" stroke-width="2" filter="url(#shadow)"/>
+  <text x="102" y="382" class="label">Flask App Entry</text>
+  <text x="102" y="412" class="endpoint">create_app()</text>
+  <text x="102" y="438" class="body">Initializes config, database, auth helpers, Celery, uploads,</text>
+  <text x="102" y="460" class="body">document store, and finally registers all API blueprints.</text>
+
+  <rect x="650" y="336" width="500" height="146" rx="24" fill="#FFF9EE" stroke="#C9B89C" stroke-width="2" filter="url(#shadow)"/>
+  <text x="680" y="382" class="label">API Router</text>
+  <text x="680" y="412" class="endpoint">register_blueprints(app)</text>
+  <text x="680" y="438" class="body">Applies error handlers and mounts every module under /api/v1,</text>
+  <text x="680" y="460" class="body">with a mirrored legacy /api path for compatibility.</text>
+
+  <rect x="1228" y="336" width="500" height="146" rx="24" fill="#FFF9EE" stroke="#C9B89C" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1258" y="382" class="label">Module Registry</text>
+  <text x="1258" y="412" class="endpoint">MODULE_BLUEPRINTS</text>
+  <text x="1258" y="438" class="body">Defines the backend route groups such as auth, students,</text>
+  <text x="1258" y="460" class="body">attendance, assessments, faculty, administration, and more.</text>
+
+  <path d="M572 396H650" stroke="#35506A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1150 396H1228" stroke="#35506A" stroke-width="4" stroke-linecap="round"/>
+
+  <text x="72" y="528" class="section">Domain Cards</text>
+
+  <rect x="72" y="556" width="520" height="190" rx="28" fill="#FFFDF7" stroke="#C9D7E3" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="584" width="96" height="28" rx="14" fill="#17324D"/>
+  <text x="120" y="603" class="pill">AUTH</text>
+  <text x="100" y="644" class="label">Authentication and Identity</text>
+  <text x="100" y="676" class="endpoint">/api/v1/auth/*</text>
+  <text x="100" y="706" class="body">Login, registration, logout, token refresh, current-user lookup,</text>
+  <text x="100" y="728" class="body">OTP verification, profile edits, and password changes.</text>
+
+  <rect x="644" y="556" width="520" height="190" rx="28" fill="#FFFDF7" stroke="#C9D7E3" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="672" y="584" width="118" height="28" rx="14" fill="#457B9D"/>
+  <text x="690" y="603" class="pill">AUTHORITY</text>
+  <text x="672" y="644" class="label">Authority and Access Control</text>
+  <text x="672" y="676" class="endpoint">/api/v1/authority/*</text>
+  <text x="672" y="706" class="body">Role templates, assignment lists, and administrative access-policy</text>
+  <text x="672" y="728" class="body">controls used by privileged workflows.</text>
+
+  <rect x="1216" y="556" width="520" height="190" rx="28" fill="#FFFDF7" stroke="#C9D7E3" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1244" y="584" width="112" height="28" rx="14" fill="#2A9D8F"/>
+  <text x="1266" y="603" class="pill">STUDENTS</text>
+  <text x="1244" y="644" class="label">Student Self-Service</text>
+  <text x="1244" y="676" class="endpoint">/api/v1/students/*</text>
+  <text x="1244" y="706" class="body">Current student profile, subject lists, content access,</text>
+  <text x="1244" y="728" class="body">performance views, and upcoming course visibility.</text>
+
+  <rect x="72" y="786" width="520" height="248" rx="28" fill="#F8FCFF" stroke="#BED5E6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="814" width="106" height="28" rx="14" fill="#E76F51"/>
+  <text x="122" y="833" class="pill">ACADEMICS</text>
+  <text x="100" y="874" class="label">Academic Metadata and Learning Flow</text>
+  <text x="100" y="906" class="endpoint">/api/v1/classes</text>
+  <text x="100" y="930" class="endpoint">/api/v1/assignments</text>
+  <text x="100" y="954" class="endpoint">/api/v1/assessments</text>
+  <text x="100" y="978" class="body">Class sections, assignments, assessments, submissions,</text>
+  <text x="100" y="1000" class="body">and AI-assisted question generation/modification.</text>
+
+  <rect x="644" y="786" width="520" height="210" rx="28" fill="#F7FBF8" stroke="#BFD8CE" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="672" y="814" width="88" height="28" rx="14" fill="#588157"/>
+  <text x="692" y="833" class="pill">FACULTY</text>
+  <text x="672" y="874" class="label">Faculty Workspace</text>
+  <text x="672" y="906" class="endpoint">/api/v1/faculty/*</text>
+  <text x="672" y="936" class="body">Assigned classes, class overview, subject lists, published</text>
+  <text x="672" y="958" class="body">materials, performance views, faculty schedule, and courses.</text>
+
+  <rect x="1216" y="786" width="520" height="210" rx="28" fill="#F7FBF8" stroke="#BFD8CE" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1244" y="814" width="102" height="28" rx="14" fill="#BC6C25"/>
+  <text x="1265" y="833" class="pill">SCHEDULE</text>
+  <text x="1244" y="874" class="label">Scheduling and Timetable Control</text>
+  <text x="1244" y="906" class="endpoint">/api/v1/schedule</text>
+  <text x="1244" y="930" class="endpoint">/api/v1/schedule/me</text>
+  <text x="1244" y="960" class="body">List, create, update, delete, and self-view schedule endpoints</text>
+  <text x="1244" y="982" class="body">for administration, faculty, and students.</text>
+
+  <rect x="72" y="1036" width="520" height="240" rx="28" fill="#FFF9FB" stroke="#E3C6CF" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="1064" width="92" height="28" rx="14" fill="#B56576"/>
+  <text x="120" y="1083" class="pill">ATTENDANCE</text>
+  <text x="100" y="1124" class="label">Attendance Tracking</text>
+  <text x="100" y="1156" class="endpoint">/api/v1/attendance/*</text>
+  <text x="100" y="1186" class="body">Attendance submission, update, list retrieval, and</text>
+  <text x="100" y="1208" class="body">student self-service attendance statistics.</text>
+
+  <rect x="644" y="1036" width="520" height="240" rx="28" fill="#FFF9FB" stroke="#E3C6CF" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="672" y="1064" width="76" height="28" rx="14" fill="#6D597A"/>
+  <text x="689" y="1083" class="pill">MARKS</text>
+  <text x="672" y="1124" class="label">Marks and Performance Records</text>
+  <text x="672" y="1156" class="endpoint">/api/v1/marks/*</text>
+  <text x="672" y="1186" class="body">Marks retrieval for faculty, administration, and</text>
+  <text x="672" y="1208" class="body">student self-access use cases.</text>
+
+  <rect x="1216" y="1036" width="520" height="240" rx="28" fill="#FFF9FB" stroke="#E3C6CF" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1244" y="1064" width="76" height="28" rx="14" fill="#355070"/>
+  <text x="1260" y="1083" class="pill">LEAVE</text>
+  <text x="1244" y="1124" class="label">Leave Request Workflow</text>
+  <text x="1244" y="1156" class="endpoint">/api/v1/leave/*</text>
+  <text x="1244" y="1186" class="body">Create, review, cancel, list, and report on leave requests</text>
+  <text x="1244" y="1208" class="body">for faculty, students, and administrators.</text>
+
+  <rect x="72" y="1326" width="540" height="210" rx="28" fill="#FFFCF5" stroke="#DCCDA8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="1354" width="132" height="28" rx="14" fill="#A44A3F"/>
+  <text x="118" y="1373" class="pill">ADMINISTRATION</text>
+  <text x="100" y="1414" class="label">Institution Operations Hub</text>
+  <text x="100" y="1446" class="endpoint">/api/v1/administration/*</text>
+  <text x="100" y="1476" class="body">Dashboard, student and staff management, course setup,</text>
+  <text x="100" y="1498" class="body">promotions, financial records, and reporting endpoints.</text>
+
+  <rect x="664" y="1326" width="480" height="210" rx="28" fill="#FFFCF5" stroke="#DCCDA8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="692" y="1354" width="96" height="28" rx="14" fill="#7F5539"/>
+  <text x="715" y="1373" class="pill">PAYROLL</text>
+  <text x="692" y="1414" class="label">Salary Slip Services</text>
+  <text x="692" y="1446" class="endpoint">/api/v1/payroll/*</text>
+  <text x="692" y="1476" class="body">Administrative salary-slip access and self-service salary</text>
+  <text x="692" y="1498" class="body">views for faculty and administration users.</text>
+
+  <rect x="1196" y="1326" width="540" height="210" rx="28" fill="#FFFCF5" stroke="#DCCDA8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1224" y="1354" width="102" height="28" rx="14" fill="#386641"/>
+  <text x="1248" y="1373" class="pill">INVENTORY</text>
+  <text x="1224" y="1414" class="label">Stock and Material Requests</text>
+  <text x="1224" y="1446" class="endpoint">/api/v1/inventory/*</text>
+  <text x="1224" y="1476" class="body">Item CRUD, material request submission, request review,</text>
+  <text x="1224" y="1498" class="body">approval, and stock reservation logic.</text>
+
+  <rect x="72" y="1596" width="520" height="210" rx="28" fill="#F9FBFD" stroke="#C8D4DE" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="1624" width="82" height="28" rx="14" fill="#3D405B"/>
+  <text x="120" y="1643" class="pill">PARENT</text>
+  <text x="100" y="1684" class="label">Parent Portal</text>
+  <text x="100" y="1716" class="endpoint">/api/v1/parent/*</text>
+  <text x="100" y="1746" class="body">Linked-child lists, child detail, dashboard, attendance,</text>
+  <text x="100" y="1768" class="body">and performance routes with ownership checks.</text>
+
+  <rect x="644" y="1596" width="520" height="210" rx="28" fill="#F9FBFD" stroke="#C8D4DE" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="672" y="1624" width="128" height="28" rx="14" fill="#5A5F7A"/>
+  <text x="698" y="1643" class="pill">NOTIFICATIONS</text>
+  <text x="672" y="1684" class="label">Messaging and Async Support</text>
+  <text x="672" y="1716" class="endpoint">/api/v1/notifications/*</text>
+  <text x="672" y="1746" class="body">Email send/sync, scheduled notifications, transport status,</text>
+  <text x="672" y="1768" class="body">and helper routes tied to background job workflows.</text>
+
+  <rect x="1216" y="1596" width="520" height="210" rx="28" fill="#F9FBFD" stroke="#C8D4DE" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1244" y="1624" width="132" height="28" rx="14" fill="#4D6A6D"/>
+  <text x="1270" y="1643" class="pill">JOBS + UPLOADS</text>
+  <text x="1244" y="1684" class="label">Operational Helpers</text>
+  <text x="1244" y="1716" class="endpoint">/api/v1/jobs/*</text>
+  <text x="1244" y="1740" class="endpoint">/api/v1/uploads/*</text>
+  <text x="1244" y="1770" class="body">Background task status endpoints and file-upload handling</text>
+  <text x="1244" y="1792" class="body">used by profile and document-related flows.</text>
+
+  <text x="72" y="1938" class="foot">Generated from the current backend module registry and condensed into stable route domains for documentation use.</text>
+</svg>

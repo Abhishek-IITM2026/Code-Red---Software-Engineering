@@ -1,0 +1,907 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 1992 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(BACKEND TEST CASE SUMMARY) Tj
+T*
+() Tj
+T*
+(This document explains what each backend test file is validating, why those tests matter, and) Tj
+T*
+(how the overall suite is organized.) Tj
+T*
+() Tj
+T*
+(Overall suite status at the time of generation:) Tj
+T*
+() Tj
+T*
+(* Total backend test files: 12) Tj
+T*
+(* Total test classes: 84) Tj
+T*
+(* Total individual test cases: 209) Tj
+T*
+(* Final result: 209 passed, 0 failed) Tj
+T*
+() Tj
+T*
+(1. AUTH TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_auth.py`) Tj
+T*
+(Classes: 7) Tj
+T*
+(Tests: 24) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file verifies the authentication and identity lifecycle for all supported user roles. It) Tj
+T*
+(focuses on login, registration, token-based identity, profile updates, password changes,) Tj
+T*
+(logout, and refresh flows.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Login success for seeded student, faculty, admin, and parent accounts) Tj
+T*
+(* Login failure for invalid email and wrong password) Tj
+T*
+(* Validation failures when login payload fields are missing) Tj
+T*
+(* Successful user registration) Tj
+T*
+(* Duplicate email rejection during registration) Tj
+T*
+(* Registration validation failures for missing fields or invalid role) Tj
+T*
+(* `/auth/me` identity lookup for authenticated and unauthenticated requests) Tj
+T*
+(* OTP-protected profile update flow) Tj
+T*
+(* OTP-protected password change flow) Tj
+T*
+(* Expected rejection when profile/password operations are attempted without OTP verification) Tj
+T*
+(* Logout success response) Tj
+T*
+(* Token refresh success response) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(These tests prove that the system accepts valid credentials, rejects invalid authentication) Tj
+T*
+(attempts, respects request validation, and enforces stronger security for sensitive actions) Tj
+T*
+(such as profile edits and password changes.) Tj
+T*
+() Tj
+T*
+(2. ADMINISTRATION TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_administration.py`) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 2261 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(Classes: 7) Tj
+T*
+(Tests: 39) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates the administration workspace, which is one of the largest backend feature) Tj
+T*
+(areas. It exercises student management, staff management, course administration, promotions,) Tj
+T*
+(financial records, and reporting endpoints.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Dashboard access for administration and denial for unauthorized users) Tj
+T*
+(* Student listing, retrieval, creation, duplicate-email checks, validation, update, status) Tj
+T*
+(change, and deletion) Tj
+T*
+(* Staff listing, retrieval, creation for both teaching and non-teaching roles, duplicate) Tj
+T*
+(employee code handling, validation, update, status change, and deletion) Tj
+T*
+(* Course listing, creation, invalid date handling, invalid seat handling, update, and deletion) Tj
+T*
+(* Promotion candidate listing) Tj
+T*
+(* Single-student promotion, already-enrolled promotion handling, and bulk promotion validation) Tj
+T*
+(* Financial record listing, retrieval, creation, invalid salary input handling, and update) Tj
+T*
+(* Attendance report retrieval) Tj
+T*
+(* Exam participation report retrieval) Tj
+T*
+(* Report generation endpoint behavior) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(This file verifies the core operational controls that administrators rely on. It ensures that) Tj
+T*
+(the application can manage academic records, workforce data, promotions, and finance-related) Tj
+T*
+(data with appropriate validation and access control.) Tj
+T*
+() Tj
+T*
+(3. ASSESSMENT TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_assessments.py`) Tj
+T*
+(Classes: 13) Tj
+T*
+(Tests: 24) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates both assessments and assignments, including AI-assisted question flows. It) Tj
+T*
+(covers faculty-authoring behavior and student-submission behavior.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Listing assessments for faculty and students) Tj
+T*
+(* Creating assessments with structured question payloads) Tj
+T*
+(* Validation failure when required fields are missing) Tj
+T*
+(* Assessment retrieval for existing and non-existing IDs) Tj
+T*
+(* Assessment updates and not-found handling) Tj
+T*
+(* Assessment deletion behavior) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 1972 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(* Assessment publishing behavior) Tj
+T*
+(* Student submission of a published assessment) Tj
+T*
+(* Not-found handling for invalid assessment submission targets) Tj
+T*
+(* Retrieval of a student's own submission) Tj
+T*
+(* Faculty retrieval of submissions for an assessment) Tj
+T*
+(* Assignment listing for students) Tj
+T*
+(* Assignment submission success and validation failure for missing URL) Tj
+T*
+(* AI question generation endpoint behavior) Tj
+T*
+(* AI question modification endpoint behavior) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(This file confirms the entire assessment pipeline, from authoring and publishing to student) Tj
+T*
+(interaction and automated question tooling. It protects one of the most behavior-heavy parts of) Tj
+T*
+(the platform.) Tj
+T*
+() Tj
+T*
+(4. ATTENDANCE TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_attendance.py`) Tj
+T*
+(Classes: 4) Tj
+T*
+(Tests: 9) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file verifies recording, updating, listing, and reading attendance statistics.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Faculty attendance submission success) Tj
+T*
+(* Validation failure when attendance date is missing) Tj
+T*
+(* Validation/logic failure when attendance records are empty) Tj
+T*
+(* Access denial when students try to submit attendance) Tj
+T*
+(* Attendance update success) Tj
+T*
+(* Attendance listing success) Tj
+T*
+(* Unauthenticated access rejection for attendance listing) Tj
+T*
+(* Student self-service attendance statistics) Tj
+T*
+(* Unauthenticated rejection for self-service attendance statistics) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Attendance data drives reports, dashboards, and academic monitoring. These tests ensure that) Tj
+T*
+(only authorized users can write attendance and that students can view their own attendance) Tj
+T*
+(metrics safely.) Tj
+T*
+() Tj
+T*
+(5. FACULTY TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_faculty.py`) Tj
+T*
+(Classes: 8) Tj
+T*
+(Tests: 18) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 1959 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates faculty-facing endpoints for classroom operations, materials, performance) Tj
+T*
+(views, schedule visibility, and upcoming courses.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Faculty directory listing for admins) Tj
+T*
+(* Access denial when students try to view faculty-only resources) Tj
+T*
+(* Assigned class listing for faculty) Tj
+T*
+(* Faculty class overview endpoint) Tj
+T*
+(* Subject listing for a class, including invalid class behavior) Tj
+T*
+(* Student performance listing and class-filtered performance retrieval) Tj
+T*
+(* Faculty schedule retrieval) Tj
+T*
+(* Subject material listing) Tj
+T*
+(* Material publishing success and validation failures) Tj
+T*
+(* Upcoming course listing for faculty) Tj
+T*
+(* Upcoming course listing for administration users) Tj
+T*
+(* Unauthorized and unauthenticated access behavior) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(This file proves that the faculty workspace returns the academic information teachers need) Tj
+T*
+(while still respecting permissions and not exposing faculty tools to student users.) Tj
+T*
+() Tj
+T*
+(6. INVENTORY TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_inventory.py`) Tj
+T*
+(Classes: 7) Tj
+T*
+(Tests: 16) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates inventory items and material request workflows.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Inventory item listing for authorized users) Tj
+T*
+(* Access denial for students) Tj
+T*
+(* Inventory item creation behavior) Tj
+T*
+(* Inventory item update and not-found behavior) Tj
+T*
+(* Inventory item deletion and not-found behavior) Tj
+T*
+(* Material request listing) Tj
+T*
+(* Material request creation success) Tj
+T*
+(* Validation failures such as missing department) Tj
+T*
+(* Request status updates) Tj
+T*
+(* Not-found handling for request status changes) Tj
+T*
+(* Access denial when faculty attempt admin-only review/status actions) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 1810 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Inventory operations often support physical classroom delivery. These tests ensure both stock) Tj
+T*
+(records and request workflows behave consistently and stay role-safe.) Tj
+T*
+() Tj
+T*
+(7. LEAVE TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_leave.py`) Tj
+T*
+(Classes: 6) Tj
+T*
+(Tests: 13) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates leave request creation, review, cancellation, listing, and statistics.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Faculty leave request submission with the correct schema) Tj
+T*
+(* Validation failures for missing leave type) Tj
+T*
+(* Invalid date-range handling) Tj
+T*
+(* Unauthenticated leave-creation rejection) Tj
+T*
+(* Leave listing for faculty and administrators) Tj
+T*
+(* Retrieval of leave requests by ID) Tj
+T*
+(* Review/approval workflow behavior for administration) Tj
+T*
+(* Canceling a newly created leave request) Tj
+T*
+(* Not-found behavior for invalid leave IDs) Tj
+T*
+(* Leave statistics retrieval for administrators) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Leave management combines workflow state, role-based permissions, and request validation. These) Tj
+T*
+(tests confirm all three operate correctly.) Tj
+T*
+() Tj
+T*
+(8. NOTIFICATIONS TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_notifications.py`) Tj
+T*
+(Classes: 12) Tj
+T*
+(Tests: 20) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates notification-related endpoints as well as several closely related modules) Tj
+T*
+(tested from the same file: marks, authority, jobs, academics helpers, and health.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Email message listing and message-by-ID retrieval) Tj
+T*
+(* Email transport status endpoint) Tj
+T*
+(* Email sending with the current API payload structure) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Length 1782 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(* Validation failures for incomplete email payloads) Tj
+T*
+(* Schedule notification creation and async acceptance behavior) Tj
+T*
+(* Marks listing for faculty and students) Tj
+T*
+(* Authority assignment listing) Tj
+T*
+(* Authority template listing) Tj
+T*
+(* Job status endpoint) Tj
+T*
+(* Academics class listing and section listing) Tj
+T*
+(* Health endpoint and document-store health endpoint) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(This file protects a broad set of integration-style routes that support messaging, monitoring,) Tj
+T*
+(operational tooling, and academic metadata retrieval.) Tj
+T*
+() Tj
+T*
+(9. PARENT TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_parent.py`) Tj
+T*
+(Classes: 5) Tj
+T*
+(Tests: 12) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates parent-specific child access flows and ensures linked-child authorization) Tj
+T*
+(rules are enforced correctly.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Listing a parent's linked children) Tj
+T*
+(* Unauthenticated and unauthorized access rejection) Tj
+T*
+(* Child detail retrieval) Tj
+T*
+(* Child dashboard retrieval) Tj
+T*
+(* Dashboard payload shape validation) Tj
+T*
+(* Child attendance retrieval) Tj
+T*
+(* Child performance retrieval) Tj
+T*
+(* Rejection when a parent requests a child who is not linked to them) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Parent access is intentionally narrow. These tests confirm that parents can see only their own) Tj
+T*
+(linked student records and cannot read unrelated student data.) Tj
+T*
+() Tj
+T*
+(10. PAYROLL TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_payroll.py`) Tj
+T*
+(Classes: 3) Tj
+T*
+(Tests: 8) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file verifies salary slip visibility for both administrators and staff members.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Length 1564 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Admin access to salary slip listings) Tj
+T*
+(* Denial for students) Tj
+T*
+(* Unauthenticated rejection) Tj
+T*
+(* Faculty self-service salary slip listing) Tj
+T*
+(* Admin self-service salary slip listing) Tj
+T*
+(* Basic salary-slip payload shape validation) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Payroll information is sensitive. These tests check both visibility boundaries and basic) Tj
+T*
+(payload consistency.) Tj
+T*
+() Tj
+T*
+(11. SCHEDULE TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_schedule.py`) Tj
+T*
+(Classes: 5) Tj
+T*
+(Tests: 11) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+T*
+(This file validates the schedule module for list, self-view, create, update, and delete flows.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Schedule listing for administration) Tj
+T*
+(* Unauthenticated access rejection) Tj
+T*
+(* Faculty self-schedule retrieval) Tj
+T*
+(* Student self-schedule retrieval) Tj
+T*
+(* Schedule creation success) Tj
+T*
+(* Validation failures for missing fields) Tj
+T*
+(* Validation failures for invalid day-of-week) Tj
+T*
+(* Schedule update success and not-found handling) Tj
+T*
+(* Schedule deletion success and not-found handling) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(Schedule data is central to multiple user roles. These tests prove both retrieval and) Tj
+T*
+(schedule-administration workflows behave correctly.) Tj
+T*
+() Tj
+T*
+(12. STUDENT TESTS) Tj
+T*
+() Tj
+T*
+(File: `backend/tests/test_students.py`) Tj
+T*
+(Classes: 7) Tj
+T*
+(Tests: 15) Tj
+T*
+() Tj
+T*
+(Purpose:) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Length 1998 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(This file validates student-facing self-service APIs and selected role-based student lookup) Tj
+T*
+(behavior.) Tj
+T*
+() Tj
+T*
+(What it covers:) Tj
+T*
+() Tj
+T*
+(* Student listing for admins) Tj
+T*
+(* Access denial when students try to list all students) Tj
+T*
+(* `/students/me` self lookup) Tj
+T*
+(* Subject listing for the current student) Tj
+T*
+(* Subject content lookup) Tj
+T*
+(* Performance retrieval) Tj
+T*
+(* Upcoming course retrieval) Tj
+T*
+(* Student-by-ID retrieval for administration and faculty) Tj
+T*
+(* Access denial for unauthorized student-by-ID access) Tj
+T*
+() Tj
+T*
+(Why it matters:) Tj
+T*
+(These tests ensure the student portal returns the right self-service information and that) Tj
+T*
+(broader student record access remains restricted to authorized roles.) Tj
+T*
+() Tj
+T*
+(TEST INFRASTRUCTURE NOTES) Tj
+T*
+() Tj
+T*
+(Shared fixtures are defined in `backend/tests/conftest.py`.) Tj
+T*
+() Tj
+T*
+(Important fixture responsibilities:) Tj
+T*
+() Tj
+T*
+(* Create the Flask app in testing mode) Tj
+T*
+(* Reset the seeded database state before each test) Tj
+T*
+(* Provide pre-authenticated headers for student, faculty, admin, and parent roles) Tj
+T*
+(* Provide reusable seeded-record helpers such as `seeded_student` and `seeded_staff_user_id`) Tj
+T*
+(* Provide an OTP helper used by authentication tests for sensitive flows) Tj
+T*
+() Tj
+T*
+(Why this matters:) Tj
+T*
+(The fixture layer ensures tests run against a predictable seeded state while still exercising) Tj
+T*
+(the application through real HTTP requests.) Tj
+T*
+() Tj
+T*
+(FINAL INTERPRETATION) Tj
+T*
+() Tj
+T*
+(Taken together, these 209 test cases provide coverage for:) Tj
+T*
+() Tj
+T*
+(* Authentication and account security) Tj
+T*
+(* Role-based authorization) Tj
+T*
+(* Student, parent, faculty, and admin workflows) Tj
+T*
+(* CRUD-heavy operational modules) Tj
+T*
+(* Academic scheduling and attendance) Tj
+T*
+(* Assessments, assignments, and submissions) Tj
+T*
+(* Leave and payroll operations) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Length 525 >>
+stream
+BT
+/F1 10 Tf
+72 800 Td
+16 TL
+(* Notifications, health, and supporting helper endpoints) Tj
+T*
+() Tj
+T*
+(The suite is not just checking happy paths. It also covers:) Tj
+T*
+() Tj
+T*
+(* Missing-field validation) Tj
+T*
+(* Unauthorized and unauthenticated requests) Tj
+T*
+(* Duplicate/conflict conditions) Tj
+T*
+(* Not-found handling) Tj
+T*
+(* Sensitive-flow protections such as OTP checks) Tj
+T*
+() Tj
+T*
+(That makes the backend test suite a strong regression safety net for both business logic and) Tj
+T*
+(access control.) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Pages /Kids [12 0 R 13 0 R 14 0 R 15 0 R 16 0 R 17 0 R 18 0 R 19 0 R 20 0 R] /Count 9 >>
+endobj
+12 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+13 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+14 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+15 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+16 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 6 0 R >>
+endobj
+17 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+18 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 8 0 R >>
+endobj
+19 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 9 0 R >>
+endobj
+20 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 10 0 R >>
+endobj
+21 0 obj
+<< /Type /Catalog /Pages 11 0 R >>
+endobj
+xref
+0 22
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000002123 00000 n 
+0000004436 00000 n 
+0000006460 00000 n 
+0000008471 00000 n 
+0000010333 00000 n 
+0000012167 00000 n 
+0000013783 00000 n 
+0000015833 00000 n 
+0000016410 00000 n 
+0000016525 00000 n 
+0000016653 00000 n 
+0000016781 00000 n 
+0000016909 00000 n 
+0000017037 00000 n 
+0000017165 00000 n 
+0000017293 00000 n 
+0000017421 00000 n 
+0000017549 00000 n 
+0000017678 00000 n 
+trailer
+<< /Size 22 /Root 21 0 R >>
+startxref
+17729
+%%EOF
