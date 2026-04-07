@@ -1,4 +1,5 @@
 from .administration import (
+    AISettingsWriteRequest,
     AuthorityAssignmentWriteRequest,
     CourseWriteRequest,
     FinancialRecordCreateRequest,
@@ -34,6 +35,7 @@ from .auth import (
     ProfileUpdateRequest,
     RegisterRequest,
 )
+from .courses import CourseEnrollmentRequest, CoursePaymentRequest
 from .inventory import (
     InventoryItemPatchRequest,
     InventoryItemWriteRequest,
@@ -51,12 +53,15 @@ __all__ = [
     "AssessmentListQuery",
     "AssessmentSubmissionCreateRequest",
     "AssessmentUpdateRequest",
+    "AISettingsWriteRequest",
     "AssignmentListQuery",
     "AssignmentSubmissionRequest",
     "AttendanceSubmissionRequest",
     "AuthorityAssignmentWriteRequest",
     "ChangePasswordRequest",
     "CourseWriteRequest",
+    "CourseEnrollmentRequest",
+    "CoursePaymentRequest",
     "EmailChangeRequest",
     "EmailMessageListQuery",
     "EmailSendRequest",

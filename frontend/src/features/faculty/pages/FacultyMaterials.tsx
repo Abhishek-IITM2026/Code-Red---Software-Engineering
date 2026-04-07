@@ -1,116 +1,167 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
-import { FiBookOpen, FiCheckCircle, FiDownload, FiFileText, FiUploadCloud } from "react-icons/fi";
-import type { RootState } from "../../../app/store";
+import { Link } from "react-router-dom";
 import {
-  getMergedStudentSubjectContent,
-  getSubjectChapterOptions,
-  getSubjectWeekOptions,
-  saveFacultyUploadedMaterial,
-  type SubjectMaterial,
-} from "../../student/data/subjectContent";
+  FiBookOpen,
+  FiCheckCircle,
+  FiExternalLink,
+  FiFileText,
+  FiRefreshCw,
+  FiUploadCloud,
+} from "react-icons/fi";
+import {
+  useGetFacultyClassOverviewQuery,
+  useListMaterialsQuery,
+  useUploadMaterialMutation,
+  type StudyMaterial,
+} from "../api/facultyApi";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
-const materialTypeStyles: Record<SubjectMaterial["type"], string> = {
-  notes: "bg-sky-100 text-sky-700",
-  video: "bg-rose-100 text-rose-700",
-  pdf: "bg-violet-100 text-violet-700",
-  worksheet: "bg-amber-100 text-amber-700",
+type MaterialForm = {
+  subjectId: string;
+  type: string;
+  unit: string;
+  week: string;
+  title: string;
+  description: string;
+  sourceText: string;
+  externalUrl: string;
+  imageUrlsText: string;
+  file: File | null;
 };
 
-const initialForm = {
-  subjectName: "Mathematics",
-  chapterId: "",
+type SubjectOption = {
+  id: string;
+  name: string;
+  code: string;
+  className: string;
+  section: string;
+};
+
+const initialForm: MaterialForm = {
+  subjectId: "",
+  type: "notes",
+  unit: "",
   week: "",
   title: "",
-  type: "notes" as SubjectMaterial["type"],
   description: "",
-  fileName: "",
+  sourceText: "",
+  externalUrl: "",
+  imageUrlsText: "",
+  file: null,
 };
 
 const FacultyMaterials = function () {
-  const user = useSelector((state: RootState) => state.auth.user);
-  const [form, setForm] = useState(initialForm);
+  const { data: classOverview = [], isLoading: isOverviewLoading } = useGetFacultyClassOverviewQuery();
+  const [uploadMaterial, { isLoading: isUploading }] = useUploadMaterialMutation();
+  const [form, setForm] = useState<MaterialForm>(initialForm);
   const [message, setMessage] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  const subjectMap = useMemo(() => getMergedStudentSubjectContent(), [refreshKey]);
-  const subjectOptions = useMemo(() => Object.keys(subjectMap), [subjectMap]);
-  const chapterOptions = useMemo(() => getSubjectChapterOptions(form.subjectName), [form.subjectName]);
-  const weekOptions = useMemo(() => getSubjectWeekOptions(form.subjectName), [form.subjectName]);
-  const selectedChapter = chapterOptions.find((chapter) => chapter.id === form.chapterId);
+  const subjectOptions = useMemo<SubjectOption[]>(() => {
+    const options: SubjectOption[] = [];
+    const seen = new Set<string>();
+    classOverview.forEach((classItem) => {
+      classItem.subjects.forEach((subject) => {
+        if (seen.has(subject.id)) {
+          return;
+        }
+        seen.add(subject.id);
+        options.push({
+          id: subject.id,
+          name: subject.name,
+          code: subject.code,
+          className: classItem.name,
+          section: classItem.section,
+        });
+      });
+    });
+    return options.sort((left, right) => left.name.localeCompare(right.name));
+  }, [classOverview]);
 
   useEffect(() => {
-    if (!form.week && weekOptions[0]) {
-      setForm((current) => ({ ...current, week: weekOptions[0] }));
+    if (!form.subjectId && subjectOptions[0]) {
+      setForm((current) => ({ ...current, subjectId: subjectOptions[0].id }));
     }
-  }, [form.week, weekOptions]);
+  }, [form.subjectId, subjectOptions]);
 
-  const uploadedMaterials = useMemo(
-    () =>
-      [...(subjectMap[form.subjectName]?.materials ?? [])]
-        .filter((material) => material.isFacultyUpload)
-        .sort((a, b) => b.id.localeCompare(a.id)),
-    [form.subjectName, subjectMap],
-  );
+  const selectedSubject = subjectOptions.find((subject) => subject.id === form.subjectId) || null;
+  const {
+    data: selectedMaterials = [],
+    isFetching: isMaterialsFetching,
+  } = useListMaterialsQuery(form.subjectId, {
+    skip: !form.subjectId,
+  });
 
-  const updateField = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+  const ragReadyCount = selectedMaterials.filter((material) => material.ragContextAvailable).length;
+
+  const updateField = <K extends keyof MaterialForm>(key: K, value: MaterialForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleSubjectChange = (subjectName: string) => {
-    const nextWeeks = getSubjectWeekOptions(subjectName);
-    setForm({
-      subjectName,
-      chapterId: "",
-      week: nextWeeks[0] ?? "",
-      title: "",
-      type: "notes",
-      description: "",
-      fileName: "",
-    });
+  const handleUpload = async () => {
     setMessage("");
-  };
-
-  const handleChapterChange = (chapterId: string) => {
-    const chapter = chapterOptions.find((item) => item.id === chapterId);
-    updateField("chapterId", chapterId);
-    if (chapter?.weeks[0]) {
-      updateField("week", chapter.weeks[0]);
-    }
-  };
-
-  const handleUpload = () => {
-    if (!form.subjectName || !form.week || !form.title.trim() || !form.description.trim()) {
-      setMessage("Please complete subject, week, title, and description before uploading.");
+    if (!form.subjectId || !form.title.trim()) {
+      setMessage("Select a course and add a title before publishing the material.");
       return;
     }
 
-    saveFacultyUploadedMaterial({
-      subjectName: form.subjectName,
-      title: form.title.trim(),
-      type: form.type,
-      week: form.week,
-      description: form.description.trim(),
-      chapterId: selectedChapter?.id,
-      chapterTitle: selectedChapter?.title,
-      fileName: form.fileName || undefined,
-      uploadedBy: `${user?.firstName ?? "Faculty"} ${user?.lastName ?? ""}`.trim(),
-    });
+    const imageUrls = form.imageUrlsText
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
 
-    setMessage("Study material uploaded successfully. It will now appear on the student subject page.");
-    setRefreshKey((current) => current + 1);
-    setForm((current) => ({
-      ...current,
-      title: "",
-      description: "",
-      fileName: "",
-    }));
+    const hasContext =
+      Boolean(form.description.trim()) ||
+      Boolean(form.sourceText.trim()) ||
+      Boolean(form.externalUrl.trim()) ||
+      imageUrls.length > 0 ||
+      Boolean(form.file);
+
+    if (!hasContext) {
+      setMessage("Add at least one context source: description, source text, URL, image URL, or file.");
+      return;
+    }
+
+    try {
+      await uploadMaterial({
+        subjectId: form.subjectId,
+        title: form.title.trim(),
+        type: form.type,
+        description: form.description.trim() || undefined,
+        unit: form.unit.trim() || undefined,
+        week: form.week.trim() || undefined,
+        sourceText: form.sourceText.trim() || undefined,
+        externalUrl: form.externalUrl.trim() || undefined,
+        imageUrls,
+        file: form.file,
+      }).unwrap();
+
+      setMessage("Study material published successfully. It is now available in the assessment builder.");
+      setForm((current) => ({
+        ...current,
+        title: "",
+        description: "",
+        sourceText: "",
+        externalUrl: "",
+        imageUrlsText: "",
+        file: null,
+      }));
+    } catch (error) {
+      const apiMessage =
+        typeof error === "object" && error && "data" in error
+          ? (error as { data?: { error?: { message?: string } } }).data?.error?.message
+          : null;
+      setMessage(apiMessage || "Unable to publish the study material right now.");
+    }
   };
 
-  const subjectStats = subjectMap[form.subjectName];
+  const materialTypeStyles: Record<string, string> = {
+    notes: "bg-sky-100 text-sky-700",
+    video: "bg-rose-100 text-rose-700",
+    pdf: "bg-violet-100 text-violet-700",
+    worksheet: "bg-amber-100 text-amber-700",
+  };
 
   return (
     <div className="space-y-8">
@@ -122,24 +173,35 @@ const FacultyMaterials = function () {
             </p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">Upload Study Materials</h1>
             <p className="mt-3 max-w-3xl text-[var(--text-secondary)]">
-              Create subject-wise study resources and map them to a chapter and week so they appear
-              directly inside the student course page module navigation.
+              Publish backend-backed material sources for your assigned courses. These uploads become selectable in the assessment builder and can feed grounded question generation.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <p className="text-sm text-slate-500">Subjects</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">{subjectOptions.length}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <p className="text-sm text-slate-500">Weeks</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">{weekOptions.length}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <p className="text-sm text-slate-500">Uploaded by faculty</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">{uploadedMaterials.length}</p>
-            </div>
+          <Link
+            to="/faculty/assessment-builder"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+          >
+            <FiFileText className="h-5 w-5" />
+            Open Assessment Builder
+          </Link>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <p className="text-sm text-slate-500">Assigned Courses</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{subjectOptions.length}</p>
+          </div>
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <p className="text-sm text-slate-500">Materials In Selected Course</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {isMaterialsFetching ? "..." : selectedMaterials.length}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <p className="text-sm text-slate-500">RAG-Ready Sources</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {isMaterialsFetching ? "..." : ragReadyCount}
+            </p>
           </div>
         </div>
       </section>
@@ -153,24 +215,29 @@ const FacultyMaterials = function () {
             <div>
               <p className="text-lg font-semibold text-slate-900">Material Publisher</p>
               <p className="text-sm text-slate-500">
-                Choose a subject, align the upload with a chapter and week, then publish it for students.
+                Attach raw text, URLs, images, or files so the question generator has usable study context.
               </p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">Subject</label>
+              <label className="text-sm font-medium text-slate-700">Course</label>
               <select
-                value={form.subjectName}
-                onChange={(event) => handleSubjectChange(event.target.value)}
+                value={form.subjectId}
+                onChange={(event) => updateField("subjectId", event.target.value)}
                 className={fieldClass}
+                disabled={subjectOptions.length === 0}
               >
-                {subjectOptions.map((subjectName) => (
-                  <option key={subjectName} value={subjectName}>
-                    {subjectName}
-                  </option>
-                ))}
+                {subjectOptions.length === 0 ? (
+                  <option value="">No assigned courses</option>
+                ) : (
+                  subjectOptions.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name} ({subject.className} - {subject.section})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -178,7 +245,7 @@ const FacultyMaterials = function () {
               <label className="text-sm font-medium text-slate-700">Material Type</label>
               <select
                 value={form.type}
-                onChange={(event) => updateField("type", event.target.value as SubjectMaterial["type"])}
+                onChange={(event) => updateField("type", event.target.value)}
                 className={fieldClass}
               >
                 <option value="notes">Notes</option>
@@ -189,34 +256,23 @@ const FacultyMaterials = function () {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-700">Chapter</label>
-              <select
-                value={form.chapterId}
-                onChange={(event) => handleChapterChange(event.target.value)}
+              <label className="text-sm font-medium text-slate-700">Unit</label>
+              <input
+                value={form.unit}
+                onChange={(event) => updateField("unit", event.target.value)}
                 className={fieldClass}
-              >
-                <option value="">No specific chapter</option>
-                {chapterOptions.map((chapter) => (
-                  <option key={chapter.id} value={chapter.id}>
-                    {chapter.title}
-                  </option>
-                ))}
-              </select>
+                placeholder="Example: Unit 2"
+              />
             </div>
 
             <div>
               <label className="text-sm font-medium text-slate-700">Week</label>
-              <select
+              <input
                 value={form.week}
                 onChange={(event) => updateField("week", event.target.value)}
                 className={fieldClass}
-              >
-                {weekOptions.map((week) => (
-                  <option key={week} value={week}>
-                    {week}
-                  </option>
-                ))}
-              </select>
+                placeholder="Example: Week 3"
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -234,42 +290,77 @@ const FacultyMaterials = function () {
               <textarea
                 value={form.description}
                 onChange={(event) => updateField("description", event.target.value)}
-                className={`${fieldClass} min-h-32 resize-y`}
-                placeholder="Explain what students will learn from this material and how it connects to the week or chapter."
+                className={`${fieldClass} min-h-28 resize-y`}
+                placeholder="Summarize the material, learning goals, or the context that should be visible to students and the RAG pipeline."
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">Source Text</label>
+              <textarea
+                value={form.sourceText}
+                onChange={(event) => updateField("sourceText", event.target.value)}
+                className={`${fieldClass} min-h-36 resize-y`}
+                placeholder="Paste notes, explanations, or extracted text here if you want stronger grounded question generation."
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">External URL</label>
+              <input
+                value={form.externalUrl}
+                onChange={(event) => updateField("externalUrl", event.target.value)}
+                className={fieldClass}
+                placeholder="Optional source URL for the material"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">Image URLs</label>
+              <textarea
+                value={form.imageUrlsText}
+                onChange={(event) => updateField("imageUrlsText", event.target.value)}
+                className={`${fieldClass} min-h-24 resize-y`}
+                placeholder="Optional comma-separated image URLs that should be attached to generated questions"
               />
             </div>
 
             <div className="md:col-span-2">
               <label className="text-sm font-medium text-slate-700">Upload File</label>
               <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5">
-                <span className="text-sm font-medium text-slate-700">Attach notes, PDF, worksheet, or media reference</span>
-                <span className="mt-1 text-xs text-slate-500">{form.fileName || "Choose a file to attach with this material"}</span>
+                <span className="text-sm font-medium text-slate-700">
+                  Attach notes, PDF, worksheet, or media file
+                </span>
+                <span className="mt-1 text-xs text-slate-500">
+                  {form.file?.name || "Choose a file to store with this material"}
+                </span>
                 <input
                   type="file"
                   className="hidden"
-                  onChange={(event) => updateField("fileName", event.target.files?.[0]?.name ?? "")}
+                  onChange={(event) => updateField("file", event.target.files?.[0] || null)}
                 />
               </label>
             </div>
           </div>
 
-          {message && (
+          {message ? (
             <div className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
               {message}
             </div>
-          )}
+          ) : null}
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={handleUpload}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+              onClick={() => void handleUpload()}
+              disabled={isUploading || !form.subjectId}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <FiUploadCloud className="h-4 w-4" />
+              {isUploading ? <FiRefreshCw className="h-4 w-4 animate-spin" /> : <FiUploadCloud className="h-4 w-4" />}
               Publish Material
             </button>
             <div className="text-sm text-slate-500">
-              Materials are placed under the selected subject and week in the student course page.
+              Newly published materials are selectable in Step 3 of the assessment builder.
             </div>
           </div>
         </div>
@@ -281,25 +372,31 @@ const FacultyMaterials = function () {
                 <FiBookOpen className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-slate-900">Selected Subject Snapshot</p>
-                <p className="text-sm text-slate-500">Quick course context before publishing.</p>
+                <p className="text-lg font-semibold text-slate-900">Selected Course Snapshot</p>
+                <p className="text-sm text-slate-500">Quick context before publishing.</p>
               </div>
             </div>
 
-            {subjectStats && (
+            {selectedSubject ? (
               <div className="mt-5 grid gap-3">
                 <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <p className="text-sm text-slate-500">Chapter blocks</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{subjectStats.chapters.length}</p>
+                  <p className="text-sm text-slate-500">Course</p>
+                  <p className="mt-2 text-lg font-bold text-slate-900">{selectedSubject.name}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <p className="text-sm text-slate-500">Total materials</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{subjectStats.materials.length}</p>
+                  <p className="text-sm text-slate-500">Code and Section</p>
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {selectedSubject.code || "No code"} • {selectedSubject.className} / {selectedSubject.section}
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <p className="text-sm text-slate-500">Assignments</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-900">{subjectStats.assignments.length}</p>
+                  <p className="text-sm text-slate-500">Published Materials</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{selectedMaterials.length}</p>
                 </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 ring-1 ring-slate-200">
+                {isOverviewLoading ? "Loading assigned courses..." : "No assigned courses were found for this faculty account."}
               </div>
             )}
           </div>
@@ -310,38 +407,23 @@ const FacultyMaterials = function () {
                 <FiCheckCircle className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-slate-900">Recent Faculty Uploads</p>
-                <p className="text-sm text-slate-500">Visible immediately inside the student subject module page.</p>
+                <p className="text-lg font-semibold text-slate-900">Recent Course Materials</p>
+                <p className="text-sm text-slate-500">Backend-backed materials used by the assessment builder.</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
-              {uploadedMaterials.length === 0 ? (
+              {selectedMaterials.length === 0 ? (
                 <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 ring-1 ring-slate-200">
-                  No faculty uploads for this subject yet.
+                  No materials published for this course yet.
                 </div>
               ) : (
-                uploadedMaterials.map((material) => (
-                  <div key={material.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900">{material.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {material.week}
-                          {material.chapterTitle ? ` • ${material.chapterTitle}` : ""}
-                          {material.fileName ? ` • ${material.fileName}` : ""}
-                        </p>
-                      </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${materialTypeStyles[material.type]}`}>
-                        {material.type}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm text-slate-600">{material.description}</p>
-                    <div className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-slate-500">
-                      <FiDownload className="h-3.5 w-3.5" />
-                      Uploaded {material.uploadedAt}
-                    </div>
-                  </div>
+                selectedMaterials.map((material) => (
+                  <MaterialCard
+                    key={material.id}
+                    material={material}
+                    badgeClass={materialTypeStyles[material.type] || "bg-slate-100 text-slate-700"}
+                  />
                 ))
               )}
             </div>
@@ -353,17 +435,80 @@ const FacultyMaterials = function () {
                 <FiFileText className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-slate-900">How It Reflects On Student Side</p>
+                <p className="text-lg font-semibold text-slate-900">Assessment Flow</p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Students will see uploaded files inside the subject page under the selected week. If
-                  a chapter is chosen here, the material also carries that chapter context in the
-                  student material card.
+                  Faculty can now upload course materials here, select them in Step 3 of the assessment builder, generate grounded questions, or jump to manual question authoring when needed.
                 </p>
               </div>
             </div>
           </div>
         </div>
       </section>
+    </div>
+  );
+};
+
+const MaterialCard = function ({
+  material,
+  badgeClass,
+}: {
+  material: StudyMaterial;
+  badgeClass: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-slate-900">{material.title}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {[material.week, material.unit, material.documentName].filter(Boolean).join(" • ") || "No extra labels"}
+          </p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+          {material.type}
+        </span>
+      </div>
+
+      {material.description ? (
+        <p className="mt-3 text-sm text-slate-600">{material.description}</p>
+      ) : null}
+
+      {material.contentTextPreview ? (
+        <p className="mt-3 text-xs text-slate-500">{material.contentTextPreview}</p>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500">
+        {material.ragContextAvailable ? (
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">RAG ready</span>
+        ) : null}
+        {material.documentUrl ? (
+          <a
+            href={material.documentUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
+          >
+            Document
+            <FiExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+        {material.externalUrl ? (
+          <a
+            href={material.externalUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
+          >
+            Source URL
+            <FiExternalLink className="h-3 w-3" />
+          </a>
+        ) : null}
+        {material.imageUrls && material.imageUrls.length > 0 ? (
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
+            {material.imageUrls.length} image reference{material.imageUrls.length > 1 ? "s" : ""}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 };

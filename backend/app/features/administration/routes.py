@@ -11,6 +11,8 @@ from ...models import (
     AdministrationStaff,
     Attendance,
     ClassEnrollment,
+    CourseEnrollment,
+    CoursePayment,
     Faculty,
     FacultySubjectAssignment,
     InstituteClass,
@@ -20,12 +22,13 @@ from ...models import (
     SalarySlip,
     StaffFinancialProfile,
     Student,
-    UpcomingCourse,
+    Subject,
     User,
     UserContactProfile,
     UserStatus,
 )
 from ...schemas import (
+    AISettingsWriteRequest,
     CourseWriteRequest,
     FinancialRecordCreateRequest,
     FinancialRecordWriteRequest,
@@ -36,6 +39,7 @@ from ...schemas import (
     StudentWriteRequest,
     parse_json,
 )
+from ...services.ai_settings import get_ai_settings, update_ai_settings
 from ...services.query import get_attendance_stats, get_performance_summary
 
 
@@ -467,7 +471,13 @@ def _dashboard_payload():
     total_faculty = Faculty.query.count()
     total_staff = len(_staff_payloads())
     student_attendance = [get_attendance_stats(student.id)["percentage"] for student in Student.query.all()]
-    upcoming_events = [course.to_dict() for course in UpcomingCourse.query.order_by(UpcomingCourse.start_date.asc()).limit(5).all()]
+    upcoming_events = [
+        course.to_dict()
+        for course in Subject.query.filter(Subject.course_type != "core")
+        .order_by(Subject.start_date.asc(), Subject.id.desc())
+        .limit(5)
+        .all()
+    ]
     return {
         "totalStudents": total_students,
         "totalFaculty": total_faculty,
@@ -871,7 +881,11 @@ def delete_staff(user_id: int):
 @administration_bp.get("/courses")
 @roles_required("administration")
 def list_courses():
-    courses = UpcomingCourse.query.order_by(UpcomingCourse.start_date.desc(), UpcomingCourse.id.desc()).all()
+    courses = (
+        Subject.query.filter(Subject.course_type != "core")
+        .order_by(Subject.start_date.desc(), Subject.id.desc())
+        .all()
+    )
     return success_response([course.to_dict() for course in courses])
 
 
@@ -888,8 +902,10 @@ def create_course():
     if creator is None:
         raise ApiError(500, "USER_NOT_FOUND", "No creator user is available.")
 
-    course = UpcomingCourse(
-        title=payload.title,
+    course_code = payload.code or f"{payload.title[:4].upper()}-{institute_class.grade}-{payload.section}"
+    course = Subject(
+        name=payload.title,
+        code=course_code,
         description=payload.description,
         class_id=institute_class.id,
         start_date=payload.start_date,
@@ -899,6 +915,13 @@ def create_course():
         seats=payload.seats,
         created_by=creator.id,
         status=payload.status,
+        course_type=payload.course_type,
+        level=payload.level or institute_class.grade,
+        credits=max(payload.credits, 1),
+        fee_amount=max(float(payload.fee_amount or 0), 0),
+        installment_available=payload.installment_available,
+        max_installments=max(int(payload.max_installments or 1), 1),
+        is_active=payload.status != "inactive",
     )
     db.session.add(course)
     db.session.commit()
@@ -908,7 +931,7 @@ def create_course():
 @administration_bp.put("/courses/<int:course_id>")
 @roles_required("administration")
 def update_course(course_id: int):
-    course = db.session.get(UpcomingCourse, course_id)
+    course = db.session.get(Subject, course_id)
     if course is None:
         raise ApiError(404, "COURSE_NOT_FOUND", "Course was not found.")
     payload = parse_json(CourseWriteRequest, request.get_json())
@@ -917,7 +940,8 @@ def update_course(course_id: int):
     if payload.seats < 1:
         raise ApiError(422, "VALIDATION_ERROR", "seats must be at least 1.")
     institute_class = _find_or_create_class(payload.class_name, payload.section)
-    course.title = payload.title
+    course.name = payload.title
+    course.code = payload.code or course.code or f"{payload.title[:4].upper()}-{institute_class.grade}-{payload.section}"
     course.description = payload.description
     course.class_id = institute_class.id
     course.start_date = payload.start_date
@@ -926,6 +950,13 @@ def update_course(course_id: int):
     course.mode = payload.mode
     course.seats = payload.seats
     course.status = payload.status
+    course.course_type = payload.course_type
+    course.level = payload.level or institute_class.grade
+    course.credits = max(payload.credits, 1)
+    course.fee_amount = max(float(payload.fee_amount or 0), 0)
+    course.installment_available = payload.installment_available
+    course.max_installments = max(int(payload.max_installments or 1), 1)
+    course.is_active = payload.status != "inactive"
     db.session.commit()
     return success_response(course.to_dict())
 
@@ -933,12 +964,26 @@ def update_course(course_id: int):
 @administration_bp.delete("/courses/<int:course_id>")
 @roles_required("administration")
 def delete_course(course_id: int):
-    course = db.session.get(UpcomingCourse, course_id)
+    course = db.session.get(Subject, course_id)
     if course is None:
         raise ApiError(404, "COURSE_NOT_FOUND", "Course was not found.")
     db.session.delete(course)
     db.session.commit()
     return success_response({"success": True})
+
+
+@administration_bp.get("/ai-settings")
+@roles_required("administration")
+def get_ai_settings_configuration():
+    return success_response(get_ai_settings(include_secret=False))
+
+
+@administration_bp.put("/ai-settings")
+@roles_required("administration")
+def save_ai_settings_configuration():
+    payload = parse_json(AISettingsWriteRequest, request.get_json())
+    updated = update_ai_settings(payload.model_dump(by_alias=True))
+    return success_response(updated, message="AI settings updated successfully.")
 
 
 @administration_bp.get("/promotions/candidates")

@@ -1,23 +1,7 @@
-📋 Project Context:
+# Frontend Project Context
 
-I'm building a Coaching Institute Operation Management system with:
-- React 18 + TypeScript + Vite
-- React Router v6 (role-based routing)
-- Redux Toolkit + RTK Query
-- Tailwind CSS + CSS Variables
+This file is no longer the source of truth for repo context.
 
-Features: auth, student, faculty, parent, administration
+Use `../../CONTEXTS.md` for the current backend + frontend codebase context and keep that root file updated when architecture, routes, state wiring, API contracts, or environment conventions change.
 
-Each feature follows this structure:
-- api/ → RTK Query API slice
-- components/ → Feature-specific components
-- layout/ → Layout with sidebar (e.g., StudentLayout.tsx)
-- pages/ → Page components
-- routes/ → Route config with icon, path, element
-- store/ → Redux slice
-- types/ → TypeScript interfaces
-
-Store is in src/app/store.ts
-Routes are in src/app/routes.tsx
-
-Please follow these patterns for any code you write.
+If this file ever conflicts with `../../CONTEXTS.md`, trust `../../CONTEXTS.md` and the code.

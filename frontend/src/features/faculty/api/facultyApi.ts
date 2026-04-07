@@ -54,7 +54,10 @@ export interface ClassSchedule {
 export interface UpcomingCourse {
   id: string;
   title: string;
+  code?: string | null;
   description: string;
+  status: 'upcoming' | 'active' | 'inactive';
+  courseType?: 'core' | 'program' | 'elective' | string;
   classId?: string;
   className: string;
   section: string;
@@ -63,8 +66,30 @@ export interface UpcomingCourse {
   instructor: string;
   mode: 'Online' | 'Offline' | 'Hybrid' | string;
   seats: number;
-  createdBy: string;
-  status: 'active' | 'inactive';
+  createdBy?: string | null;
+  level?: string | null;
+  credits?: number;
+  feeAmount: number;
+  installmentAvailable: boolean;
+  maxInstallments: number;
+}
+
+export interface StudyMaterial {
+  id: string;
+  subjectId?: string;
+  courseId?: string;
+  title: string;
+  unit?: string | null;
+  week?: string | null;
+  type: string;
+  description?: string | null;
+  documentId?: string | null;
+  documentName?: string | null;
+  documentUrl?: string | null;
+  externalUrl?: string | null;
+  imageUrls?: string[];
+  contentTextPreview?: string | null;
+  ragContextAvailable?: boolean;
 }
 
 export interface AttendanceEntry {
@@ -118,14 +143,7 @@ export interface FacultyClassOverview {
     id: string;
     name: string;
     code: string;
-    materials: Array<{
-      id: string;
-      title: string;
-      unit?: string;
-      week?: string;
-      type: string;
-      description?: string;
-    }>;
+    materials: StudyMaterial[];
   }>;
 }
 
@@ -167,6 +185,8 @@ export const facultyApi = createApi({
     'Exams',
     'Marks',
     'Classes',
+    'Courses',
+    'Materials',
   ],
   endpoints: (builder) => ({
     // Faculty Profile
@@ -393,33 +413,48 @@ export const facultyApi = createApi({
     }),
 
     // Materials/Resources
-    listMaterials: builder.query<
-      { id: string; title: string; url: string; type: string }[],
-      string
-    >({
+    listMaterials: builder.query<StudyMaterial[], string>({
       query: (subjectId) => `/faculty/subjects/${subjectId}/materials`,
-      providesTags: ['Classes'],
+      providesTags: ['Classes', 'Materials'],
     }),
 
     uploadMaterial: builder.mutation<
-      { id: string; url: string },
+      StudyMaterial,
       {
         subjectId: string;
         title: string;
-        file: File;
+        type: string;
+        description?: string;
+        unit?: string;
+        week?: string;
+        sourceText?: string;
+        externalUrl?: string;
+        imageUrls?: string[];
+        file?: File | null;
       }
     >({
-      query: ({ subjectId, title, file }) => {
+      query: ({ subjectId, title, type, description, unit, week, sourceText, externalUrl, imageUrls, file }) => {
         const formData = new FormData();
         formData.append('title', title);
-        formData.append('file', file);
+        formData.append('type', type);
+        if (description) formData.append('description', description);
+        if (unit) formData.append('unit', unit);
+        if (week) formData.append('week', week);
+        if (sourceText) formData.append('sourceText', sourceText);
+        if (externalUrl) formData.append('externalUrl', externalUrl);
+        (imageUrls || []).forEach((imageUrl) => {
+          if (imageUrl.trim()) {
+            formData.append('imageUrls', imageUrl.trim());
+          }
+        });
+        if (file) formData.append('file', file);
         return {
           url: `/faculty/subjects/${subjectId}/materials`,
           method: 'POST',
           body: formData,
         };
       },
-      invalidatesTags: ['Classes'],
+      invalidatesTags: ['Classes', 'Materials'],
     }),
   }),
 });

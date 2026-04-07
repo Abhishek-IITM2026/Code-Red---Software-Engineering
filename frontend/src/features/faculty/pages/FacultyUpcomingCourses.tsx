@@ -1,4 +1,4 @@
-import { FiBookOpen, FiCalendar, FiUsers } from "react-icons/fi";
+import { FiBookOpen, FiCalendar, FiCreditCard, FiUsers } from "react-icons/fi";
 import { useGetUpcomingCoursesQuery } from "../api/facultyApi";
 
 const FacultyUpcomingCourses = function () {
@@ -25,10 +25,18 @@ const FacultyUpcomingCourses = function () {
       <section className="grid gap-5 md:grid-cols-2">
         {courses.map((course) => (
           <article key={course.id} className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="inline-flex rounded-2xl bg-[var(--primary)]/10 p-3 text-[var(--primary)]">
-              <FiBookOpen className="h-5 w-5" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="inline-flex rounded-2xl bg-[var(--primary)]/10 p-3 text-[var(--primary)]">
+                <FiBookOpen className="h-5 w-5" />
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
+                {course.status}
+              </span>
             </div>
             <h2 className="mt-5 text-2xl font-semibold text-slate-900">{course.title}</h2>
+            <p className="mt-2 text-sm text-slate-500">
+              {course.code || "Course code pending"}{course.level ? ` • Level ${course.level}` : ""}
+            </p>
             <p className="mt-3 text-sm leading-6 text-slate-600">{course.description}</p>
             <div className="mt-5 grid gap-3 text-sm text-slate-600">
               <div className="inline-flex items-center gap-2">
@@ -38,6 +46,10 @@ const FacultyUpcomingCourses = function () {
               <div className="inline-flex items-center gap-2">
                 <FiUsers className="h-4 w-4 text-slate-500" />
                 {course.className} Section {course.section} • {course.instructor} • {course.mode} • {course.seats} seats
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <FiCreditCard className="h-4 w-4 text-slate-500" />
+                Fee: Rs. {course.feeAmount.toLocaleString()} {course.installmentAvailable ? `• up to ${course.maxInstallments} installments` : "• one-time payment"}
               </div>
             </div>
           </article>

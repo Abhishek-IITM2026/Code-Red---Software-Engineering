@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiFile, FiChevronLeft, FiCheck } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { useAssessmentBuilder, type Material } from '../../context/AssessmentBuilderContext';
 import { useGetSubjectMaterialsQuery } from '../../api/assessmentApi';
 import Button from '../../../../components/common/Button';
@@ -89,7 +90,14 @@ const StepMaterials: React.FC = () => {
         <p className="text-[var(--text-secondary)]">
           Select materials to base questions on (at least one required)
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Link
+            to="/faculty/materials"
+            className="text-sm text-[var(--primary)] hover:underline"
+          >
+            Upload Materials
+          </Link>
+          <span className="text-[var(--border)]">|</span>
           <button
             onClick={handleSelectAll}
             className="text-sm text-[var(--primary)] hover:underline"
@@ -110,9 +118,17 @@ const StepMaterials: React.FC = () => {
         <div className="text-center py-8">
           <FiFile className="w-12 h-12 mx-auto text-[var(--text-secondary)] mb-3" />
           <p className="text-[var(--text-secondary)]">No materials available for this subject.</p>
-          <Button onClick={handleContinue} variant="outline" className="mt-4">
-            Continue Without Materials
-          </Button>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/faculty/materials"
+              className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] transition hover:border-[var(--primary)]"
+            >
+              Open Materials Studio
+            </Link>
+            <Button onClick={handleContinue} variant="outline">
+              Continue Without Materials
+            </Button>
+          </div>
         </div>
       ) : (
         <>
@@ -154,10 +170,25 @@ const StepMaterials: React.FC = () => {
                           {material.type}
                         </span>
                       )}
+                      {material.documentUrl && (
+                        <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-xs text-[var(--primary)]">
+                          document
+                        </span>
+                      )}
+                      {material.imageUrls && material.imageUrls.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-xs text-amber-700">
+                          image
+                        </span>
+                      )}
                     </div>
                     {material.description && (
                       <p className="mt-2 text-sm text-[var(--text-secondary)] line-clamp-2">
                         {material.description}
+                      </p>
+                    )}
+                    {material.contentTextPreview && (
+                      <p className="mt-2 text-xs text-[var(--text-secondary)] line-clamp-2">
+                        {material.contentTextPreview}
                       </p>
                     )}
                   </div>

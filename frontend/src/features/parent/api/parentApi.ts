@@ -115,6 +115,72 @@ export interface FeeInvoice {
   updatedAt: string;
 }
 
+export interface ParentCourseEnrollment {
+  id: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  parentId?: string | null;
+  paymentPlan: 'one_time' | 'installments';
+  installmentCount: number;
+  installmentAmount: number;
+  totalFee: number;
+  amountPaid: number;
+  balanceDue: number;
+  status: 'pending_payment' | 'partial' | 'paid';
+  enrolledByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ParentUpcomingCourse {
+  id: string;
+  title: string;
+  code?: string | null;
+  description: string;
+  status: 'upcoming' | 'active' | 'inactive';
+  courseType?: 'core' | 'program' | 'elective' | string;
+  classId?: string | null;
+  className: string;
+  section: string;
+  startDate: string;
+  endDate: string;
+  instructor: string;
+  mode: 'Online' | 'Offline' | 'Hybrid' | string;
+  seats: number;
+  createdBy?: string | null;
+  level?: string | null;
+  credits?: number;
+  feeAmount: number;
+  installmentAvailable: boolean;
+  maxInstallments: number;
+  enrollment?: ParentCourseEnrollment | null;
+  enrollmentStatus?: string;
+}
+
+export interface FeePayment {
+  id: string;
+  enrollmentId: string;
+  courseId: string;
+  courseTitle?: string | null;
+  studentId: string;
+  parentId?: string | null;
+  paidByUserId: string;
+  paidByName?: string;
+  amount: number;
+  paymentMethod: string;
+  installmentNumber?: number | null;
+  referenceNumber?: string | null;
+  receiptNumber: string;
+  status: string;
+  paidAt: string;
+}
+
+export interface FeePaymentResponse {
+  invoice: FeeInvoice;
+  payment: FeePayment;
+}
+
 export interface ParentChildWorkspace {
   child: ChildInfo & {
     id: string;
@@ -158,19 +224,7 @@ export interface ParentChildWorkspace {
     faculty: string;
     phone: string;
   }>;
-  upcomingCourses: Array<{
-    id: string;
-    title: string;
-    description: string;
-    className: string;
-    section: string;
-    startDate: string;
-    endDate: string;
-    instructor: string;
-    mode: 'Online' | 'Offline' | 'Hybrid' | string;
-    seats: number;
-    createdBy: string;
-  }>;
+  upcomingCourses: ParentUpcomingCourse[];
 }
 
 export const parentApi = createApi({
@@ -193,6 +247,7 @@ export const parentApi = createApi({
     'Communications',
     'Fees',
     'Preferences',
+    'Courses',
   ],
   endpoints: (builder) => ({
     // Parent Profile
@@ -240,7 +295,7 @@ export const parentApi = createApi({
 
     getChildWorkspace: builder.query<ParentChildWorkspace, string>({
       query: (studentId) => `/parent/children/${studentId}/dashboard`,
-      providesTags: ['Profile', 'Attendance', 'Performance', 'Fees', 'Communications'],
+      providesTags: ['Profile', 'Attendance', 'Performance', 'Fees', 'Communications', 'Courses'],
     }),
 
     getStudentOverview: builder.query<StudentAccess, string>({
@@ -378,15 +433,15 @@ export const parentApi = createApi({
     }),
 
     recordFeePayment: builder.mutation<
-      FeeInvoice,
-      { invoiceId: string; amountPaid: number; paymentMethod: string }
+      FeePaymentResponse,
+      { invoiceId: string; amountPaid: number; paymentMethod: string; referenceNumber?: string }
     >({
-      query: ({ invoiceId, amountPaid, paymentMethod }) => ({
+      query: ({ invoiceId, amountPaid, paymentMethod, referenceNumber }) => ({
         url: `/parent/fees/${invoiceId}/payment`,
         method: 'POST',
-        body: { amountPaid, paymentMethod },
+        body: { amountPaid, paymentMethod, referenceNumber },
       }),
-      invalidatesTags: ['Fees'],
+      invalidatesTags: ['Fees', 'Courses'],
     }),
 
     // Notification Preferences

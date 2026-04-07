@@ -14,6 +14,7 @@ type CourseForm = Omit<Course, "id" | "createdAt" | "updatedAt" | "createdBy" | 
 
 const emptyCourseForm: CourseForm = {
   title: "",
+  code: "",
   description: "",
   className: "Class 10",
   section: "A",
@@ -22,7 +23,13 @@ const emptyCourseForm: CourseForm = {
   instructor: "",
   mode: "Offline",
   seats: 30,
-  status: "active",
+  status: "upcoming",
+  courseType: "program",
+  level: "10",
+  credits: 2,
+  feeAmount: 5000,
+  installmentAvailable: true,
+  maxInstallments: 3,
 };
 
 const CourseManagement = function () {
@@ -110,6 +117,10 @@ const CourseManagement = function () {
               <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className={fieldClass} placeholder="Enter course title" />
             </div>
             <div>
+              <label className="text-sm font-medium text-slate-700">Course Code</label>
+              <input value={form.code || ""} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))} className={fieldClass} placeholder="Optional code like PRG-10-A" />
+            </div>
+            <div>
               <label className="text-sm font-medium text-slate-700">Description</label>
               <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className={`${fieldClass} min-h-28 resize-none`} placeholder="Describe course goals, coverage, and learning support" />
             </div>
@@ -155,11 +166,49 @@ const CourseManagement = function () {
               <div>
                 <label className="text-sm font-medium text-slate-700">Status</label>
                 <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as Course["status"] }))} className={fieldClass}>
+                  <option value="upcoming">Upcoming</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
             </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Course Type</label>
+                <select value={form.courseType} onChange={(event) => setForm((current) => ({ ...current, courseType: event.target.value as Course["courseType"] }))} className={fieldClass}>
+                  <option value="program">Program</option>
+                  <option value="elective">Elective</option>
+                  <option value="core">Core</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Level</label>
+                <input value={form.level || ""} onChange={(event) => setForm((current) => ({ ...current, level: event.target.value }))} className={fieldClass} placeholder="Grade or level" />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Credits</label>
+                <input type="number" min="1" value={form.credits || 1} onChange={(event) => setForm((current) => ({ ...current, credits: Number(event.target.value) || 1 }))} className={fieldClass} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Fee Amount</label>
+                <input type="number" min="0" value={form.feeAmount} onChange={(event) => setForm((current) => ({ ...current, feeAmount: Number(event.target.value) || 0 }))} className={fieldClass} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Max Installments</label>
+                <input type="number" min="1" value={form.maxInstallments} onChange={(event) => setForm((current) => ({ ...current, maxInstallments: Number(event.target.value) || 1 }))} className={fieldClass} />
+              </div>
+            </div>
+            <label className="inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.installmentAvailable}
+                onChange={(event) => setForm((current) => ({ ...current, installmentAvailable: event.target.checked }))}
+                className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
+              />
+              Allow installment payments
+            </label>
           </div>
         </div>
 
@@ -188,6 +237,9 @@ const CourseManagement = function () {
                     <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
                       {course.seats} seats
                     </span>
+                    <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase text-slate-700 ring-1 ring-slate-200">
+                      {course.status}
+                    </span>
                     <button type="button" onClick={() => void handleDeleteCourse(course)} className="inline-flex rounded-xl border border-rose-200 p-2 text-rose-600 transition hover:bg-rose-50">
                       <FiTrash2 className="h-4 w-4" />
                     </button>
@@ -197,6 +249,8 @@ const CourseManagement = function () {
                 <div className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-2">
                   <p><span className="font-medium text-slate-900">Instructor:</span> {course.instructor}</p>
                   <p><span className="font-medium text-slate-900">Dates:</span> {course.startDate} to {course.endDate}</p>
+                  <p><span className="font-medium text-slate-900">Fee:</span> Rs. {course.feeAmount.toLocaleString()}</p>
+                  <p><span className="font-medium text-slate-900">Payments:</span> {course.installmentAvailable ? `Up to ${course.maxInstallments} installments` : "One-time only"}</p>
                 </div>
                 <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm text-slate-500 ring-1 ring-slate-200">
                   <FiUsers className="h-4 w-4" />

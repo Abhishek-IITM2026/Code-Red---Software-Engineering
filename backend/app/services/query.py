@@ -17,7 +17,13 @@ def get_student_subjects(student_id: int):
         return []
 
     assignments = FacultySubjectAssignment.query.filter_by(class_id=enrollment.class_id).all()
-    return [assignment.subject.to_dict(faculty_id=assignment.faculty_id) for assignment in assignments]
+    subjects = []
+    for assignment in assignments:
+        subject = assignment.subject
+        if subject is None:
+            continue
+        subjects.append(subject.to_dict(faculty_id=assignment.faculty_id))
+    return subjects
 
 
 def get_attendance_stats(student_id: int):

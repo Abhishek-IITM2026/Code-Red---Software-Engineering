@@ -10,6 +10,10 @@ export type {
   NotificationPreference,
   Communication,
   FeeInvoice,
+  ParentUpcomingCourse,
+  ParentCourseEnrollment,
+  FeePayment,
+  FeePaymentResponse,
 } from './parentApi';
 export {
   useGetParentProfileQuery,

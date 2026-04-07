@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FiZap, FiChevronLeft, FiRefreshCw, FiCheck } from 'react-icons/fi';
 import { useAssessmentBuilder } from '../../context/AssessmentBuilderContext';
-import { useGenerateQuestionsMutation } from '../../api/assessmentApi';
+import { useGenerateQuestionsMutation, useGetAIRuntimeSettingsQuery } from '../../api/assessmentApi';
 import Button from '../../../../components/common/Button';
 
 const StepGenerate: React.FC = () => {
@@ -12,7 +12,16 @@ const StepGenerate: React.FC = () => {
     : config.className;
   
   const [generateQuestions, { isLoading }] = useGenerateQuestionsMutation();
+  const { data: aiSettings } = useGetAIRuntimeSettingsQuery();
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'generating' | 'success'>('idle');
+
+  const providerLabel = aiSettings
+    ? {
+        'grounded-rag': 'Grounded RAG',
+        'openai-compatible-cloud': 'OpenAI-Compatible Cloud',
+        'openai-compatible-local': 'OpenAI-Compatible Local',
+      }[aiSettings.provider]
+    : null;
 
   const handleBack = () => {
     goToStep('configure', 4);
@@ -39,9 +48,28 @@ const StepGenerate: React.FC = () => {
       setGenerationStatus('success');
     } catch (err) {
       console.error('Failed to generate questions:', err);
-      setError('Failed to generate questions. Please try again.');
+      const apiMessage =
+        typeof err === 'object' && err && 'data' in err
+          ? (err as { data?: { error?: { message?: string } } }).data?.error?.message
+          : null;
+      setError(apiMessage || 'Failed to generate questions. Please try again.');
       setGenerationStatus('idle');
     }
+  };
+
+  const handleStartManual = () => {
+    if (config.questions.length === 0) {
+      setQuestions([
+        {
+          id: `manual-${Date.now()}`,
+          questionText: '',
+          questionType: 'short',
+          marks: Math.max(1, Math.round(config.totalMarks / Math.max(config.questionCount || 1, 1))),
+          difficulty: config.difficultyLevel === 'mixed' ? 'medium' : config.difficultyLevel,
+        },
+      ]);
+    }
+    goToStep('modify', 6);
   };
 
   const handleContinue = () => {
@@ -94,6 +122,16 @@ const StepGenerate: React.FC = () => {
           <div>
             <span className="font-medium">Materials:</span> {config.selectedMaterials.length} selected
           </div>
+          {aiSettings ? (
+            <>
+              <div>
+                <span className="font-medium">Active Engine:</span> {providerLabel} / {aiSettings.model}
+              </div>
+              <div>
+                <span className="font-medium">Rate Limit:</span> {aiSettings.generationRateLimit}
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -107,19 +145,24 @@ const StepGenerate: React.FC = () => {
           <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
             Click the button below to generate AI-powered questions based on the selected materials and configuration.
           </p>
-          <Button onClick={handleGenerate} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FiZap className="w-4 h-4 mr-2" />
-                Generate Questions
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={handleGenerate} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <FiRefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FiZap className="w-4 h-4 mr-2" />
+                  Generate Questions
+                </>
+              )}
+            </Button>
+            <Button onClick={handleStartManual} variant="outline">
+              Start Manually
+            </Button>
+          </div>
         </div>
       )}
 
@@ -167,6 +210,18 @@ const StepGenerate: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[var(--text)]">{question.questionText}</p>
+                    {question.imageUrls && question.imageUrls.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {question.imageUrls.map((imageUrl) => (
+                          <img
+                            key={imageUrl}
+                            src={imageUrl}
+                            alt="Question reference"
+                            className="h-24 w-24 rounded-lg object-cover ring-1 ring-[var(--border)]"
+                          />
+                        ))}
+                      </div>
+                    )}
                     {question.options && question.options.length > 0 && (
                       <ul className="mt-2 space-y-1">
                         {question.options.map((opt, i) => (
@@ -176,6 +231,11 @@ const StepGenerate: React.FC = () => {
                         ))}
                       </ul>
                     )}
+                    {question.contextSnippet ? (
+                      <p className="mt-3 text-xs text-[var(--text-secondary)]">
+                        Grounded in: {question.contextSnippet}
+                      </p>
+                    ) : null}
                   </div>
                   <span className="text-sm font-semibold text-[var(--text)]">
                     {question.marks} marks
@@ -186,9 +246,14 @@ const StepGenerate: React.FC = () => {
           </div>
 
           <div className="flex justify-end pt-4 border-t border-[var(--border)]">
-            <Button onClick={handleContinue}>
-              Continue to Modify
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={handleStartManual} variant="outline">
+                Add Questions Manually
+              </Button>
+              <Button onClick={handleContinue}>
+                Continue to Modify
+              </Button>
+            </div>
           </div>
         </div>
       )}

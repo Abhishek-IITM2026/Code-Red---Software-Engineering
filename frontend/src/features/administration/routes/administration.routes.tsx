@@ -1,4 +1,5 @@
 import AdministrationDashboard from "../pages/AdministrationDashboard";
+import AISettings from "../pages/AISettings";
 import AuthorityManagement from "../pages/AuthorityManagement";
 import CourseManagement from "../pages/CourseManagement";
 import FinancialRecords from "../pages/FinancialRecords";
@@ -24,6 +25,7 @@ import {
   FiBookOpen,
   FiCheckSquare,
   FiClock,
+  FiCpu,
   FiCreditCard,
   FiDollarSign,
   FiFileText,
@@ -67,6 +69,13 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <CourseManagement />,
     icon: FiBookOpen,
     description: "Create upcoming courses for students"
+  },
+  {
+    name: "AI Settings",
+    path: "/administration/ai-settings",
+    element: <AISettings />,
+    icon: FiCpu,
+    description: "Manage assessment AI provider, model, and rate controls"
   },
   {
     name: "Student Records",

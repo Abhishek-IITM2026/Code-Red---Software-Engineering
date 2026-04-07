@@ -1,11 +1,14 @@
+import json
+
 from flask import Blueprint, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import ClassEnrollment, Faculty, FacultySubjectAssignment, Mark, Material, Student, Subject, UpcomingCourse
+from ...models import ClassEnrollment, Faculty, FacultySubjectAssignment, Mark, Material, Student, Subject
 from ...schemas import MaterialCreateRequest, parse_json
+from ...services.materials import create_material_with_source, list_subject_materials, serialize_material
 from ...services.query import get_attendance_stats
 
 
@@ -46,21 +49,26 @@ def faculty_classes_overview():
     classes: dict[int, dict] = {}
 
     for assignment in assignments:
+        subject = assignment.subject or db.session.get(Subject, assignment.subject_id)
+        institute_class = assignment.institute_class
+        if subject is None or institute_class is None:
+            continue
+
         class_id = assignment.class_id
         class_entry = classes.setdefault(
             class_id,
             {
                 "id": str(class_id),
-                "name": assignment.institute_class.name,
-                "section": assignment.institute_class.section,
-                "studentCount": len(assignment.institute_class.enrollments),
+                "name": institute_class.name,
+                "section": institute_class.section,
+                "studentCount": len(institute_class.enrollments),
                 "subjects": [],
             },
         )
 
-        subject_payload = assignment.subject.to_dict()
+        subject_payload = subject.to_dict()
         materials = Material.query.filter_by(subject_id=assignment.subject_id).all()
-        subject_payload["materials"] = [material.to_dict() for material in materials]
+        subject_payload["materials"] = [serialize_material(material) for material in materials]
         class_entry["subjects"].append(subject_payload)
 
     return success_response(list(classes.values()))
@@ -70,10 +78,12 @@ def faculty_classes_overview():
 @roles_required("faculty", "administration")
 def class_subjects(class_id: int):
     assignments = FacultySubjectAssignment.query.filter_by(class_id=class_id).all()
-    return success_response([assignment.subject.to_dict() for assignment in assignments])
-
-
-@faculty_bp.get("/subjects/<int:subject_id>/materials")
+    subjects = []
+    for assignment in assignments:
+        subject = assignment.subject or db.session.get(Subject, assignment.subject_id)
+        if subject is not None:
+            subjects.append(subject.to_dict())
+    return success_response(subjects)
 
 
 @faculty_bp.get("/upcoming-courses")
@@ -88,22 +98,24 @@ def get_faculty_upcoming_courses():
         return success_response([])
 
     courses = (
-        UpcomingCourse.query.filter(
-            UpcomingCourse.class_id.in_(assigned_class_ids),
-            UpcomingCourse.status == "active",
+        Subject.query.filter(
+            Subject.class_id.in_(assigned_class_ids),
+            Subject.course_type != "core",
+            Subject.status.in_(["upcoming", "active"]),
         )
-        .order_by(UpcomingCourse.start_date.asc())
+        .order_by(Subject.start_date.asc(), Subject.id.desc())
         .all()
     )
     return success_response([course.to_dict() for course in courses])
 
 
+@faculty_bp.get("/subjects/<int:subject_id>/materials")
 @roles_required("faculty", "administration")
 def subject_materials(subject_id: int):
-    materials = Material.query.filter_by(subject_id=subject_id).all()
-    if not materials:
-        raise ApiError(404, "MATERIALS_NOT_FOUND", "No materials found for the selected subject.")
-    return success_response([material.to_dict() for material in materials])
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+    return success_response(list_subject_materials(subject_id))
 
 
 @faculty_bp.post("/subjects/<int:subject_id>/materials")
@@ -112,18 +124,22 @@ def publish_subject_material(subject_id: int):
     subject = db.session.get(Subject, subject_id)
     if subject is None:
         raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
-    payload = parse_json(MaterialCreateRequest, request.get_json())
-    material = Material(
-        subject_id=subject_id,
+    payload = _parse_material_create_request()
+    material = create_material_with_source(
+        subject=subject,
+        actor=g.current_user,
         title=payload.title,
         unit=payload.unit,
         week=payload.week,
         material_type=payload.material_type,
         description=payload.description,
+        source_text=payload.source_text,
+        external_url=payload.external_url,
+        image_urls=payload.image_urls,
+        document_id=payload.document_id,
+        uploaded_file=request.files.get("file"),
     )
-    db.session.add(material)
-    db.session.commit()
-    return success_response(material.to_dict(), status_code=201)
+    return success_response(serialize_material(material), status_code=201)
 
 
 @faculty_bp.get("/performance/students")
@@ -168,3 +184,19 @@ def faculty_student_performance():
         )
 
     return success_response(students)
+
+
+def _parse_material_create_request() -> MaterialCreateRequest:
+    if request.files:
+        payload = request.form.to_dict(flat=True)
+        image_urls = request.form.getlist("imageUrls")
+        if image_urls:
+            payload["imageUrls"] = image_urls
+        elif payload.get("imageUrls"):
+            try:
+                payload["imageUrls"] = json.loads(payload["imageUrls"])
+            except json.JSONDecodeError:
+                payload["imageUrls"] = [payload["imageUrls"]]
+        return parse_json(MaterialCreateRequest, payload)
+
+    return parse_json(MaterialCreateRequest, request.get_json())

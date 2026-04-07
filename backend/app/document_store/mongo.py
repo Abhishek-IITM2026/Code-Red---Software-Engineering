@@ -34,6 +34,18 @@ class InMemoryDocumentStore:
             return None
         return self._collection(collection).get(document_id)
 
+    def find_many(self, collection: str, filters: dict[str, Any] | None = None, *, limit: int | None = None) -> list[dict[str, Any]]:
+        items = list(self._collection(collection).values())
+        if filters:
+            items = [
+                item
+                for item in items
+                if all(item.get(key) == value for key, value in filters.items())
+            ]
+        if limit is not None:
+            return items[:limit]
+        return items
+
     def update_one(self, collection: str, document_id: str, payload: dict[str, Any]) -> str:
         self._collection(collection)[document_id] = {"_id": document_id, **payload}
         return document_id
@@ -70,6 +82,15 @@ class MongoDocumentStore:
         document["_id"] = str(document["_id"])
         return document
 
+    def find_many(self, collection: str, filters: dict[str, Any] | None = None, *, limit: int | None = None) -> list[dict[str, Any]]:
+        cursor = self.database[collection].find(filters or {})
+        if limit is not None:
+            cursor = cursor.limit(limit)
+        documents = list(cursor)
+        for document in documents:
+            document["_id"] = str(document["_id"])
+        return documents
+
     def update_one(self, collection: str, document_id: str, payload: dict[str, Any]) -> str:
         self.database[collection].update_one({"_id": self._normalize_id(document_id)}, {"$set": payload}, upsert=True)
         return document_id
@@ -98,6 +119,9 @@ class ResilientDocumentStore:
 
     def find_one(self, collection: str, document_id: str | None) -> dict[str, Any] | None:
         return self._call("find_one", collection, document_id)
+
+    def find_many(self, collection: str, filters: dict[str, Any] | None = None, *, limit: int | None = None) -> list[dict[str, Any]]:
+        return self._call("find_many", collection, filters, limit=limit)
 
     def update_one(self, collection: str, document_id: str, payload: dict[str, Any]) -> str:
         return self._call("update_one", collection, document_id, payload)

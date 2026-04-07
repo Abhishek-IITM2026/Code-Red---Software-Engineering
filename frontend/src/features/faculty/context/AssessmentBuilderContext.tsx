@@ -20,6 +20,13 @@ export interface Material {
   week?: string;
   type: string;
   description?: string;
+  documentId?: string | null;
+  documentName?: string | null;
+  documentUrl?: string | null;
+  externalUrl?: string | null;
+  imageUrls?: string[];
+  contentTextPreview?: string | null;
+  ragContextAvailable?: boolean;
 }
 
 export interface Question {
@@ -30,6 +37,10 @@ export interface Question {
   correctAnswer?: string | string[];
   marks: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  imageUrls?: string[];
+  contextSnippet?: string;
+  sourceMaterialIds?: string[];
+  sourceMaterialTitles?: string[];
 }
 
 export interface AssessmentConfig {

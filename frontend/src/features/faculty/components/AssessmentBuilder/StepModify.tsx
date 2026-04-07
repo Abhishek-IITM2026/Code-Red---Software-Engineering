@@ -293,7 +293,26 @@ const StepModify: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[var(--text)]">{question.questionText}</p>
+                  <div className="space-y-3">
+                    <p className="text-[var(--text)]">{question.questionText}</p>
+                    {question.imageUrls && question.imageUrls.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {question.imageUrls.map((imageUrl) => (
+                          <img
+                            key={imageUrl}
+                            src={imageUrl}
+                            alt="Question reference"
+                            className="h-20 w-20 rounded-lg object-cover ring-1 ring-[var(--border)]"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {question.contextSnippet ? (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Grounded in: {question.contextSnippet}
+                      </p>
+                    ) : null}
+                  </div>
                 )}
               </div>
             </div>

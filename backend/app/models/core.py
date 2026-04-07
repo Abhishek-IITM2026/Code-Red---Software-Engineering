@@ -192,12 +192,17 @@ class Faculty(db.Model):
     user = db.relationship("User", back_populates="faculty")
 
     def to_dict(self):
+        subject_names = []
+        for assignment in self.subject_assignments:
+            subject = assignment.subject or db.session.get(Subject, assignment.subject_id)
+            if subject is not None:
+                subject_names.append(subject.name)
         return {
             "id": str(self.id),
             "firstName": self.user.first_name,
             "lastName": self.user.last_name,
             "email": self.user.email,
-            "subjects": [assignment.subject.name for assignment in self.subject_assignments],
+            "subjects": subject_names,
         }
 
 
@@ -295,22 +300,188 @@ class ClassEnrollment(db.Model):
 
 
 class Subject(db.Model):
-    __tablename__ = "subjects"
+    __tablename__ = "courses"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     code = db.Column(db.String(20), unique=True)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey("classes.id"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), nullable=False, default="active")
+    course_type = db.Column(db.String(30), nullable=False, default="core")
+    level = db.Column(db.String(50))
+    credits = db.Column(db.Integer, nullable=False, default=1)
+    fee_amount = db.Column(db.Float, nullable=False, default=0)
+    installment_available = db.Column(db.Boolean, nullable=False, default=False)
+    max_installments = db.Column(db.Integer, nullable=False, default=1)
+    start_date = db.Column(db.String(30))
+    end_date = db.Column(db.String(30))
+    instructor = db.Column(db.String(200))
+    mode = db.Column(db.String(30), nullable=False, default="Offline")
+    seats = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     def to_dict(self, faculty_id: int | None = None):
-        payload = {"id": str(self.id), "name": self.name, "code": self.code}
+        class_name = self.institute_class.name if self.institute_class else None
+        section = self.institute_class.section if self.institute_class else ""
+        creator_name = None
+        if self.creator is not None:
+            creator_name = f"{self.creator.first_name} {self.creator.last_name}".strip()
+
+        payload = {
+            "id": str(self.id),
+            "name": self.name,
+            "title": self.name,
+            "code": self.code,
+            "description": self.description,
+            "status": self.status,
+            "courseType": self.course_type,
+            "classId": str(self.class_id) if self.class_id is not None else None,
+            "className": class_name,
+            "section": section,
+            "level": self.level,
+            "credits": self.credits,
+            "feeAmount": self.fee_amount,
+            "installmentAvailable": self.installment_available,
+            "maxInstallments": self.max_installments,
+            "startDate": self.start_date,
+            "endDate": self.end_date,
+            "instructor": self.instructor,
+            "mode": self.mode,
+            "seats": self.seats,
+            "createdBy": creator_name,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+            "updatedAt": self.updated_at.isoformat() if self.updated_at else None,
+        }
         if faculty_id is not None:
             payload["teacherId"] = str(faculty_id)
             payload["facultyId"] = str(faculty_id)
-            payload["credits"] = 1
         return payload
+
+    institute_class = db.relationship("InstituteClass")
+    creator = db.relationship("User")
+
+
+class CourseEnrollment(db.Model):
+    __tablename__ = "course_enrollments"
+    __table_args__ = (
+        db.UniqueConstraint("course_id", "student_id", name="uq_course_enrollment_course_student"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("parents.id"))
+    payment_plan = db.Column(db.String(20), nullable=False, default="one_time")
+    installment_count = db.Column(db.Integer, nullable=False, default=1)
+    total_fee = db.Column(db.Float, nullable=False, default=0)
+    amount_paid = db.Column(db.Float, nullable=False, default=0)
+    status = db.Column(db.String(20), nullable=False, default="pending_payment")
+    enrolled_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    course = db.relationship("Subject")
+    student = db.relationship("Student")
+    parent = db.relationship("Parent")
+    enrolled_by = db.relationship("User")
+
+    @property
+    def balance_due(self) -> float:
+        return round(max(float(self.total_fee or 0) - float(self.amount_paid or 0), 0), 2)
+
+    @property
+    def installment_amount(self) -> float:
+        count = max(int(self.installment_count or 1), 1)
+        return round(float(self.total_fee or 0) / count, 2)
+
+    def sync_status(self) -> None:
+        if self.amount_paid <= 0:
+            self.status = "pending_payment"
+        elif self.balance_due <= 0:
+            self.status = "paid"
+        else:
+            self.status = "partial"
+
+    def to_dict(self):
+        student_name = ""
+        if self.student and self.student.user:
+            student_name = f"{self.student.user.first_name} {self.student.user.last_name}".strip()
+
+        return {
+            "id": str(self.id),
+            "courseId": str(self.course_id),
+            "course": self.course.to_dict() if self.course is not None else None,
+            "studentId": str(self.student_id),
+            "studentName": student_name,
+            "parentId": str(self.parent_id) if self.parent_id is not None else None,
+            "paymentPlan": self.payment_plan,
+            "installmentCount": self.installment_count,
+            "installmentAmount": self.installment_amount,
+            "totalFee": self.total_fee,
+            "amountPaid": self.amount_paid,
+            "balanceDue": self.balance_due,
+            "status": self.status,
+            "enrolledByUserId": str(self.enrolled_by_user_id),
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
+class CoursePayment(db.Model):
+    __tablename__ = "course_payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    enrollment_id = db.Column(db.Integer, db.ForeignKey("course_enrollments.id"), nullable=False, index=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False, index=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("parents.id"))
+    paid_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    amount = db.Column(db.Float, nullable=False, default=0)
+    payment_method = db.Column(db.String(50), nullable=False, default="online")
+    installment_number = db.Column(db.Integer)
+    reference_number = db.Column(db.String(100))
+    receipt_number = db.Column(db.String(100), nullable=False, unique=True)
+    status = db.Column(db.String(20), nullable=False, default="completed")
+    paid_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    enrollment = db.relationship("CourseEnrollment", backref=db.backref("payments", lazy=True, order_by="CoursePayment.id.asc()"))
+    course = db.relationship("Subject")
+    student = db.relationship("Student")
+    parent = db.relationship("Parent")
+    paid_by = db.relationship("User")
+
+    def to_dict(self):
+        payer_name = ""
+        if self.paid_by is not None:
+            payer_name = f"{self.paid_by.first_name} {self.paid_by.last_name}".strip()
+        course_title = self.course.name if self.course is not None else None
+        return {
+            "id": str(self.id),
+            "enrollmentId": str(self.enrollment_id),
+            "courseId": str(self.course_id),
+            "courseTitle": course_title,
+            "studentId": str(self.student_id),
+            "parentId": str(self.parent_id) if self.parent_id is not None else None,
+            "paidByUserId": str(self.paid_by_user_id),
+            "paidByName": payer_name,
+            "amount": self.amount,
+            "paymentMethod": self.payment_method,
+            "installmentNumber": self.installment_number,
+            "referenceNumber": self.reference_number,
+            "receiptNumber": self.receipt_number,
+            "status": self.status,
+            "paidAt": self.paid_at.isoformat(),
+            "createdAt": self.created_at.isoformat(),
+        }
+
+
+Course = Subject
+UpcomingCourse = Subject
 
 
 class FacultySubjectAssignment(db.Model):
@@ -318,7 +489,7 @@ class FacultySubjectAssignment(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
     academic_year = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
@@ -334,7 +505,7 @@ class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     attendance_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)
     marked_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -350,6 +521,7 @@ class Attendance(db.Model):
             "id": str(self.id),
             "studentId": str(self.student_id),
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "date": self.attendance_date.isoformat(),
             "status": self.status.lower(),
             "markedBy": str(self.marked_by),
@@ -363,7 +535,7 @@ class Mark(db.Model):
     examination_name = db.Column(db.String(200), nullable=False)
     exam_type = db.Column(db.String(50), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     marks_obtained = db.Column(db.Float, nullable=False)
     total_marks = db.Column(db.Float, nullable=False)
     entered_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -378,7 +550,9 @@ class Mark(db.Model):
             "id": str(self.id),
             "studentId": str(self.student_id),
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "subject": subject.name if subject else None,
+            "courseTitle": subject.name if subject else None,
             "examType": self.exam_type,
             "marks": self.marks_obtained,
             "totalMarks": self.total_marks,
@@ -391,7 +565,7 @@ class Schedule(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
     day_of_week = db.Column(db.Integer, nullable=False)
     start_time = db.Column(db.String(10), nullable=False)
@@ -431,6 +605,7 @@ class Schedule(db.Model):
             },
             "subject": subject_name,
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "facultyId": str(self.faculty_id),
             "facultyName": faculty_name,
             "roomNumber": self.room_number,
@@ -446,7 +621,7 @@ class Material(db.Model):
     __tablename__ = "materials"
 
     id = db.Column(db.Integer, primary_key=True)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     unit = db.Column(db.String(50))
     week = db.Column(db.String(50))
@@ -459,6 +634,7 @@ class Material(db.Model):
         return {
             "id": str(self.id),
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "title": self.title,
             "unit": self.unit,
             "week": self.week,
@@ -474,7 +650,7 @@ class Assessment(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     due_date = db.Column(db.String(30))
     total_marks = db.Column(db.Integer, nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -494,6 +670,7 @@ class Assessment(db.Model):
             "description": self.description,
             "classId": str(self.class_id),
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "questions": self.questions_json if questions is None else questions,
             "totalMarks": self.total_marks,
             "createdBy": str(self.created_by),
@@ -503,58 +680,11 @@ class Assessment(db.Model):
             "questionsDocumentId": self.questions_document_id,
         }
 
-
-class UpcomingCourse(db.Model):
-    __tablename__ = "upcoming_courses"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
-    start_date = db.Column(db.String(30), nullable=False)
-    end_date = db.Column(db.String(30), nullable=False)
-    instructor = db.Column(db.String(200), nullable=False)
-    mode = db.Column(db.String(30), nullable=False, default="Offline")
-    seats = db.Column(db.Integer, nullable=False, default=0)
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="active")
-    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
-
-    institute_class = db.relationship("InstituteClass")
-    creator = db.relationship("User")
-
-    def to_dict(self):
-        class_name = self.institute_class.name if self.institute_class else None
-        section = self.institute_class.section if self.institute_class else ""
-        creator_name = "Administration"
-        if self.creator is not None:
-            creator_name = f"{self.creator.first_name} {self.creator.last_name}".strip()
-
-        return {
-            "id": str(self.id),
-            "title": self.title,
-            "description": self.description,
-            "classId": str(self.class_id),
-            "className": class_name,
-            "section": section,
-            "startDate": self.start_date,
-            "endDate": self.end_date,
-            "instructor": self.instructor,
-            "mode": self.mode,
-            "seats": self.seats,
-            "createdBy": creator_name,
-            "status": self.status,
-            "createdAt": self.created_at.isoformat(),
-            "updatedAt": self.updated_at.isoformat(),
-        }
-
-
 class Assignment(db.Model):
     __tablename__ = "assignments"
 
     id = db.Column(db.Integer, primary_key=True)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     due_date = db.Column(db.String(30), nullable=False)
@@ -567,6 +697,7 @@ class Assignment(db.Model):
         return {
             "id": str(self.id),
             "subjectId": str(self.subject_id),
+            "courseId": str(self.subject_id),
             "title": self.title,
             "description": self.description,
             "dueDate": self.due_date,

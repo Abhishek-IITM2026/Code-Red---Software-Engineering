@@ -21,6 +21,10 @@ class QuestionPayload(StrictModel):
     correct_answer: str | None = Field(default=None, alias="correctAnswer")
     marks: int
     difficulty: str = "medium"
+    image_urls: list[str] | None = Field(default=None, alias="imageUrls")
+    context_snippet: str | None = Field(default=None, alias="contextSnippet")
+    source_material_ids: list[str] | None = Field(default=None, alias="sourceMaterialIds")
+    source_material_titles: list[str] | None = Field(default=None, alias="sourceMaterialTitles")
 
 
 class ModifyQuestionsRequest(StrictModel):

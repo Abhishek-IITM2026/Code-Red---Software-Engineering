@@ -1,47 +1,109 @@
 import { useEffect, useState } from "react";
-import { FiCreditCard, FiDollarSign, FiSearch } from "react-icons/fi";
+import { FiCreditCard, FiDollarSign, FiDownload, FiSearch } from "react-icons/fi";
 import { Search } from "../../../components/common";
 import ChildSelector from "../components/ChildSelector";
+import {
+  useDownloadFeeInvoiceMutation,
+  useGetStudentFeeInvoicesQuery,
+  useRecordFeePaymentMutation,
+  type FeeInvoice,
+} from "../api/parentApi";
 import { useParentChildren } from "../useParentChildren";
 
+const formatCurrency = (amount: number) =>
+  `Rs. ${amount.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const statusClasses: Record<FeeInvoice["status"], string> = {
+  paid: "bg-emerald-100 text-emerald-700",
+  partially_paid: "bg-sky-100 text-sky-700",
+  pending: "bg-amber-100 text-amber-700",
+  overdue: "bg-rose-100 text-rose-700",
+};
+
+const statusLabel = (status: FeeInvoice["status"]) => status.replaceAll("_", " ");
+
 const ParentFees = function () {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, feeTransactions, isLoading } = useParentChildren();
-  const [filteredTransactions, setFilteredTransactions] = useState(feeTransactions);
-  const pendingFee = filteredTransactions.find((item) => item.status === "Pending");
+  const { children, selectedChild, selectedChildId, setSelectedChildId, isLoading } = useParentChildren();
+  const { data: invoices = [], isLoading: isInvoicesLoading } = useGetStudentFeeInvoicesQuery(selectedChildId, {
+    skip: !selectedChildId,
+  });
+  const [recordFeePayment, { isLoading: isPaying }] = useRecordFeePaymentMutation();
+  const [downloadFeeInvoice, { isLoading: isDownloading }] = useDownloadFeeInvoiceMutation();
+  const [filteredInvoices, setFilteredInvoices] = useState<FeeInvoice[]>([]);
+  const pendingInvoice = invoices.find((item) => item.pendingAmount > 0) || null;
+  const totalPaid = invoices.reduce((sum, item) => sum + item.paidAmount, 0);
+  const totalPending = invoices.reduce((sum, item) => sum + item.pendingAmount, 0);
 
   useEffect(() => {
-    setFilteredTransactions(feeTransactions);
-  }, [feeTransactions]);
+    setFilteredInvoices(invoices);
+  }, [invoices]);
+
+  const handlePayInvoice = async (invoice: FeeInvoice | null) => {
+    if (!invoice || invoice.pendingAmount <= 0) {
+      return;
+    }
+
+    try {
+      const response = await recordFeePayment({
+        invoiceId: invoice.id,
+        amountPaid: invoice.pendingAmount,
+        paymentMethod: "online",
+      }).unwrap();
+      window.alert(`Payment recorded successfully. Receipt ${response.payment.receiptNumber} was emailed to the parent.`);
+    } catch (error: any) {
+      window.alert(error?.data?.error?.message || error?.data?.message || "Unable to record this payment.");
+    }
+  };
+
+  const handleDownloadInvoice = async (invoice: FeeInvoice) => {
+    try {
+      const response = await downloadFeeInvoice({
+        invoiceId: invoice.id,
+        format: "pdf",
+      }).unwrap();
+      if (response.url) {
+        window.open(response.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      window.alert("Invoice download link is not available yet.");
+    } catch (error: any) {
+      window.alert(error?.data?.error?.message || error?.data?.message || "Unable to open this invoice.");
+    }
+  };
 
   const searchConfig = {
     fields: [
-      { key: "month", label: "Month", type: "text" as const, placeholder: "Search by month..." },
+      { key: "invoiceNumber", label: "Invoice", type: "text" as const, placeholder: "Search by invoice or course..." },
       {
         key: "status",
         label: "Status",
         type: "select" as const,
         options: [
-          { value: "Paid", label: "Paid" },
-          { value: "Pending", label: "Pending" },
-          { value: "Overdue", label: "Overdue" },
+          { value: "paid", label: "Paid" },
+          { value: "partially_paid", label: "Partially Paid" },
+          { value: "pending", label: "Pending" },
+          { value: "overdue", label: "Overdue" },
         ],
       },
     ],
-    placeholder: "Search fees...",
+    placeholder: "Search invoices...",
     showAdvancedToggle: true,
     onSearch: (values: Record<string, string> = {}) => {
-      const filtered = feeTransactions.filter((item) => {
-        const matchesMonth = !values.month || item.month.toLowerCase().includes(values.month.toLowerCase());
+      const filtered = invoices.filter((item) => {
+        const keyword = values.invoiceNumber?.trim().toLowerCase() || "";
+        const matchesKeyword =
+          !keyword ||
+          item.invoiceNumber.toLowerCase().includes(keyword) ||
+          item.description.toLowerCase().includes(keyword);
         const matchesStatus = !values.status || item.status === values.status;
-        return matchesMonth && matchesStatus;
+        return matchesKeyword && matchesStatus;
       });
-      setFilteredTransactions(filtered);
+      setFilteredInvoices(filtered);
     },
   };
-
-  const totalPaid = feeTransactions
-    .filter((item) => item.status === "Paid")
-    .reduce((sum, item) => sum + Number.parseInt(item.amount.replace(/[^\d]/g, ""), 10), 0);
 
   return (
     <div className="space-y-8">
@@ -59,25 +121,27 @@ const ParentFees = function () {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
+            onClick={() => void handlePayInvoice(pendingInvoice)}
+            disabled={!pendingInvoice || isPaying}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <FiCreditCard className="h-5 w-5" />
-            Pay Fee Online
+            {pendingInvoice ? "Pay Pending Invoice" : "All Fees Settled"}
           </button>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Pending amount</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{pendingFee ? pendingFee.amount : "Rs. 0"}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{formatCurrency(totalPending)}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Current status</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{pendingFee?.status ?? "Paid"}</p>
+            <p className="mt-2 text-3xl font-bold capitalize text-slate-900">{pendingInvoice ? statusLabel(pendingInvoice.status) : "Paid"}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Total paid</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">Rs. {totalPaid.toLocaleString()}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{formatCurrency(totalPaid)}</p>
           </div>
         </div>
       </section>
@@ -98,10 +162,19 @@ const ParentFees = function () {
               <div>
                 <p className="text-lg font-semibold text-slate-900">Current Fee Status</p>
                 <p className="text-sm text-slate-500">
-                  {pendingFee ? `${pendingFee.month} payment is still pending.` : "There are no pending payments right now."}
+                  {pendingInvoice
+                    ? `${pendingInvoice.invoiceNumber} for ${pendingInvoice.description} is still awaiting payment.`
+                    : "There are no pending payments right now."}
                 </p>
               </div>
             </div>
+            {pendingInvoice ? (
+              <div className="mt-5 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+                <p><span className="font-semibold text-slate-900">Due date:</span> {pendingInvoice.dueDate}</p>
+                <p><span className="font-semibold text-slate-900">Outstanding:</span> {formatCurrency(pendingInvoice.pendingAmount)}</p>
+                <p><span className="font-semibold text-slate-900">Invoice:</span> {pendingInvoice.invoiceNumber}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -111,7 +184,7 @@ const ParentFees = function () {
               </div>
               <div>
                 <p className="text-lg font-semibold text-slate-900">Search Payments</p>
-                <p className="text-sm text-slate-500">Filter by month or payment status.</p>
+                <p className="text-sm text-slate-500">Filter by invoice, course, or payment status.</p>
               </div>
             </div>
             <Search config={searchConfig} />
@@ -120,43 +193,69 @@ const ParentFees = function () {
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
           <div className="border-b border-slate-200 px-6 py-4">
-            <p className="text-lg font-semibold text-slate-900">Payment History</p>
-            <p className="text-sm text-slate-500">All recorded fee transactions for the current academic year.</p>
+            <p className="text-lg font-semibold text-slate-900">Fee Invoices</p>
+            <p className="text-sm text-slate-500">Live enrollment invoices for {selectedChild?.name ?? "the selected student"}.</p>
           </div>
 
           <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Month</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Amount</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Invoice</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Course</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Total</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Paid</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Pending</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Date</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredTransactions.map((item) => (
-                  <tr key={item.month}>
-                    <td className="px-6 py-4 text-slate-700">{item.month}</td>
-                    <td className="px-6 py-4 text-slate-700">{item.amount}</td>
+                {filteredInvoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td className="px-6 py-4 text-slate-700">
+                      <p className="font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                      <p className="text-xs text-slate-500">Due {invoice.dueDate}</p>
+                    </td>
+                    <td className="px-6 py-4 text-slate-700">{invoice.description}</td>
+                    <td className="px-6 py-4 text-slate-700">{formatCurrency(invoice.amount)}</td>
+                    <td className="px-6 py-4 text-slate-700">{formatCurrency(invoice.paidAmount)}</td>
+                    <td className="px-6 py-4 text-slate-700">{formatCurrency(invoice.pendingAmount)}</td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        item.status === "Paid"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : item.status === "Pending"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-rose-100 text-rose-700"
-                      }`}>
-                        {item.status}
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClasses[invoice.status]}`}>
+                        {statusLabel(invoice.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">{item.date}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleDownloadInvoice(invoice)}
+                          disabled={isDownloading}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          <FiDownload className="h-4 w-4" />
+                          Download
+                        </button>
+                        {invoice.pendingAmount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => void handlePayInvoice(invoice)}
+                            disabled={isPaying}
+                            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                          >
+                            <FiCreditCard className="h-4 w-4" />
+                            Pay
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 ))}
-                {!filteredTransactions.length && !isLoading ? (
+                {!filteredInvoices.length && !isLoading && !isInvoicesLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-6 text-center text-sm text-slate-500">
-                      No fee transactions found.
+                    <td colSpan={7} className="px-6 py-6 text-center text-sm text-slate-500">
+                      No fee invoices found.
                     </td>
                   </tr>
                 ) : null}
@@ -165,26 +264,52 @@ const ParentFees = function () {
           </div>
 
           <div className="space-y-4 p-4 md:hidden">
-            {filteredTransactions.map((item) => (
-              <div key={item.month} className="rounded-2xl border border-slate-200 p-4">
+            {filteredInvoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-2xl border border-slate-200 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-semibold text-slate-900">{item.month}</p>
-                    <p className="mt-1 text-sm text-slate-500">{item.date}</p>
+                    <p className="text-lg font-semibold text-slate-900">{invoice.invoiceNumber}</p>
+                    <p className="mt-1 text-sm text-slate-500">{invoice.description}</p>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    item.status === "Paid"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : item.status === "Pending"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-rose-100 text-rose-700"
-                  }`}>
-                    {item.status}
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClasses[invoice.status]}`}>
+                    {statusLabel(invoice.status)}
                   </span>
                 </div>
-                <p className="mt-4 text-base font-semibold text-slate-900">{item.amount}</p>
+                <div className="mt-4 space-y-1 text-sm text-slate-600">
+                  <p><span className="font-semibold text-slate-900">Total:</span> {formatCurrency(invoice.amount)}</p>
+                  <p><span className="font-semibold text-slate-900">Paid:</span> {formatCurrency(invoice.paidAmount)}</p>
+                  <p><span className="font-semibold text-slate-900">Pending:</span> {formatCurrency(invoice.pendingAmount)}</p>
+                  <p><span className="font-semibold text-slate-900">Due:</span> {invoice.dueDate}</p>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadInvoice(invoice)}
+                    disabled={isDownloading}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    <FiDownload className="h-4 w-4" />
+                    Download
+                  </button>
+                  {invoice.pendingAmount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void handlePayInvoice(invoice)}
+                      disabled={isPaying}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                    >
+                      <FiCreditCard className="h-4 w-4" />
+                      Pay
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
+            {!filteredInvoices.length && !isLoading && !isInvoicesLoading ? (
+              <div className="rounded-2xl border border-slate-200 p-4 text-center text-sm text-slate-500">
+                No fee invoices found.
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

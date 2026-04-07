@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..api.errors import ApiError
 from ..extensions import db
-from ..models import Assessment, AssessmentSubmission
+from ..models import Assessment, AssessmentSubmission, Subject
+from ..rag.assessment import generate_grounded_questions
 from ..repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
+from .ai_settings import get_ai_settings
+from .materials import get_materials_for_generation
 
 
 def serialize_assessment(assessment: Assessment) -> dict[str, Any]:
@@ -100,3 +104,31 @@ def evaluate_submission(questions: list[dict[str, Any]], answers: list[dict[str,
 def serialize_assessment_submission(submission: AssessmentSubmission) -> dict[str, Any]:
     payload = AssessmentSubmissionRepository().get_submission(submission.answers_document_id, fallback={})
     return submission.to_dict(answers=payload.get("answers", []))
+
+
+def generate_assessment_questions(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    subject = db.session.get(Subject, int(payload["subjectId"]))
+    if subject is None:
+        raise ApiError(404, "COURSE_NOT_FOUND", "Course was not found for question generation.")
+
+    materials = get_materials_for_generation(
+        subject_id=subject.id,
+        selected_materials=payload.get("materials") or [],
+    )
+    if not materials:
+        raise ApiError(
+            422,
+            "MATERIALS_REQUIRED",
+            "Add at least one study material for this course before generating assessment questions.",
+        )
+
+    return generate_grounded_questions(
+        subject_name=subject.name,
+        materials=materials,
+        question_count=max(1, int(payload.get("questionCount", 1))),
+        total_marks=max(1, int(payload.get("totalMarks", 1))),
+        difficulty_level=payload.get("difficultyLevel", "medium"),
+        question_types=payload.get("questionTypes") or {},
+        custom_prompt=payload.get("customPrompt"),
+        ai_settings=get_ai_settings(include_secret=True),
+    )

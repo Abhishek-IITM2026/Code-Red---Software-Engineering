@@ -43,6 +43,21 @@ export interface AssessmentSubmission {
   answers: AssessmentSubmissionAnswer[];
 }
 
+export interface AIRuntimeSettings {
+  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local';
+  model: string;
+  baseUrl?: string | null;
+  temperature: number;
+  maxTokens: number;
+  generationRateLimit: string;
+  modificationRateLimit: string;
+  fallbackToGroundedRag: boolean;
+  notes?: string | null;
+  hasApiKey: boolean;
+  apiKeyPreview?: string | null;
+  updatedAt?: string | null;
+}
+
 type GenerateQuestionsRequest = {
   subjectId: string;
   materials: Material[];
@@ -85,6 +100,10 @@ export const assessmentApi = createApi({
     getSubjectMaterials: builder.query<Material[], string>({
       query: (subjectId) => `/faculty/subjects/${subjectId}/materials`,
       providesTags: ['Materials'],
+    }),
+
+    getAIRuntimeSettings: builder.query<AIRuntimeSettings, void>({
+      query: () => '/ai/settings',
     }),
 
     generateQuestions: builder.mutation<Question[], GenerateQuestionsRequest>({
@@ -191,6 +210,7 @@ export const {
   useGetFacultyClassesQuery,
   useGetClassSubjectsQuery,
   useGetSubjectMaterialsQuery,
+  useGetAIRuntimeSettingsQuery,
   useGenerateQuestionsMutation,
   useModifyQuestionsMutation,
   useSaveAssessmentMutation,

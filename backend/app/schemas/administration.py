@@ -1,8 +1,12 @@
+import re
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .validation import StrictModel
+
+
+RATE_LIMIT_PATTERN = re.compile(r"^\s*\d+\s+per\s+(second|minute|hour|day)s?\s*$", re.IGNORECASE)
 
 
 class MaterialCreateRequest(StrictModel):
@@ -11,6 +15,56 @@ class MaterialCreateRequest(StrictModel):
     week: str | None = None
     material_type: str = Field(alias="type")
     description: str | None = None
+    source_text: str | None = Field(default=None, alias="sourceText")
+    external_url: str | None = Field(default=None, alias="externalUrl")
+    image_urls: list[str] = Field(default_factory=list, alias="imageUrls")
+    document_id: int | None = Field(default=None, alias="documentId")
+
+
+class AISettingsWriteRequest(StrictModel):
+    provider: Literal["grounded-rag", "openai-compatible-cloud", "openai-compatible-local"] = "grounded-rag"
+    model: str = "grounded-rag-v1"
+    base_url: str | None = Field(default=None, alias="baseUrl")
+    api_key: str | None = Field(default=None, alias="apiKey")
+    clear_api_key: bool = Field(default=False, alias="clearApiKey")
+    temperature: float = 0.2
+    max_tokens: int = Field(default=1200, alias="maxTokens")
+    generation_rate_limit: str = Field(default="15 per minute", alias="generationRateLimit")
+    modification_rate_limit: str = Field(default="15 per minute", alias="modificationRateLimit")
+    fallback_to_grounded_rag: bool = Field(default=True, alias="fallbackToGroundedRag")
+    notes: str | None = None
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("model must not be empty.")
+        return normalized
+
+    @field_validator("base_url")
+    @classmethod
+    def normalize_base_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().rstrip("/")
+        return normalized or None
+
+    @field_validator("api_key")
+    @classmethod
+    def normalize_api_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+    @field_validator("generation_rate_limit", "modification_rate_limit")
+    @classmethod
+    def validate_rate_limit(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not RATE_LIMIT_PATTERN.match(normalized):
+            raise ValueError("rate limit must look like '15 per minute' or '100 per hour'.")
+        return normalized
 
 
 class AuthorityAssignmentWriteRequest(StrictModel):
@@ -62,6 +116,7 @@ class StaffStatusRequest(StrictModel):
 class CourseWriteRequest(StrictModel):
     title: str
     description: str
+    code: str | None = None
     class_name: str = Field(alias="className")
     section: str
     start_date: str = Field(alias="startDate")
@@ -69,7 +124,13 @@ class CourseWriteRequest(StrictModel):
     instructor: str
     mode: Literal["Online", "Offline", "Hybrid"]
     seats: int
-    status: Literal["active", "inactive"] = "active"
+    status: Literal["upcoming", "active", "inactive"] = "upcoming"
+    level: str | None = None
+    credits: int = 1
+    fee_amount: float = Field(default=0, alias="feeAmount")
+    installment_available: bool = Field(default=False, alias="installmentAvailable")
+    max_installments: int = Field(default=1, alias="maxInstallments")
+    course_type: Literal["core", "program", "elective"] = Field(default="program", alias="courseType")
 
 
 class FinancialRecordCreateRequest(StrictModel):

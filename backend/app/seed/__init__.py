@@ -10,6 +10,8 @@ from ..models import (
     Attendance,
     AuthorityAssignment,
     ClassEnrollment,
+    CourseEnrollment,
+    CoursePayment,
     Faculty,
     FacultySubjectAssignment,
     InventoryItem,
@@ -26,7 +28,6 @@ from ..models import (
     Schedule,
     Student,
     Subject,
-    UpcomingCourse,
     User,
     UserContactProfile,
     user_roles,
@@ -120,6 +121,8 @@ def _reset_seeded_data():
     ordered_models = [
         AssignmentSubmission,
         AssessmentSubmission,
+        CoursePayment,
+        CourseEnrollment,
         Attendance,
         Mark,
         Schedule,
@@ -130,7 +133,6 @@ def _reset_seeded_data():
         Material,
         FacultySubjectAssignment,
         ClassEnrollment,
-        UpcomingCourse,
         Parent,
         Student,
         Faculty,
@@ -332,7 +334,19 @@ def seed_database(force: bool = False):
     subjects: list[Subject] = []
     for name, code, description in SUBJECT_BLUEPRINTS:
         for grade in ("8", "9", "10", "11", "12"):
-            subjects.append(Subject(name=name, code=f"{code}-{grade}", description=description))
+            subjects.append(
+                Subject(
+                    name=name,
+                    code=f"{code}-{grade}",
+                    description=description,
+                    course_type="core",
+                    status="active",
+                    credits=1,
+                    fee_amount=0,
+                    created_by=users["admin"].id,
+                    is_active=True,
+                )
+            )
     db.session.add_all(subjects)
     db.session.flush()
 
@@ -500,10 +514,12 @@ def seed_database(force: bool = False):
             )
     db.session.add_all(submissions)
 
-    db.session.add_all(
-        [
-            UpcomingCourse(
-                title=f"{institute_class.name} {institute_class.section} Revision Program",
+    program_courses: list[Subject] = []
+    for index, institute_class in enumerate(classes):
+        program_courses.append(
+            Subject(
+                name=f"{institute_class.name} {institute_class.section} Revision Program",
+                code=f"PRG-{institute_class.grade}-{institute_class.section}",
                 description=f"Guided support program for {institute_class.name} Section {institute_class.section}.",
                 class_id=institute_class.id,
                 start_date=utc_today_plus(5 + index),
@@ -512,11 +528,67 @@ def seed_database(force: bool = False):
                 mode=["Offline", "Online", "Hybrid"][index % 3],
                 seats=30 + (index % 3) * 5,
                 created_by=users["admin"].id if index % 2 == 0 else users["director"].id,
-                status="active",
+                status="upcoming" if index % 3 == 0 else "active",
+                course_type="program",
+                level=institute_class.grade,
+                credits=2,
+                fee_amount=4000 + (index % 4) * 750,
+                installment_available=True,
+                max_installments=3,
+                is_active=True,
             )
-            for index, institute_class in enumerate(classes)
-        ]
-    )
+        )
+    db.session.add_all(program_courses)
+    db.session.flush()
+
+    program_course_by_class = {}
+    for course in program_courses:
+        program_course_by_class.setdefault(course.class_id, []).append(course)
+
+    seeded_course_enrollments: list[CourseEnrollment] = []
+    seeded_course_payments: list[CoursePayment] = []
+    for index, student in enumerate(students[:12]):
+        class_ref = classes[index % len(classes)]
+        available_courses = program_course_by_class.get(class_ref.id) or []
+        if not available_courses:
+            continue
+        course = available_courses[0]
+        enrollment = CourseEnrollment(
+            course_id=course.id,
+            student_id=student.id,
+            parent_id=Parent.query.filter_by(student_id=student.id, is_primary=True).first().id,
+            payment_plan="installments" if index % 2 == 0 else "one_time",
+            installment_count=3 if index % 2 == 0 else 1,
+            total_fee=course.fee_amount,
+            amount_paid=course.fee_amount / 3 if index % 2 == 0 else course.fee_amount,
+            enrolled_by_user_id=(Parent.query.filter_by(student_id=student.id, is_primary=True).first().user_id),
+            status="partial" if index % 2 == 0 else "paid",
+        )
+        enrollment.sync_status()
+        seeded_course_enrollments.append(enrollment)
+    db.session.add_all(seeded_course_enrollments)
+    db.session.flush()
+
+    for index, enrollment in enumerate(seeded_course_enrollments):
+        amount = round(float(enrollment.amount_paid or 0), 2)
+        if amount <= 0:
+            continue
+        seeded_course_payments.append(
+            CoursePayment(
+                enrollment_id=enrollment.id,
+                course_id=enrollment.course_id,
+                student_id=enrollment.student_id,
+                parent_id=enrollment.parent_id,
+                paid_by_user_id=enrollment.enrolled_by_user_id,
+                amount=amount,
+                payment_method="online",
+                installment_number=1,
+                reference_number=f"SEED-PAY-{index + 1:04d}",
+                receipt_number=f"RCT-SEED-{index + 1:04d}",
+                status="completed",
+            )
+        )
+    db.session.add_all(seeded_course_payments)
 
     db.session.add_all(
         [

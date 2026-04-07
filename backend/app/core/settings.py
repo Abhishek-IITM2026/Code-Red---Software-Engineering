@@ -34,10 +34,15 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str = "ciop_db"
     MONGO_ASSESSMENT_COLLECTION: str = "assessment_questions"
     MONGO_ASSESSMENT_SUBMISSION_COLLECTION: str = "assessment_submissions"
+    MONGO_MATERIAL_SOURCE_COLLECTION: str = "material_sources"
+    MONGO_AI_SETTINGS_COLLECTION: str = "ai_settings"
     USE_MONGO_MOCK: bool = False
     UPLOAD_ROOT: str = str(BACKEND_DIR / "uploads")
     UPLOAD_URL_PREFIX: str = "/uploads"
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024
+    RAG_CHUNK_SIZE: int = 700
+    RAG_CHUNK_OVERLAP: int = 120
+    RAG_MAX_CONTEXT_CHUNKS: int = 6
 
     EMAIL_ENABLED: bool = False
     EMAIL_FROM_ADDRESS: str = "no-reply@ciop.local"

@@ -58,6 +58,7 @@ export type StaffWritePayload = Omit<
 export interface Course {
   id: string;
   title: string;
+  code?: string | null;
   description: string;
   classId?: string;
   className: string;
@@ -67,11 +68,46 @@ export interface Course {
   instructor: string;
   mode: 'Online' | 'Offline' | 'Hybrid';
   seats: number;
-  createdBy: string;
-  status: 'active' | 'inactive';
+  createdBy?: string | null;
+  status: 'upcoming' | 'active' | 'inactive';
+  courseType?: 'core' | 'program' | 'elective';
+  level?: string | null;
+  credits?: number;
+  feeAmount: number;
+  installmentAvailable: boolean;
+  maxInstallments: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AISettings {
+  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local';
+  model: string;
+  baseUrl?: string | null;
+  temperature: number;
+  maxTokens: number;
+  generationRateLimit: string;
+  modificationRateLimit: string;
+  fallbackToGroundedRag: boolean;
+  notes?: string | null;
+  hasApiKey: boolean;
+  apiKeyPreview?: string | null;
+  updatedAt?: string | null;
+}
+
+export type AISettingsWritePayload = {
+  provider: AISettings['provider'];
+  model: string;
+  baseUrl?: string | null;
+  apiKey?: string | null;
+  clearApiKey?: boolean;
+  temperature: number;
+  maxTokens: number;
+  generationRateLimit: string;
+  modificationRateLimit: string;
+  fallbackToGroundedRag: boolean;
+  notes?: string | null;
+};
 
 export interface PromotionData {
   classId: string;
@@ -163,6 +199,7 @@ export const adminApi = createApi({
     'Students',
     'Staff',
     'Courses',
+    'AISettings',
     'Finance',
     'Reports',
   ],
@@ -303,6 +340,20 @@ export const adminApi = createApi({
       invalidatesTags: ['Courses'],
     }),
 
+    getAISettings: builder.query<AISettings, void>({
+      query: () => '/administration/ai-settings',
+      providesTags: ['AISettings'],
+    }),
+
+    updateAISettings: builder.mutation<AISettings, AISettingsWritePayload>({
+      query: (data) => ({
+        url: '/administration/ai-settings',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['AISettings'],
+    }),
+
     // Student Promotion
     listPromotionCandidates: builder.query<PromotionCandidate[], { targetClass?: string } | void>({
       query: (params) => {
@@ -420,6 +471,8 @@ export const {
   useCreateCourseMutation,
   useUpdateCourseMutation,
   useDeleteCourseMutation,
+  useGetAISettingsQuery,
+  useUpdateAISettingsMutation,
   usePromoteStudentsMutation,
   useListPromotionCandidatesQuery,
   usePromoteStudentMutation,

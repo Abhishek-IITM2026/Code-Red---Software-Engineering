@@ -8,6 +8,7 @@ from .config import get_config
 from .document_store import init_document_store
 from .upload_storage import init_upload_storage
 from .seed import seed_database
+from .services.courses import sync_legacy_courses_if_needed
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -27,6 +28,7 @@ def create_app(config_name: str | None = None) -> Flask:
     with app.app_context():
         if app.config.get("AUTO_CREATE_TABLES"):
             db.create_all()
+        sync_legacy_courses_if_needed()
         if app.config.get("SEED_ON_STARTUP"):
             seed_database()
 

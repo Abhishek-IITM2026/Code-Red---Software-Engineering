@@ -17,6 +17,7 @@ export interface Student {
 export interface Subject {
   id: string;
   name: string;
+  title?: string;
   code: string;
   teacherId: string;
   credits: number;
@@ -64,7 +65,11 @@ export interface Schedule {
 export interface UpcomingCourse {
   id: string;
   title: string;
+  code?: string;
   description: string;
+  status: 'upcoming' | 'active' | 'inactive';
+  courseType?: string;
+  classId?: string | null;
   className: string;
   section: string;
   startDate: string;
@@ -72,7 +77,42 @@ export interface UpcomingCourse {
   instructor: string;
   mode: string;
   seats: number;
-  createdBy: string;
+  createdBy?: string | null;
+  level?: string | null;
+  credits?: number;
+  feeAmount: number;
+  installmentAvailable: boolean;
+  maxInstallments: number;
+  enrollment?: CourseEnrollment | null;
+  enrollmentStatus?: string;
+}
+
+export interface CourseEnrollment {
+  id: string;
+  courseId: string;
+  studentId: string;
+  studentName: string;
+  paymentPlan: 'one_time' | 'installments';
+  installmentCount: number;
+  installmentAmount: number;
+  totalFee: number;
+  amountPaid: number;
+  balanceDue: number;
+  status: 'pending_payment' | 'partial' | 'paid';
+  course?: UpcomingCourse | null;
+}
+
+export interface CoursePayment {
+  id: string;
+  enrollmentId: string;
+  courseId: string;
+  courseTitle: string;
+  amount: number;
+  paymentMethod: string;
+  installmentNumber?: number;
+  receiptNumber: string;
+  status: string;
+  paidAt: string;
 }
 
 // API Slice
@@ -88,7 +128,7 @@ export const studentApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Student', 'Subjects', 'Attendance', 'Marks', 'Assignments', 'Schedule'],
+  tagTypes: ['Student', 'Subjects', 'Attendance', 'Marks', 'Assignments', 'Schedule', 'Courses', 'Payments'],
   endpoints: (builder) => ({
     // Get current student profile
     getProfile: builder.query<Student, void>({
@@ -166,6 +206,36 @@ export const studentApi = createApi({
 
     getUpcomingCourses: builder.query<UpcomingCourse[], void>({
       query: () => '/students/me/upcoming-courses',
+      providesTags: ['Courses'],
+    }),
+
+    getMyCourseEnrollments: builder.query<CourseEnrollment[], void>({
+      query: () => '/students/me/course-enrollments',
+      providesTags: ['Courses', 'Payments'],
+    }),
+
+    enrollInCourse: builder.mutation<
+      CourseEnrollment,
+      { courseId: string; paymentPlan: 'one_time' | 'installments'; installmentCount?: number }
+    >({
+      query: (body) => ({
+        url: '/students/me/course-enrollments',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Courses', 'Payments'],
+    }),
+
+    payCourseEnrollment: builder.mutation<
+      { success: boolean; payment: CoursePayment; enrollment: CourseEnrollment },
+      { enrollmentId: string; amount: number; paymentMethod: string; referenceNumber?: string }
+    >({
+      query: ({ enrollmentId, ...body }) => ({
+        url: `/students/me/course-enrollments/${enrollmentId}/payments`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Courses', 'Payments'],
     }),
   }),
 });
@@ -182,6 +252,9 @@ export const {
   useGetAttendanceStatsQuery,
   useGetPerformanceSummaryQuery,
   useGetUpcomingCoursesQuery,
+  useGetMyCourseEnrollmentsQuery,
+  useEnrollInCourseMutation,
+  usePayCourseEnrollmentMutation,
 } = studentApi;
 
 export default studentApi;

@@ -19,10 +19,12 @@ from ...schemas import (
     parse_json,
     parse_query,
 )
+from ...services.ai_settings import get_ai_rate_limit, get_ai_settings
 from ...services.assessments import (
     create_assessment_with_questions,
     delete_assessment_questions,
     evaluate_submission,
+    generate_assessment_questions,
     serialize_assessment,
     serialize_assessment_for_student,
     serialize_assessment_submission,
@@ -35,42 +37,32 @@ from ...repositories import AssessmentQuestionRepository, AssessmentSubmissionRe
 assessments_bp = Blueprint("assessments", __name__)
 
 
+def _question_generation_limit() -> str:
+    return get_ai_rate_limit("generate")
+
+
+def _question_modification_limit() -> str:
+    return get_ai_rate_limit("modify")
+
+
+@assessments_bp.get("/ai/settings")
+@roles_required("faculty", "administration")
+def get_ai_runtime_settings():
+    return success_response(get_ai_settings(include_secret=False))
+
+
 @assessments_bp.post("/ai/generate-questions")
 @roles_required("faculty", "administration")
-@limiter.limit("15 per minute")
+@limiter.limit(_question_generation_limit)
 def generate_questions():
     payload = parse_json(GenerateQuestionsRequest, request.get_json())
-    total = max(1, payload.question_count)
-    marks = max(1, payload.total_marks)
-    base_mark = max(1, marks // total)
-    material_titles = [item.get("title", "").strip() for item in payload.materials if item.get("title")]
-    question_type_plan = []
-    for question_type, count in payload.question_types.items():
-        question_type_plan.extend([question_type] * max(0, count))
-    if not question_type_plan:
-        question_type_plan = ["mcq", "short", "long", "trueFalse"]
-    questions = []
-    for index in range(total):
-        question_type = question_type_plan[index % len(question_type_plan)]
-        topic = material_titles[index % len(material_titles)] if material_titles else f"subject {payload.subject_id}"
-        prompt_suffix = f" Focus: {payload.custom_prompt.strip()}" if payload.custom_prompt else ""
-        questions.append(
-            {
-                "id": f"generated-{index + 1}",
-                "questionText": f"Generated question {index + 1} on {topic}.{prompt_suffix}",
-                "questionType": question_type,
-                "options": ["Option A", "Option B", "Option C", "Option D"] if question_type == "mcq" else None,
-                "correctAnswer": "Option A" if question_type == "mcq" else ("True" if question_type == "trueFalse" else ""),
-                "marks": base_mark,
-                "difficulty": payload.difficulty_level if payload.difficulty_level != "mixed" else "medium",
-            }
-        )
+    questions = generate_assessment_questions(payload.model_dump(by_alias=True))
     return success_response(questions)
 
 
 @assessments_bp.post("/ai/modify-questions")
 @roles_required("faculty", "administration")
-@limiter.limit("15 per minute")
+@limiter.limit(_question_modification_limit)
 def modify_questions():
     payload = parse_json(ModifyQuestionsRequest, request.get_json())
     prompt = payload.modification_prompt.strip()

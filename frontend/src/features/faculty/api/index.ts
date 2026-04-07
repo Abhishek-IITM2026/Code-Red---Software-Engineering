@@ -12,6 +12,7 @@ export type {
   Exam,
   MarksEntry,
   ClassInfo,
+  StudyMaterial,
 } from './facultyApi';
 
 export {
