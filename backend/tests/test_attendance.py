@@ -13,11 +13,11 @@ class TestAttendanceSubmit:
             BASE,
             json={
                 "date": "2026-04-05",
-                "class": "Class 9",
+                "class": 1,
                 "section": "A",
                 "records": [
-                    {"studentId": "1", "status": "present"},
-                    {"studentId": "2", "status": "absent"},
+                    {"studentId": 1, "status": "present"},
+                    {"studentId": 2, "status": "absent"},
                 ],
             },
             headers=faculty_auth_header,
@@ -29,8 +29,8 @@ class TestAttendanceSubmit:
         response = client.post(
             BASE,
             json={
-                "class": "Class 9",
-                "records": [{"studentId": "1", "status": "present"}],
+                "class": 1,
+                "records": [{"studentId": 1, "status": "present"}],
             },
             headers=faculty_auth_header,
         )
@@ -42,12 +42,12 @@ class TestAttendanceSubmit:
             BASE,
             json={
                 "date": "2026-04-05",
-                "class": "Class 9",
+                "class": 1,
                 "records": [],
             },
             headers=faculty_auth_header,
         )
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_submit_attendance_forbidden_student(self, client, student_auth_header):
         """Test submitting attendance as student is forbidden."""
@@ -55,8 +55,8 @@ class TestAttendanceSubmit:
             BASE,
             json={
                 "date": "2026-04-05",
-                "class": "Class 9",
-                "records": [{"studentId": "1", "status": "present"}],
+                "class": 1,
+                "records": [{"studentId": 1, "status": "present"}],
             },
             headers=student_auth_header,
         )
@@ -72,10 +72,10 @@ class TestAttendanceUpdate:
             BASE,
             json={
                 "date": "2026-04-05",
-                "class": "Class 9",
+                "class": 1,
                 "section": "A",
                 "records": [
-                    {"studentId": "1", "status": "late"},
+                    {"studentId": 1, "status": "late"},
                 ],
             },
             headers=faculty_auth_header,

@@ -2,6 +2,10 @@
 import pytest
 
 BASE = "/api/v1/auth"
+SEEDED_STUDENT_EMAIL = "student001@example.com"
+SEEDED_FACULTY_EMAIL = "faculty01@example.com"
+SEEDED_ADMIN_EMAIL = "dheerajkumarvishwakarma5@gmail.com"
+SEEDED_PARENT_EMAIL = "parent001@example.com"
 
 
 class TestAuthLogin:
@@ -11,31 +15,30 @@ class TestAuthLogin:
         """Test successful login with student credentials."""
         response = client.post(
             f"{BASE}/login",
-            json={"email": "student@example.com", "password": "student123"},
+            json={"email": SEEDED_STUDENT_EMAIL, "password": "student123"},
         )
         assert response.status_code == 200
         data = response.get_json()
         assert "token" in data
-        assert data["user"]["email"] == "student@example.com"
-        assert data["user"]["status"] == "ACTIVE"
-        # Expected: token string, Actual: same -> Success
+        assert data["user"]["email"] == SEEDED_STUDENT_EMAIL
+        assert data["user"]["role"] == "student"
 
     def test_login_success_faculty(self, client):
         """Test successful login with faculty credentials."""
         response = client.post(
             f"{BASE}/login",
-            json={"email": "faculty@example.com", "password": "faculty123"},
+            json={"email": SEEDED_FACULTY_EMAIL, "password": "faculty123"},
         )
         assert response.status_code == 200
         data = response.get_json()
         assert "token" in data
-        assert data["user"]["email"] == "faculty@example.com"
+        assert data["user"]["email"] == SEEDED_FACULTY_EMAIL
 
     def test_login_success_admin(self, client):
         """Test successful login with admin credentials."""
         response = client.post(
             f"{BASE}/login",
-            json={"email": "admin@example.com", "password": "admin123"},
+            json={"email": SEEDED_ADMIN_EMAIL, "password": "admin123"},
         )
         assert response.status_code == 200
         data = response.get_json()
@@ -45,7 +48,7 @@ class TestAuthLogin:
         """Test successful login with parent credentials."""
         response = client.post(
             f"{BASE}/login",
-            json={"email": "parent@example.com", "password": "parent123"},
+            json={"email": SEEDED_PARENT_EMAIL, "password": "parent123"},
         )
         assert response.status_code == 200
         data = response.get_json()
@@ -65,7 +68,7 @@ class TestAuthLogin:
         """Test login with wrong password."""
         response = client.post(
             f"{BASE}/login",
-            json={"email": "student@example.com", "password": "wrongpassword"},
+            json={"email": SEEDED_STUDENT_EMAIL, "password": "wrongpassword"},
         )
         assert response.status_code == 401
 
@@ -76,7 +79,7 @@ class TestAuthLogin:
 
     def test_login_missing_password(self, client):
         """Test login with missing password field."""
-        response = client.post(f"{BASE}/login", json={"email": "student@example.com"})
+        response = client.post(f"{BASE}/login", json={"email": SEEDED_STUDENT_EMAIL})
         assert response.status_code == 422
 
 
@@ -105,7 +108,7 @@ class TestAuthRegister:
         response = client.post(
             f"{BASE}/register",
             json={
-                "email": "student@example.com",
+                "email": SEEDED_STUDENT_EMAIL,
                 "password": "SecurePass123",
                 "firstName": "Duplicate",
                 "lastName": "User",
@@ -146,7 +149,7 @@ class TestAuthMe:
         assert response.status_code == 200
         data = response.get_json()
         assert "email" in data
-        assert data["email"] == "student@example.com"
+        assert data["email"] == SEEDED_STUDENT_EMAIL
 
     def test_me_unauthenticated(self, client):
         """Test getting current user info without authentication."""
@@ -165,8 +168,9 @@ class TestAuthMe:
 class TestAuthProfileUpdate:
     """Tests for POST /auth/profile/update"""
 
-    def test_update_profile_success(self, client, student_auth_header):
+    def test_update_profile_success(self, client, student_auth_header, verify_otp):
         """Test successful profile update."""
+        verify_otp(SEEDED_STUDENT_EMAIL, "profile_update")
         response = client.post(
             f"{BASE}/profile/update",
             json={"firstName": "Updated", "lastName": "Name", "phone": "+919876543210"},
@@ -176,8 +180,9 @@ class TestAuthProfileUpdate:
         data = response.get_json()
         assert data["success"] is True
 
-    def test_update_profile_no_change(self, client, student_auth_header):
+    def test_update_profile_no_change(self, client, student_auth_header, verify_otp):
         """Test profile update with no changes."""
+        verify_otp(SEEDED_STUDENT_EMAIL, "profile_update")
         response = client.post(
             f"{BASE}/profile/update",
             json={},
@@ -185,12 +190,22 @@ class TestAuthProfileUpdate:
         )
         assert response.status_code == 200
 
+    def test_update_profile_requires_verified_otp(self, client, student_auth_header):
+        """Test profile update without verified OTP."""
+        response = client.post(
+            f"{BASE}/profile/update",
+            json={"firstName": "Updated"},
+            headers=student_auth_header,
+        )
+        assert response.status_code == 403
+
 
 class TestAuthChangePassword:
     """Tests for POST /auth/profile/change-password"""
 
-    def test_change_password_success(self, client, student_auth_header):
+    def test_change_password_success(self, client, student_auth_header, verify_otp):
         """Test successful password change."""
+        verify_otp(SEEDED_STUDENT_EMAIL, "password_change")
         response = client.post(
             f"{BASE}/profile/change-password",
             json={
@@ -206,12 +221,13 @@ class TestAuthChangePassword:
         # Verify new password works
         login = client.post(
             f"{BASE}/login",
-            json={"email": "student@example.com", "password": "NewPass456"},
+            json={"email": SEEDED_STUDENT_EMAIL, "password": "NewPass456"},
         )
         assert login.status_code == 200
 
-    def test_change_password_mismatch(self, client, student_auth_header):
+    def test_change_password_mismatch(self, client, student_auth_header, verify_otp):
         """Test password change with mismatched confirmPassword."""
+        verify_otp(SEEDED_STUDENT_EMAIL, "password_change")
         response = client.post(
             f"{BASE}/profile/change-password",
             json={
@@ -223,8 +239,9 @@ class TestAuthChangePassword:
         )
         assert response.status_code == 400
 
-    def test_change_password_wrong_current(self, client, student_auth_header):
+    def test_change_password_wrong_current(self, client, student_auth_header, verify_otp):
         """Test password change with wrong current password."""
+        verify_otp(SEEDED_STUDENT_EMAIL, "password_change")
         response = client.post(
             f"{BASE}/profile/change-password",
             json={
@@ -235,6 +252,19 @@ class TestAuthChangePassword:
             headers=student_auth_header,
         )
         assert response.status_code == 400
+
+    def test_change_password_requires_verified_otp(self, client, student_auth_header):
+        """Test password change without verified OTP."""
+        response = client.post(
+            f"{BASE}/profile/change-password",
+            json={
+                "currentPassword": "student123",
+                "newPassword": "NewPass456",
+                "confirmPassword": "NewPass456",
+            },
+            headers=student_auth_header,
+        )
+        assert response.status_code == 403
 
 
 class TestAuthLogout:

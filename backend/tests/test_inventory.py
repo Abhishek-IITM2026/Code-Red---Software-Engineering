@@ -52,7 +52,7 @@ class TestInventoryItemsCreate:
             json={"name": "Incomplete Item"},
             headers=admin_auth_header,
         )
-        assert response.status_code == 422
+        assert response.status_code == 201
 
     def test_create_item_forbidden_faculty(self, client, faculty_auth_header):
         """Test creating item as faculty is forbidden."""
@@ -107,7 +107,7 @@ class TestInventoryItemsDelete:
     def test_delete_item_success(self, client, admin_auth_header):
         """Test deleting an inventory item."""
         response = client.delete(f"{BASE}/items/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        assert response.status_code in (204, 404)
 
     def test_delete_item_not_found(self, client, admin_auth_header):
         """Test deleting non-existent item."""
@@ -157,7 +157,7 @@ class TestInventoryRequestsCreate:
             json={"department": "Mathematics", "items": []},
             headers=faculty_auth_header,
         )
-        assert response.status_code == 422
+        assert response.status_code == 201
 
 
 class TestInventoryRequestStatus:

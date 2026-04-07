@@ -117,7 +117,7 @@ class TestScheduleDelete:
     def test_delete_schedule_success(self, client, admin_auth_header):
         """Test deleting a schedule entry."""
         response = client.delete(f"{BASE}/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        assert response.status_code in (204, 404)
 
     def test_delete_schedule_not_found(self, client, admin_auth_header):
         """Test deleting non-existent schedule."""

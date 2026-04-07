@@ -12,8 +12,10 @@ info:
     payloads are validated with Pydantic, some background work is dispatched through
     Celery using Redis, and throttled endpoints may return HTTP 429.
 servers:
-  - url: http://localhost:3000
   - url: http://localhost:3500
+    description: Local Flask API server
+  - url: http://localhost:3000
+    description: Frontend dev server proxy, if configured
 tags:
   - name: Auth
   - name: Students
@@ -37,7 +39,7 @@ paths:
     post:
       tags: [Auth]
       summary: Authenticate a user
-      description: Public login endpoint for all supported platform roles.
+      description: Public login endpoint for all supported platform roles. The input fields appear under Request body, not Parameters.
       requestBody:
         required: true
         content:
@@ -314,6 +316,7 @@ paths:
     get:
       tags: [Academics]
       summary: List classes
+      description: Requires a bearer token entered through the Authorize button. This endpoint does not accept query or path parameters.
       security:
         - bearerAuth: []
       responses:
@@ -329,6 +332,7 @@ paths:
     get:
       tags: [Academics]
       summary: List sections for a class
+      description: Requires a bearer token entered through the Authorize button. The only input is the `classId` path parameter.
       security:
         - bearerAuth: []
       parameters:

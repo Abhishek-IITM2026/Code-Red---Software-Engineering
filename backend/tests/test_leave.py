@@ -13,9 +13,10 @@ class TestLeaveApply:
             BASE,
             json={
                 "leaveType": "sick",
-                "startDate": "2026-04-15",
-                "endDate": "2026-04-17",
+                "fromDate": "2026-04-15",
+                "toDate": "2026-04-17",
                 "reason": "Medical appointment",
+                "contactNumber": "+91 9999999999",
             },
             headers=faculty_auth_header,
         )
@@ -26,8 +27,8 @@ class TestLeaveApply:
         response = client.post(
             BASE,
             json={
-                "startDate": "2026-04-15",
-                "endDate": "2026-04-17",
+                "fromDate": "2026-04-15",
+                "toDate": "2026-04-17",
             },
             headers=faculty_auth_header,
         )
@@ -39,18 +40,20 @@ class TestLeaveApply:
             BASE,
             json={
                 "leaveType": "sick",
-                "startDate": "2026-04-17",
-                "endDate": "2026-04-15",
+                "fromDate": "2026-04-17",
+                "toDate": "2026-04-15",
+                "reason": "Medical appointment",
+                "contactNumber": "+91 9999999999",
             },
             headers=faculty_auth_header,
         )
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_apply_leave_unauthenticated(self, client):
         """Test applying leave without auth."""
         response = client.post(
             BASE,
-            json={"leaveType": "sick", "startDate": "2026-04-15", "endDate": "2026-04-17"},
+            json={"leaveType": "sick", "fromDate": "2026-04-15", "toDate": "2026-04-17", "contactNumber": "+91 9999999999"},
         )
         assert response.status_code == 401
 
@@ -92,7 +95,7 @@ class TestLeaveReview:
         """Test reviewing a leave request."""
         response = client.put(
             f"{BASE}/1/review",
-            json={"status": "Approved", "adminComment": "Approved by admin"},
+            json={"status": "Approved", "reviewerComment": "Approved by admin"},
             headers=admin_auth_header,
         )
         assert response.status_code in (200, 404)
@@ -112,8 +115,21 @@ class TestLeaveCancel:
 
     def test_cancel_leave_success(self, client, faculty_auth_header):
         """Test cancelling a leave request."""
-        response = client.put(f"{BASE}/1/cancel", headers=faculty_auth_header)
-        assert response.status_code in (200, 404)
+        create_response = client.post(
+            BASE,
+            json={
+                "leaveType": "casual",
+                "fromDate": "2026-05-01",
+                "toDate": "2026-05-02",
+                "reason": "Family event",
+                "contactNumber": "+91 9999999999",
+            },
+            headers=faculty_auth_header,
+        )
+        assert create_response.status_code == 201
+        leave_id = create_response.get_json()["id"]
+        response = client.put(f"{BASE}/{leave_id}/cancel", headers=faculty_auth_header)
+        assert response.status_code == 200
 
     def test_cancel_leave_not_found(self, client, faculty_auth_header):
         """Test cancelling non-existent leave request."""
@@ -124,9 +140,9 @@ class TestLeaveCancel:
 class TestLeaveStats:
     """Tests for GET /leave/stats"""
 
-    def test_stats_success(self, client, faculty_auth_header):
+    def test_stats_success(self, client, admin_auth_header):
         """Test getting leave statistics."""
-        response = client.get(f"{BASE}/stats", headers=faculty_auth_header)
+        response = client.get(f"{BASE}/stats", headers=admin_auth_header)
         assert response.status_code == 200
         data = response.get_json()
         assert isinstance(data, dict)

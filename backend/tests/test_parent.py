@@ -36,7 +36,7 @@ class TestParentChildById:
     def test_get_child_invalid_id(self, client, parent_auth_header):
         """Test getting non-existent child."""
         response = client.get(f"{BASE}/children/99999", headers=parent_auth_header)
-        assert response.status_code == 404
+        assert response.status_code == 403
 
 
 class TestParentChildDashboard:
@@ -71,7 +71,7 @@ class TestParentChildAttendance:
     def test_attendance_invalid_child(self, client, parent_auth_header):
         """Test attendance for non-existent child."""
         response = client.get(f"{BASE}/children/99999/attendance", headers=parent_auth_header)
-        assert response.status_code == 404
+        assert response.status_code == 403
 
 
 class TestParentChildPerformance:
@@ -85,4 +85,4 @@ class TestParentChildPerformance:
     def test_performance_invalid_child(self, client, parent_auth_header):
         """Test performance for non-existent child."""
         response = client.get(f"{BASE}/children/99999/performance", headers=parent_auth_header)
-        assert response.status_code == 404
+        assert response.status_code == 403

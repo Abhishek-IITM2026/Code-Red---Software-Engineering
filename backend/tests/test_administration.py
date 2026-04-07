@@ -35,10 +35,12 @@ class TestAdminStudents:
         data = response.get_json()
         assert isinstance(data, list)
 
-    def test_get_student(self, client, admin_auth_header):
+    def test_get_student(self, client, admin_auth_header, seeded_student):
         """Test getting a single student."""
-        response = client.get(f"{BASE}/students/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        response = client.get(f"{BASE}/students/{seeded_student.id}", headers=admin_auth_header)
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["id"] == str(seeded_student.id)
 
     def test_create_student(self, client, admin_auth_header):
         """Test creating a new student."""
@@ -98,10 +100,10 @@ class TestAdminStudents:
         )
         assert response.status_code == 422
 
-    def test_update_student(self, client, admin_auth_header):
+    def test_update_student(self, client, admin_auth_header, seeded_student):
         """Test updating a student."""
         response = client.put(
-            f"{BASE}/students/1",
+            f"{BASE}/students/{seeded_student.id}",
             json={
                 "email": "updated@test.com",
                 "firstName": "Updated",
@@ -113,21 +115,23 @@ class TestAdminStudents:
             },
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404)
+        assert response.status_code == 200
 
-    def test_update_student_status(self, client, admin_auth_header):
+    def test_update_student_status(self, client, admin_auth_header, seeded_student):
         """Test updating student status."""
         response = client.patch(
-            f"{BASE}/students/1/status",
+            f"{BASE}/students/{seeded_student.id}/status",
             json={"status": "inactive"},
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404)
+        assert response.status_code == 200
+        assert response.get_json()["status"] == "inactive"
 
-    def test_delete_student(self, client, admin_auth_header):
+    def test_delete_student(self, client, admin_auth_header, seeded_student):
         """Test deleting a student."""
-        response = client.delete(f"{BASE}/students/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        response = client.delete(f"{BASE}/students/{seeded_student.id}", headers=admin_auth_header)
+        assert response.status_code == 200
+        assert response.get_json()["success"] is True
 
 
 class TestAdminStaff:
@@ -140,10 +144,11 @@ class TestAdminStaff:
         data = response.get_json()
         assert isinstance(data, list)
 
-    def test_get_staff(self, client, admin_auth_header):
+    def test_get_staff(self, client, admin_auth_header, seeded_staff_user_id):
         """Test getting a single staff member."""
-        response = client.get(f"{BASE}/staff/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        response = client.get(f"{BASE}/staff/{seeded_staff_user_id}", headers=admin_auth_header)
+        assert response.status_code == 200
+        assert response.get_json()["id"] == str(seeded_staff_user_id)
 
     def test_create_staff_teaching(self, client, admin_auth_header):
         """Test creating a teaching staff member."""
@@ -226,10 +231,10 @@ class TestAdminStaff:
         )
         assert response.status_code == 422
 
-    def test_update_staff(self, client, admin_auth_header):
+    def test_update_staff(self, client, admin_auth_header, seeded_staff_user_id):
         """Test updating a staff member."""
         response = client.put(
-            f"{BASE}/staff/1",
+            f"{BASE}/staff/{seeded_staff_user_id}",
             json={
                 "email": "staffupdate@test.com",
                 "firstName": "Updated",
@@ -243,21 +248,23 @@ class TestAdminStaff:
             },
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404)
+        assert response.status_code == 200
 
-    def test_update_staff_status(self, client, admin_auth_header):
+    def test_update_staff_status(self, client, admin_auth_header, seeded_staff_user_id):
         """Test updating staff status."""
         response = client.patch(
-            f"{BASE}/staff/1/status",
+            f"{BASE}/staff/{seeded_staff_user_id}/status",
             json={"status": "inactive"},
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404)
+        assert response.status_code == 200
+        assert response.get_json()["status"] == "inactive"
 
-    def test_delete_staff(self, client, admin_auth_header):
+    def test_delete_staff(self, client, admin_auth_header, seeded_staff_user_id):
         """Test deleting a staff member."""
-        response = client.delete(f"{BASE}/staff/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        response = client.delete(f"{BASE}/staff/{seeded_staff_user_id}", headers=admin_auth_header)
+        assert response.status_code == 200
+        assert response.get_json()["success"] is True
 
 
 class TestAdminCourses:
@@ -368,23 +375,25 @@ class TestAdminPromotions:
         data = response.get_json()
         assert isinstance(data, list)
 
-    def test_promote_single_student(self, client, admin_auth_header):
+    def test_promote_single_student(self, client, admin_auth_header, seeded_student):
         """Test promoting a single student."""
         response = client.post(
-            f"{BASE}/promotions/1",
+            f"{BASE}/promotions/{seeded_student.id}",
             json={"targetClass": "Class 10"},
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404, 409)
+        assert response.status_code in (200, 409)
 
-    def test_promote_student_already_enrolled(self, client, admin_auth_header):
+    def test_promote_student_already_enrolled(self, client, admin_auth_header, seeded_student):
         """Test promoting student already in target class."""
+        enrollment = seeded_student.current_enrollment()
+        assert enrollment is not None
         response = client.post(
-            f"{BASE}/promotions/1",
-            json={"targetClass": "Class 9"},
+            f"{BASE}/promotions/{seeded_student.id}",
+            json={"targetClass": enrollment.institute_class.name},
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 409)
+        assert response.status_code == 409
 
     def test_promote_students_bulk(self, client, admin_auth_header):
         """Test bulk student promotion."""
@@ -419,17 +428,18 @@ class TestAdminFinancialRecords:
         data = response.get_json()
         assert isinstance(data, list)
 
-    def test_get_financial_record(self, client, admin_auth_header):
+    def test_get_financial_record(self, client, admin_auth_header, seeded_staff_user_id):
         """Test getting a single financial record."""
-        response = client.get(f"{BASE}/financial-records/1", headers=admin_auth_header)
-        assert response.status_code in (200, 404)
+        response = client.get(f"{BASE}/financial-records/{seeded_staff_user_id}", headers=admin_auth_header)
+        assert response.status_code == 200
+        assert response.get_json()["staffId"] == str(seeded_staff_user_id)
 
-    def test_create_financial_record(self, client, admin_auth_header):
+    def test_create_financial_record(self, client, admin_auth_header, seeded_staff_user_id):
         """Test creating a financial record."""
         response = client.post(
             f"{BASE}/financial-records",
             json={
-                "staffId": "1",
+                "staffId": str(seeded_staff_user_id),
                 "basePay": "Rs. 30000",
                 "currentSalary": "Rs. 45000",
                 "lastIncrement": "Rs. 5000",
@@ -444,12 +454,11 @@ class TestAdminFinancialRecords:
         )
         assert response.status_code in (201, 409)
 
-    def test_create_financial_record_invalid_salary(self, client, admin_auth_header):
-        """Test creating financial record with invalid salary format."""
-        response = client.post(
-            f"{BASE}/financial-records",
+    def test_create_financial_record_invalid_salary(self, client, admin_auth_header, seeded_staff_user_id):
+        """Test updating financial record with invalid salary format."""
+        response = client.put(
+            f"{BASE}/financial-records/{seeded_staff_user_id}",
             json={
-                "staffId": "1",
                 "basePay": "not_a_number",
                 "currentSalary": "Rs. 45000",
                 "lastIncrement": "Rs. 5000",
@@ -459,10 +468,10 @@ class TestAdminFinancialRecords:
         )
         assert response.status_code == 422
 
-    def test_update_financial_record(self, client, admin_auth_header):
+    def test_update_financial_record(self, client, admin_auth_header, seeded_staff_user_id):
         """Test updating a financial record."""
         response = client.put(
-            f"{BASE}/financial-records/1",
+            f"{BASE}/financial-records/{seeded_staff_user_id}",
             json={
                 "basePay": "Rs. 35000",
                 "currentSalary": "Rs. 50000",
@@ -471,7 +480,7 @@ class TestAdminFinancialRecords:
             },
             headers=admin_auth_header,
         )
-        assert response.status_code in (200, 404)
+        assert response.status_code == 200
 
 
 class TestAdminReports:

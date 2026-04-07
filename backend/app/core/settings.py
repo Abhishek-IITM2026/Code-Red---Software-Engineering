@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     RATELIMIT_ENABLED: bool = True
     RATELIMIT_STORAGE_URI: str | None = None
     RATELIMIT_DEFAULT: str = "200 per hour"
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,https://editor.swagger.io"
 
     SEED_ON_STARTUP: bool = False
     AUTO_CREATE_TABLES: bool = False

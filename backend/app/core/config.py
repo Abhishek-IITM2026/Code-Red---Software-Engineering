@@ -76,6 +76,11 @@ class Config:
     RATELIMIT_STORAGE_URI = settings.RATELIMIT_STORAGE_URI or settings.REDIS_URL
     RATELIMIT_DEFAULT = settings.RATELIMIT_DEFAULT
     RATELIMIT_HEADERS_ENABLED = True
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in settings.CORS_ALLOWED_ORIGINS.split(",")
+        if origin.strip()
+    ]
 
     SEED_ON_STARTUP = settings.SEED_ON_STARTUP
     AUTO_CREATE_TABLES = settings.AUTO_CREATE_TABLES
