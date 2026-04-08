@@ -1,18 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
+  FiArrowUpRight,
   FiBookOpen,
   FiCalendar,
+  FiCheck,
   FiCheckCircle,
   FiChevronDown,
   FiChevronRight,
   FiClock,
   FiDownload,
   FiFileText,
+  FiLoader,
+  FiMessageSquare,
   FiPlayCircle,
+  FiSend,
 } from "react-icons/fi";
 import { Button } from "../../../components/common";
+import {
+  useAskSubjectChatbotMutation,
+  useGetSubjectContentQuery,
+  useGetSubjectsQuery,
+  type SubjectWeeklyContent,
+} from "../api/studentApi";
+import { API_BASE_URL } from "../../../services/api/config";
 import {
   getMergedStudentSubjectContent,
   type SubjectAssignment,
@@ -65,12 +77,152 @@ const getWeekOrder = (weekLabel: string) => {
   return match ? Number.parseInt(match[0], 10) : Number.MAX_SAFE_INTEGER;
 };
 
+const formatMaterialDate = (value?: string | null) => {
+  if (!value) return "Recently added";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+};
+
+const resolveApiOrigin = () => {
+  if (API_BASE_URL.startsWith("http://") || API_BASE_URL.startsWith("https://")) {
+    try {
+      return new URL(API_BASE_URL).origin;
+    } catch {
+      return API_BASE_URL.replace(/\/api(?:\/v\d+)?\/?$/, "");
+    }
+  }
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
+};
+
+const API_ORIGIN = resolveApiOrigin();
+const DEFAULT_SUBJECT_WEEKS = ["Week 1", "Week 2", "Week 3", "Week 4"] as const;
+
+const normalizeMaterialWeek = (week?: string | null) => {
+  const normalized = (week || "").trim();
+  if (!normalized) return "General";
+  const directWeekMatch = normalized.match(/^week\s*(\d+)$/i);
+  if (directWeekMatch) return `Week ${directWeekMatch[1]}`;
+  if (/^\d+$/.test(normalized)) return `Week ${normalized}`;
+  return normalized;
+};
+
+const resolveMaterialDownloadUrl = (documentUrl?: string | null, storagePath?: string | null) => {
+  const candidate = (documentUrl || "").trim();
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.pathname.startsWith("/uploads/")) {
+        return `${API_ORIGIN}${parsed.pathname}`;
+      }
+    } catch {
+      return candidate;
+    }
+    return candidate;
+  }
+  if (candidate.startsWith("/uploads/")) {
+    return `${API_ORIGIN}${candidate}`;
+  }
+  if (storagePath) {
+    return `${API_ORIGIN}/uploads/${storagePath.replace(/^\/+/, "")}`;
+  }
+  return undefined;
+};
+
+const triggerMaterialDownload = (url: string, fileName?: string, title?: string) => {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName?.trim() || title?.trim() || "study-material";
+  link.rel = "noreferrer";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const normalizeSubjectToken = (value?: string | null) => (value || "").trim().toLowerCase();
+const normalizeMaterialType = (value?: string | null): SubjectMaterial["type"] => {
+  const normalized = (value || "").trim().toLowerCase();
+  if (normalized === "video" || normalized === "pdf" || normalized === "worksheet") {
+    return normalized;
+  }
+  return "notes";
+};
+
+const buildFallbackWeeklyContent = (subjectLabel: string): SubjectWeeklyContent[] =>
+  DEFAULT_SUBJECT_WEEKS.map((weekLabel, index) => ({
+    id: `${normalizeSubjectToken(subjectLabel).replace(/\s+/g, "-") || "subject"}-week-${index + 1}`,
+    week: weekLabel,
+    title: `${subjectLabel} ${weekLabel} Module`,
+    summary: `Core ${subjectLabel} content for ${weekLabel}.`,
+    focus: `Concept clarity and guided practice in ${subjectLabel}.`,
+    keyPoints: [
+      `Understand the main ${subjectLabel} ideas covered in ${weekLabel}.`,
+      "Practice with class-level examples and revision checkpoints.",
+    ],
+  }));
+
+const buildSubjectChapters = (subjectLabel: string, weeklyContent?: SubjectWeeklyContent[]): SubjectChapter[] => {
+  const sourceContent =
+    weeklyContent && weeklyContent.length > 0 ? weeklyContent : buildFallbackWeeklyContent(subjectLabel);
+  const normalizedByWeek = new Map<string, SubjectWeeklyContent>();
+  sourceContent.forEach((item) => {
+    const weekLabel = normalizeMaterialWeek(item.week);
+    if (!normalizedByWeek.has(weekLabel)) {
+      normalizedByWeek.set(weekLabel, { ...item, week: weekLabel });
+    }
+  });
+
+  DEFAULT_SUBJECT_WEEKS.forEach((weekLabel, index) => {
+    if (!normalizedByWeek.has(weekLabel)) {
+      normalizedByWeek.set(weekLabel, {
+        id: `${normalizeSubjectToken(subjectLabel).replace(/\s+/g, "-") || "subject"}-week-${index + 1}`,
+        week: weekLabel,
+        title: `${subjectLabel} ${weekLabel} Module`,
+        summary: `Essential ${subjectLabel} coverage for ${weekLabel}.`,
+        focus: `Understand and revise the key concepts for ${weekLabel}.`,
+        keyPoints: [
+          `Focus on fundamentals and applications in ${subjectLabel}.`,
+          "Complete classwork and revision aligned with this week.",
+        ],
+      });
+    }
+  });
+
+  return Array.from(normalizedByWeek.values())
+    .sort((a, b) => getWeekOrder(a.week) - getWeekOrder(b.week))
+    .map((item, index) => ({
+      id: item.id || `${normalizeSubjectToken(subjectLabel).replace(/\s+/g, "-") || "subject"}-chapter-${index + 1}`,
+      title: item.title,
+      summary: item.summary,
+      description: `${item.summary} ${item.focus}`.trim(),
+      headings: (item.keyPoints && item.keyPoints.length > 0 ? item.keyPoints : [item.focus]).map(
+        (point, pointIndex) => ({
+          title: pointIndex === 0 ? "Key Learning Outcome" : `Focus Area ${pointIndex + 1}`,
+          content: point,
+        }),
+      ),
+      weeklyTopics: [
+        {
+          week: item.week,
+          topic: item.title,
+          focus: item.focus,
+        },
+      ],
+    }));
+};
+
 const SubjectDetails = () => {
   const navigate = useNavigate();
   const { subjectName } = useParams<{ subjectName: string }>();
   const decodedSubjectName = subjectName ? decodeURIComponent(subjectName) : "";
+  const normalizedRouteSubject = normalizeSubjectToken(decodedSubjectName);
   const [subjectMap, setSubjectMap] = useState(() => getMergedStudentSubjectContent());
-  const subject = decodedSubjectName ? subjectMap[decodedSubjectName] : null;
+  const { data: enrolledSubjects = [] } = useGetSubjectsQuery();
 
   useEffect(() => {
     const refreshSubjects = () => setSubjectMap(getMergedStudentSubjectContent());
@@ -78,8 +230,78 @@ const SubjectDetails = () => {
     return () => window.removeEventListener("student-subject-materials-updated", refreshSubjects);
   }, []);
 
-  const weekGroups = useMemo<WeekGroup[]>(() => {
-    if (!subject) return [];
+  let baseSubject: (typeof subjectMap)[string] | null = null;
+  if (decodedSubjectName) {
+    baseSubject = subjectMap[decodedSubjectName] || null;
+    if (!baseSubject) {
+      const matchedEntry = Object.entries(subjectMap).find(([name]) => normalizeSubjectToken(name) === normalizedRouteSubject);
+      baseSubject = matchedEntry ? matchedEntry[1] : null;
+    }
+  }
+
+  const matchedSubject = enrolledSubjects.find(
+    (item) =>
+      normalizeSubjectToken(item.id) === normalizedRouteSubject ||
+      normalizeSubjectToken(item.name) === normalizedRouteSubject ||
+      normalizeSubjectToken(item.title) === normalizedRouteSubject ||
+      normalizeSubjectToken(item.code) === normalizedRouteSubject,
+  );
+  if (!baseSubject && matchedSubject?.name) {
+    baseSubject = subjectMap[matchedSubject.name] || null;
+    if (!baseSubject) {
+      const matchedEntry = Object.entries(subjectMap).find(
+        ([name]) => normalizeSubjectToken(name) === normalizeSubjectToken(matchedSubject.name),
+      );
+      baseSubject = matchedEntry ? matchedEntry[1] : null;
+    }
+  }
+  const matchedSubjectId = matchedSubject?.id || "";
+  const { data: subjectContent } = useGetSubjectContentQuery(matchedSubjectId, {
+    skip: !matchedSubjectId,
+  });
+  const resolvedBaseSubject =
+    baseSubject ||
+    (matchedSubject
+      ? {
+          name: matchedSubject.name,
+          code: matchedSubject.code,
+          teacher: matchedSubject.teacherId ? `Faculty ${matchedSubject.teacherId}` : "Assigned Faculty",
+          description: "Class-specific subject content.",
+          progressLabel: "Class subject",
+          chapters: [],
+          materials: [],
+          assignments: [],
+        }
+      : null);
+  const subjectLabel = matchedSubject?.name || resolvedBaseSubject?.name || decodedSubjectName || "Subject";
+  const generatedChapters = buildSubjectChapters(subjectLabel, subjectContent?.weeklyContent);
+
+  const subject = !resolvedBaseSubject
+    ? null
+    : {
+        ...resolvedBaseSubject,
+        name: subjectLabel,
+        chapters: generatedChapters,
+        materials: (subjectContent?.materials || [])
+          .filter((material) => {
+            if (!matchedSubjectId) return false;
+            return !material.subjectId || material.subjectId === matchedSubjectId || material.courseId === matchedSubjectId;
+          })
+          .map<SubjectMaterial>((material) => ({
+            id: material.id,
+            title: material.title,
+            type: normalizeMaterialType(material.type),
+            subjectName: subjectLabel,
+            week: normalizeMaterialWeek(material.week),
+            uploadedAt: formatMaterialDate(material.uploadedAt),
+            description: material.description || material.contentTextPreview || "Faculty uploaded study material.",
+            fileName: material.fileName || material.documentName || undefined,
+            downloadUrl: resolveMaterialDownloadUrl(material.documentUrl, material.storagePath),
+          })),
+      };
+
+  let weekGroups: WeekGroup[] = [];
+  if (subject) {
 
     const grouped = new Map<string, WeekGroup>();
 
@@ -133,26 +355,23 @@ const SubjectDetails = () => {
       grouped.set(assignment.week, existing);
     });
 
-    return Array.from(grouped.values()).sort((a, b) => a.order - b.order);
-  }, [subject]);
+    weekGroups = Array.from(grouped.values()).sort((a, b) => a.order - b.order);
+  }
 
   const [expandedWeekId, setExpandedWeekId] = useState("");
   const [selectedWeekId, setSelectedWeekId] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<SidebarCategory>("contents");
-
-  useEffect(() => {
-    const firstWeek = weekGroups[0];
-    if (!firstWeek) return;
-    setExpandedWeekId(firstWeek.id);
-    setSelectedWeekId(firstWeek.id);
-    setSelectedCategory(
-      firstWeek.contents.length > 0
-        ? "contents"
-        : firstWeek.materials.length > 0
-          ? "materials"
-          : "assessments",
-    );
-  }, [weekGroups]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string; citations?: Array<{ materialId: string; materialTitle: string; snippet: string }>; confidence?: "high" | "medium" | "low"; followUps?: string[] }>>([
+    {
+      role: "assistant",
+      content: `Ask me anything about ${matchedSubject?.name || decodedSubjectName || "this subject"}. I’ll answer from the uploaded study materials and show which sources I used.`,
+    },
+  ]);
+  const [chatError, setChatError] = useState("");
+  const [materialError, setMaterialError] = useState("");
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [askSubjectChatbot, { isLoading: isChatting }] = useAskSubjectChatbotMutation();
 
   if (!subject) {
     return (
@@ -168,14 +387,81 @@ const SubjectDetails = () => {
     );
   }
 
-  const selectedWeek =
-    weekGroups.find((week) => week.id === selectedWeekId) ?? weekGroups[0];
+  const selectedWeek = weekGroups.find((week) => week.id === selectedWeekId) ?? weekGroups[0];
+  const effectiveSelectedWeekId = selectedWeek?.id || "";
+  const effectiveExpandedWeekId = weekGroups.some((week) => week.id === expandedWeekId)
+    ? expandedWeekId
+    : (weekGroups[0]?.id || "");
+  const effectiveCategory: SidebarCategory = selectedWeek
+    ? selectedCategory === "contents" && selectedWeek.contents.length === 0
+      ? "materials"
+      : selectedCategory === "assessments" && selectedWeek.assignments.length === 0
+        ? "materials"
+        : selectedCategory
+    : selectedCategory;
   const pendingAssignments = subject.assignments.filter((assignment) => assignment.status === "pending").length;
 
   const openWeekCategory = (weekId: string, category: SidebarCategory) => {
+    if (category === "materials") {
+      setMaterialError("");
+    }
     setExpandedWeekId(weekId);
     setSelectedWeekId(weekId);
     setSelectedCategory(category);
+  };
+
+  const handleMaterialDownload = (material: SubjectMaterial) => {
+    if (!material.downloadUrl) {
+      setMaterialError("No material found.");
+      return;
+    }
+    setMaterialError("");
+    triggerMaterialDownload(material.downloadUrl, material.fileName, material.title);
+  };
+
+  const handleAskQuestion = async (questionOverride?: string) => {
+    const nextQuestion = (questionOverride ?? chatInput).trim();
+    if (!nextQuestion || !matchedSubject?.id || isChatting) return;
+
+    setChatError("");
+    const nextUserMessage = { role: "user" as const, content: nextQuestion };
+    const nextHistory = chatMessages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => ({ role: message.role, content: message.content }))
+      .slice(-8);
+
+    setChatMessages((current) => [...current, nextUserMessage]);
+    setChatInput("");
+
+    try {
+      const response = await askSubjectChatbot({
+        subjectId: matchedSubject.id,
+        question: nextQuestion,
+        history: nextHistory,
+      }).unwrap();
+
+      setChatMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: response.answer,
+          citations: response.citations,
+          confidence: response.confidence,
+          followUps: response.followUpQuestions,
+        },
+      ]);
+    } catch (error: unknown) {
+      const errorPayload =
+        error && typeof error === "object" && "data" in error
+          ? (error as { data?: { error?: { message?: string }; message?: string } }).data
+          : undefined;
+      const message =
+        errorPayload?.error?.message ||
+        errorPayload?.message ||
+        "The subject assistant could not answer right now. Please try again.";
+      setChatError(message);
+      setChatMessages((current) => current.slice(0, -1));
+    }
   };
 
   return (
@@ -229,16 +515,27 @@ const SubjectDetails = () => {
 
           <div className="p-3">
             {weekGroups.map((week) => {
-              const isExpanded = expandedWeekId === week.id;
+              const isExpanded = effectiveExpandedWeekId === week.id;
               const weekHasContent = week.contents.length > 0;
-              const weekHasMaterials = week.materials.length > 0;
               const weekHasAssessments = week.assignments.length > 0;
 
               return (
                 <div key={week.id} className="mb-3 rounded-2xl border border-slate-200 bg-slate-50">
                   <button
                     type="button"
-                    onClick={() => setExpandedWeekId(isExpanded ? "" : week.id)}
+                    onClick={() => {
+                      const nextExpandedWeekId = isExpanded ? "" : week.id;
+                      setExpandedWeekId(nextExpandedWeekId);
+                      if (nextExpandedWeekId) {
+                        setSelectedWeekId(week.id);
+                        if (selectedCategory === "contents" && week.contents.length === 0) {
+                          setSelectedCategory("materials");
+                        }
+                        if (selectedCategory === "assessments" && week.assignments.length === 0) {
+                          setSelectedCategory("materials");
+                        }
+                      }
+                    }}
                     className="flex w-full items-center justify-between px-4 py-4 text-left"
                   >
                     <div>
@@ -261,7 +558,7 @@ const SubjectDetails = () => {
                           type="button"
                           onClick={() => openWeekCategory(week.id, "contents")}
                           className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition ${
-                            selectedWeekId === week.id && selectedCategory === "contents"
+                            effectiveSelectedWeekId === week.id && effectiveCategory === "contents"
                               ? "bg-[var(--primary)] text-white"
                               : "hover:bg-slate-100 text-slate-700"
                           }`}
@@ -271,27 +568,25 @@ const SubjectDetails = () => {
                         </button>
                       )}
 
-                      {weekHasMaterials && (
-                        <button
-                          type="button"
-                          onClick={() => openWeekCategory(week.id, "materials")}
-                          className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition ${
-                            selectedWeekId === week.id && selectedCategory === "materials"
-                              ? "bg-emerald-600 text-white"
-                              : "hover:bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          <FiDownload className="h-4 w-4" />
-                          Study Materials
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openWeekCategory(week.id, "materials")}
+                        className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition ${
+                          effectiveSelectedWeekId === week.id && effectiveCategory === "materials"
+                            ? "bg-emerald-600 text-white"
+                            : "hover:bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        <FiDownload className="h-4 w-4" />
+                        Study Materials
+                      </button>
 
                       {weekHasAssessments && (
                         <button
                           type="button"
                           onClick={() => openWeekCategory(week.id, "assessments")}
                           className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-semibold transition ${
-                            selectedWeekId === week.id && selectedCategory === "assessments"
+                            effectiveSelectedWeekId === week.id && effectiveCategory === "assessments"
                               ? "bg-amber-500 text-white"
                               : "hover:bg-slate-100 text-slate-700"
                           }`}
@@ -309,7 +604,165 @@ const SubjectDetails = () => {
         </aside>
 
         <div className="min-w-0 space-y-5">
-          {selectedWeek && selectedCategory === "contents" && (
+          {subject.materials.length === 0 && (
+            <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+              No material found for {subject.name}. Faculty has not uploaded study material yet.
+            </div>
+          )}
+
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full bg-[var(--primary)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">
+                  <FiMessageSquare className="h-3.5 w-3.5" />
+                  AI Tutor
+                </div>
+                <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                  Click the AI button to chat in this subject.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiOpen((current) => !current)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                <FiMessageSquare className="h-4 w-4" />
+                {isAiOpen ? "Close AI" : "Open AI"}
+              </button>
+            </div>
+          </section>
+
+          {isAiOpen && (
+            <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[var(--primary)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">
+                    <FiMessageSquare className="h-3.5 w-3.5" />
+                    Subject Assistant
+                  </div>
+                  <h2 className="mt-4 text-2xl font-semibold text-[var(--text)]">Ask anything in {subject.name}</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+                    The assistant uses uploaded materials when available, and also supports broader subject Q&A.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Linked subject</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {matchedSubject ? `${matchedSubject.code} • ${matchedSubject.name}` : "Matching API subject not found yet"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={`${message.role}-${index}`}
+                      className={`rounded-3xl px-4 py-4 ${
+                        message.role === "user" ? "ml-auto max-w-2xl bg-[var(--primary)] text-white" : "max-w-3xl bg-white text-slate-900 ring-1 ring-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+                          {message.role === "user" ? "You" : "AI Tutor"}
+                        </p>
+                        {message.role === "assistant" && message.confidence && (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                            {message.confidence} confidence
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+
+                      {message.citations && message.citations.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {message.citations.map((citation, citationIndex) => (
+                            <div key={`${citation.materialId}-${citationIndex}`} className="rounded-2xl bg-slate-50 px-3 py-3 text-sm text-slate-700 ring-1 ring-slate-200">
+                              <p className="font-semibold text-slate-900">{citation.materialTitle || "Study Material"}</p>
+                              <p className="mt-1 leading-6">{citation.snippet}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.followUps && message.followUps.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {message.followUps.map((followUp) => (
+                            <button
+                              key={followUp}
+                              type="button"
+                              onClick={() => handleAskQuestion(followUp)}
+                              className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                            >
+                              <FiArrowUpRight className="h-3.5 w-3.5" />
+                              {followUp}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {isChatting && (
+                    <div className="max-w-3xl rounded-3xl bg-white px-4 py-4 text-slate-900 ring-1 ring-slate-200">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                        <FiLoader className="h-4 w-4 animate-spin" />
+                        Thinking and preparing an answer...
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {chatError && (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {chatError}
+                  </div>
+                )}
+
+                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      `Explain the main ideas in ${subject.name}.`,
+                      `Give me a revision summary for ${subject.name}.`,
+                      `What topics should I focus on first in ${subject.name}?`,
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => handleAskQuestion(prompt)}
+                        disabled={!matchedSubject || isChatting}
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FiCheck className="h-3.5 w-3.5" />
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-3 md:flex-row">
+                    <textarea
+                      value={chatInput}
+                      onChange={(event) => setChatInput(event.target.value)}
+                      placeholder={`Ask any question about ${subject.name}...`}
+                      className="min-h-[110px] flex-1 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAskQuestion()}
+                      disabled={!chatInput.trim() || !matchedSubject || isChatting}
+                      className="inline-flex items-center justify-center gap-2 rounded-3xl bg-[var(--primary)] px-5 py-4 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 md:w-48"
+                    >
+                      {isChatting ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiSend className="h-4 w-4" />}
+                      Ask Assistant
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {selectedWeek && effectiveCategory === "contents" && (
             <>
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-[var(--primary)]/10 p-3 text-[var(--primary)]">
@@ -360,10 +813,15 @@ const SubjectDetails = () => {
                   </div>
                 ))}
               </div>
+              {selectedWeek.contents.length === 0 && (
+                <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+                  No content found.
+                </div>
+              )}
             </>
           )}
 
-          {selectedWeek && selectedCategory === "materials" && (
+          {selectedWeek && effectiveCategory === "materials" && (
             <>
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
@@ -379,7 +837,14 @@ const SubjectDetails = () => {
 
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {selectedWeek.materials.map((material) => (
-                  <div key={material.id} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                  <button
+                    key={material.id}
+                    type="button"
+                    onClick={() => handleMaterialDownload(material)}
+                    className={`rounded-3xl bg-white p-5 text-left shadow-sm ring-1 ring-slate-200 transition ${
+                      material.downloadUrl ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : "cursor-not-allowed opacity-75"
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="text-lg font-semibold text-slate-900">{material.title}</h3>
@@ -405,13 +870,27 @@ const SubjectDetails = () => {
                         Watch lecture
                       </div>
                     )}
-                  </div>
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white">
+                      <FiDownload className="h-4 w-4" />
+                      {material.downloadUrl ? "Download file" : "No file attached"}
+                    </div>
+                  </button>
                 ))}
               </div>
+              {selectedWeek.materials.length === 0 && (
+                <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+                  No material found.
+                </div>
+              )}
+              {materialError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {materialError}
+                </div>
+              )}
             </>
           )}
 
-          {selectedWeek && selectedCategory === "assessments" && (
+          {selectedWeek && effectiveCategory === "assessments" && (
             <>
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
@@ -475,6 +954,11 @@ const SubjectDetails = () => {
                   </div>
                 ))}
               </div>
+              {selectedWeek.assignments.length === 0 && (
+                <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+                  No assessments found.
+                </div>
+              )}
             </>
           )}
         </div>

@@ -4,10 +4,15 @@ from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import Attendance, Assignment, CourseEnrollment, FacultySubjectAssignment, Mark, Parent
+from ...models import Attendance, Assignment, CourseEnrollment, FacultySubjectAssignment, Mark, Parent, Student
 from ...schemas import CoursePaymentRequest, parse_json
 from ...services.courses import list_program_courses_for_class, record_course_payment, serialize_course_for_student
-from ...services.query import get_attendance_stats, get_performance_summary, get_student_subjects
+from ...services.query import (
+    get_attendance_stats,
+    get_enrollment_class_scope_ids,
+    get_performance_summary,
+    get_student_subjects,
+)
 
 
 parent_bp = Blueprint("parent", __name__)
@@ -40,11 +45,17 @@ def _child_attendance_rows(child_id: int):
 
 def _child_performance_rows(child_id: int):
     subjects = {subject["id"]: subject for subject in get_student_subjects(child_id)}
+    child = db.session.get(Student, child_id)
+    enrollment = child.current_enrollment() if child is not None else None
+    class_id = enrollment.class_id if enrollment is not None else None
     rows = []
     for subject_id, subject in subjects.items():
         marks = Mark.query.filter_by(student_id=child_id, subject_id=int(subject_id)).all()
         average = round(sum(mark.marks_obtained for mark in marks) / len(marks), 2) if marks else 0
-        faculty_assignment = FacultySubjectAssignment.query.filter_by(subject_id=int(subject_id)).first()
+        assignment_query = FacultySubjectAssignment.query.filter_by(subject_id=int(subject_id))
+        if class_id is not None:
+            assignment_query = assignment_query.filter_by(class_id=class_id)
+        faculty_assignment = assignment_query.first()
         teacher_name = ""
         if faculty_assignment and faculty_assignment.faculty and faculty_assignment.faculty.user:
             teacher_name = f"{faculty_assignment.faculty.user.first_name} {faculty_assignment.faculty.user.last_name}"
@@ -96,9 +107,15 @@ def _child_fee_rows(child):
 
 
 def _child_faculty_contacts(child_id: int):
+    child = db.session.get(Student, child_id)
+    enrollment = child.current_enrollment() if child is not None else None
+    class_id = enrollment.class_id if enrollment is not None else None
     contacts = []
     for subject in get_student_subjects(child_id):
-        assignment = FacultySubjectAssignment.query.filter_by(subject_id=int(subject["id"])).first()
+        assignment_query = FacultySubjectAssignment.query.filter_by(subject_id=int(subject["id"]))
+        if class_id is not None:
+            assignment_query = assignment_query.filter_by(class_id=class_id)
+        assignment = assignment_query.first()
         if assignment and assignment.faculty and assignment.faculty.user:
             phone = assignment.faculty.user.contact_profile.phone_number if assignment.faculty.user.contact_profile else "Not available"
             contacts.append(
@@ -115,7 +132,8 @@ def _child_upcoming_courses(child):
     enrollment = child.current_enrollment()
     if enrollment is None:
         return []
-    courses = list_program_courses_for_class(enrollment.class_id)
+    class_scope_ids = get_enrollment_class_scope_ids(enrollment)
+    courses = list_program_courses_for_class(class_scope_ids)
     return [serialize_course_for_student(course, child) for course in courses]
 
 

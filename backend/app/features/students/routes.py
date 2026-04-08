@@ -3,9 +3,12 @@ from flask import Blueprint, g, request
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
-from ...extensions import db
-from ...models import Material, Student, Subject
-from ...schemas import CourseEnrollmentRequest, CoursePaymentRequest, parse_json
+from ...extensions import db, limiter
+from ...models import FacultySubjectAssignment, Student, Subject
+from ...rag.student_chat import answer_subject_question
+from ...schemas import CourseEnrollmentRequest, CoursePaymentRequest, StudentSubjectChatRequest, parse_json
+from ...services.ai_settings import get_ai_rate_limit, get_ai_settings
+from ...services.materials import get_materials_for_generation, list_subject_materials
 from ...services.courses import (
     create_course_enrollment,
     get_student_course_enrollment,
@@ -14,10 +17,20 @@ from ...services.courses import (
     record_course_payment,
     serialize_course_for_student,
 )
-from ...services.query import get_current_student, get_performance_summary, get_student_subjects
+from ...services.query import (
+    build_subject_week_content,
+    get_current_student,
+    get_enrollment_class_scope_ids,
+    get_performance_summary,
+    get_student_subjects,
+)
 
 
 students_bp = Blueprint("students", __name__)
+
+
+def _subject_chat_limit() -> str:
+    return get_ai_rate_limit("generate")
 
 
 @students_bp.get("")
@@ -25,10 +38,24 @@ students_bp = Blueprint("students", __name__)
 def list_students():
     class_name = request.args.get("class")
     section = request.args.get("section")
+    allowed_class_ids: set[str] | None = None
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty_profile = getattr(g.current_user, "faculty", None)
+        if faculty_profile is None:
+            raise ApiError(403, "FORBIDDEN", "Faculty profile is required to access students.")
+        assignments = FacultySubjectAssignment.query.filter_by(faculty_id=faculty_profile.id).all()
+        allowed_class_ids = {str(assignment.class_id) for assignment in assignments}
+        if not allowed_class_ids:
+            return success_response([])
+
     students = Student.query.all()
     response = []
     for student in students:
         serialized = student.to_dict()
+        if allowed_class_ids is not None and serialized["classId"] not in allowed_class_ids:
+            continue
         if class_name and serialized["class"] != class_name and serialized["classId"] != class_name:
             continue
         if section and serialized["section"] != section:
@@ -67,11 +94,53 @@ def get_me_subject_content(subject_id: int):
     subjects = get_student_subjects(student.id)
     if not any(int(subject["id"]) == subject_id for subject in subjects):
         raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject is not available for the current student.")
-    materials = Material.query.filter_by(subject_id=subject_id).all()
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+    enrollment = student.current_enrollment()
     return success_response(
         {
             "subjectId": str(subject_id),
-            "materials": [material.to_dict() for material in materials],
+            "subjectName": subject.name,
+            "weeklyContent": build_subject_week_content(subject, enrollment),
+            "materials": list_subject_materials(subject_id),
+        }
+    )
+
+
+@students_bp.post("/me/subjects/<int:subject_id>/chat")
+@roles_required("student")
+@limiter.limit(_subject_chat_limit)
+def chat_about_subject(subject_id: int):
+    student = get_current_student()
+    subjects = get_student_subjects(student.id)
+    if not any(int(subject["id"]) == subject_id for subject in subjects):
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject is not available for the current student.")
+
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+
+    payload = parse_json(StudentSubjectChatRequest, request.get_json())
+    materials = get_materials_for_generation(subject_id)
+    history = [
+        {"role": item.role.strip().lower(), "content": item.content.strip()}
+        for item in payload.history
+        if item.role.strip() and item.content.strip()
+    ]
+    result = answer_subject_question(
+        subject_name=subject.name,
+        question=payload.question.strip(),
+        materials=materials,
+        history=history,
+        ai_settings=get_ai_settings(include_secret=True),
+    )
+    return success_response(
+        {
+            "subjectId": str(subject_id),
+            "subjectName": subject.name,
+            "question": payload.question.strip(),
+            **result,
         }
     )
 
@@ -90,7 +159,8 @@ def get_me_upcoming_courses():
     enrollment = student.current_enrollment()
     if enrollment is None:
         return success_response([])
-    courses = list_program_courses_for_class(enrollment.class_id)
+    class_scope_ids = get_enrollment_class_scope_ids(enrollment)
+    courses = list_program_courses_for_class(class_scope_ids)
     return success_response([serialize_course_for_student(course, student) for course in courses])
 
 

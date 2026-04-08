@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
   useGetStudentsByClassSectionQuery,
   useGetClassesQuery,
@@ -27,9 +27,8 @@ const MarkAttendance = function() {
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [studentAttendance, setStudentAttendance] = useState<StudentAttendance[]>([]);
+  const [attendanceOverrides, setAttendanceOverrides] = useState<Record<string, AttendanceStatus>>({});
   const [isSearched, setIsSearched] = useState(false);
-  const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPreviousDates, setShowPreviousDates] = useState(false);
@@ -75,7 +74,7 @@ const MarkAttendance = function() {
 
   // Filter students based on class and section
   const filteredStudents = useMemo(() => {
-    return students.filter((student: any) => {
+    return students.filter((student) => {
       const matchClass =
         !selectedClass ||
         student.classId === selectedClass ||
@@ -84,6 +83,23 @@ const MarkAttendance = function() {
       return matchClass && matchSection;
     });
   }, [students, selectedClass, selectedSection]);
+
+  const studentAttendance = useMemo<StudentAttendance[]>(() => {
+    if (!isSearched) {
+      return [];
+    }
+    return filteredStudents.map((student) => {
+      const existingRecord = existingAttendance.find((att) => att.studentId === student.id);
+      return {
+        id: student.id,
+        name: `${student.firstName} ${student.lastName}`,
+        rollNumber: student.rollNumber || '-',
+        status: attendanceOverrides[student.id] ?? ((existingRecord?.status as AttendanceStatus) || ''),
+      };
+    });
+  }, [attendanceOverrides, existingAttendance, filteredStudents, isSearched]);
+
+  const isUpdateMode = isSearched && existingAttendance.length > 0;
 
   // Filter displayed students based on search query
   const displayedStudents = useMemo(() => {
@@ -97,50 +113,26 @@ const MarkAttendance = function() {
   const handleSearch = () => {
     setIsSearched(true);
     setSubmitStatus('idle');
+    setAttendanceOverrides({});
   };
-
-  // Reset sections when class changes
-  useEffect(() => {
-    setSelectedSection('');
-    setStudentAttendance([]);
-    setIsSearched(false);
-    setIsUpdateMode(false);
-  }, [selectedClass]);
-
-  useEffect(() => {
-    if (!isSearched) {
-      return;
-    }
-
-    const studentsWithAttendance = filteredStudents.map((student: any) => {
-      const existingRecord = existingAttendance.find((att: any) => att.studentId === student.id);
-
-      return {
-        id: student.id,
-        name: `${student.firstName} ${student.lastName}`,
-        rollNumber: student.rollNumber || '-',
-        status: ((existingRecord?.status as AttendanceStatus) || '') as AttendanceStatus,
-      };
-    });
-
-    setStudentAttendance(studentsWithAttendance);
-    setIsUpdateMode(existingAttendance.length > 0);
-  }, [existingAttendance, filteredStudents, isSearched]);
 
   // Mark all students with same status
   const handleMarkAll = (status: AttendanceStatus) => {
-    setStudentAttendance((prev) =>
-      prev.map((student) => ({ ...student, status }))
-    );
+    setAttendanceOverrides((current) => {
+      const next = { ...current };
+      studentAttendance.forEach((student) => {
+        next[student.id] = status;
+      });
+      return next;
+    });
   };
 
   // Handle individual status change
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-    setStudentAttendance((prev) =>
-      prev.map((student) =>
-        student.id === studentId ? { ...student, status } : student
-      )
-    );
+    setAttendanceOverrides((current) => ({
+      ...current,
+      [studentId]: status,
+    }));
   };
 
   // Submit attendance
@@ -229,6 +221,7 @@ const MarkAttendance = function() {
                 type="button"
                 onClick={() => {
                   setSelectedDate(date);
+                  setAttendanceOverrides({});
                   setIsSearched(true);
                   setShowPreviousDates(false);
                 }}
@@ -254,22 +247,26 @@ const MarkAttendance = function() {
           <select
             className={selectClass}
             value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
+            onChange={(e) => {
+              const nextClass = e.target.value;
+              setSelectedClass(nextClass);
+              setSelectedSection('');
+              setAttendanceOverrides({});
+              setIsSearched(false);
+              setSubmitStatus('idle');
+            }}
           >
             <option value="">Select Class</option>
             {classes.length > 0 ? (
-              classes.map((cls: any) => (
+              classes.map((cls) => (
                 <option key={cls.id} value={cls.id}>
                   {cls.name || `Class ${cls.level}`}
                 </option>
               ))
             ) : (
-              // Demo classes if API returns empty
-              [9, 10, 11, 12].map((level) => (
-                <option key={level} value={level}>
-                  Class {level}
-                </option>
-              ))
+              <option value="" disabled>
+                No classes available
+              </option>
             )}
           </select>
         </div>
@@ -281,23 +278,25 @@ const MarkAttendance = function() {
           <select
             className={selectClass}
             value={selectedSection}
-            onChange={(e) => setSelectedSection(e.target.value)}
+            onChange={(e) => {
+              setSelectedSection(e.target.value);
+              setAttendanceOverrides({});
+              setIsSearched(false);
+              setSubmitStatus('idle');
+            }}
             disabled={!selectedClass}
           >
             <option value="">{selectedClass ? 'Select Section' : 'Select Class First'}</option>
             {sections.length > 0 ? (
-              sections.map((sec: any) => (
+              sections.map((sec) => (
                 <option key={sec.id} value={sec.name}>
                   Section {sec.name}
                 </option>
               ))
             ) : selectedClass ? (
-              // Demo sections if API returns empty
-              ['A', 'B', 'C'].map((sec) => (
-                <option key={sec} value={sec}>
-                  Section {sec}
-                </option>
-              ))
+              <option value="" disabled>
+                No sections available
+              </option>
             ) : null}
           </select>
         </div>
@@ -310,7 +309,11 @@ const MarkAttendance = function() {
             type="date"
             className={inputClass}
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              setAttendanceOverrides({});
+              setIsSearched(false);
+            }}
           />
         </div>
 

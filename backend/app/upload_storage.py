@@ -80,7 +80,7 @@ def save_profile_picture_value(profile_picture: str | None) -> str | None:
     raise ApiError(400, "INVALID_PROFILE_PICTURE", "Profile picture must be a valid URL, upload path, or base64 image data.")
 
 
-def save_uploaded_file(uploaded_file: FileStorage, *, category: str, kind: str) -> dict:
+def save_uploaded_file(uploaded_file: FileStorage, *, category: str, kind: str, path_segments: list[str] | None = None) -> dict:
     if uploaded_file.filename is None:
         raise ApiError(400, "FILE_REQUIRED", "A file is required.")
 
@@ -96,11 +96,12 @@ def save_uploaded_file(uploaded_file: FileStorage, *, category: str, kind: str) 
         filename=filename,
         extension=extension,
         category=category,
+        path_segments=path_segments,
         content_type=uploaded_file.mimetype,
     )
 
 
-def save_data_url_file(data_url: str, *, category: str, kind: str, filename_hint: str) -> dict:
+def save_data_url_file(data_url: str, *, category: str, kind: str, filename_hint: str, path_segments: list[str] | None = None) -> dict:
     match = DATA_URL_PATTERN.match(data_url.strip())
     if match is None:
         raise ApiError(400, "INVALID_DATA_URL", "The uploaded payload is not a valid base64 data URL.")
@@ -120,6 +121,7 @@ def save_data_url_file(data_url: str, *, category: str, kind: str, filename_hint
         filename=filename_hint,
         extension=extension,
         category=category,
+        path_segments=path_segments,
         content_type=content_type,
     )
 
@@ -150,10 +152,20 @@ def _resolve_extension(*, filename: str, content_type: str | None, kind: str) ->
     return suffix
 
 
-def _write_bytes(payload: bytes, *, filename: str, extension: str, category: str, content_type: str | None) -> dict:
+def _write_bytes(
+    payload: bytes,
+    *,
+    filename: str,
+    extension: str,
+    category: str,
+    path_segments: list[str] | None,
+    content_type: str | None,
+) -> dict:
     sanitized_category = secure_filename(category) or "uploads"
+    sanitized_segments = [segment for segment in (_sanitize_path_segment(item) for item in (path_segments or [])) if segment]
     stored_name = f"{uuid4().hex}.{extension}"
-    relative_path = f"{sanitized_category}/{stored_name}"
+    relative_prefix = "/".join([sanitized_category, *sanitized_segments]) if sanitized_segments else sanitized_category
+    relative_path = f"{relative_prefix}/{stored_name}"
     absolute_path = _upload_root() / relative_path
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_path.write_bytes(payload)
@@ -165,3 +177,8 @@ def _write_bytes(payload: bytes, *, filename: str, extension: str, category: str
         "sizeBytes": len(payload),
         "url": build_public_file_url(relative_path),
     }
+
+
+def _sanitize_path_segment(value: str | None) -> str:
+    normalized = secure_filename((value or "").strip().replace("/", "-"))
+    return normalized or ""

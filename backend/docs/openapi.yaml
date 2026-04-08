@@ -298,6 +298,37 @@ paths:
                 $ref: '#/components/schemas/StudentSubjectContent'
         '404':
           $ref: '#/components/responses/Error404'
+  /api/v1/students/me/subjects/{subjectId}/chat:
+    post:
+      tags: [Students, AI]
+      summary: Ask a grounded chatbot question about a student subject
+      description: >
+        Uses uploaded subject materials plus stored AI runtime settings to answer a student's
+        question with cited source snippets. Falls back to grounded extractive answers when no
+        external provider is configured or available.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SubjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentSubjectChatRequest'
+      responses:
+        '200':
+          description: Grounded subject answer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentSubjectChatResponse'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '422':
+          $ref: '#/components/responses/Error422'
+        '429':
+          $ref: '#/components/responses/Error429'
   /api/v1/students/me/performance:
     get:
       tags: [Students]
@@ -1495,8 +1526,50 @@ components:
         type: { type: string }
         description: { type: string, nullable: true }
         fileName: { type: string, nullable: true }
+        documentId: { type: string, nullable: true }
+        documentName: { type: string, nullable: true }
+        documentUrl: { type: string, nullable: true }
+        externalUrl: { type: string, nullable: true }
+        uploadedAt: { type: string, format: date-time, nullable: true }
+        storagePath: { type: string, nullable: true }
         uploadedBy: { type: string, nullable: true }
         isFacultyUpload: { type: boolean, nullable: true }
+    StudentSubjectChatHistoryMessage:
+      type: object
+      properties:
+        role: { type: string }
+        content: { type: string }
+      required: [role, content]
+    StudentSubjectChatRequest:
+      type: object
+      properties:
+        question: { type: string }
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentSubjectChatHistoryMessage'
+      required: [question]
+    StudentSubjectChatCitation:
+      type: object
+      properties:
+        materialId: { type: string }
+        materialTitle: { type: string }
+        snippet: { type: string }
+    StudentSubjectChatResponse:
+      type: object
+      properties:
+        subjectId: { type: string }
+        subjectName: { type: string }
+        question: { type: string }
+        answer: { type: string }
+        confidence: { type: string }
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentSubjectChatCitation'
+        followUpQuestions:
+          type: array
+          items: { type: string }
     SubjectWeekContent:
       type: object
       properties:

@@ -7,7 +7,7 @@ from ...api.errors import ApiError
 from ...common.auth import auth_required, generate_token, normalize_role_name, verify_token
 from ...common.responses import success_response
 from ...extensions import db, limiter
-from ...models import OtpChallenge, Role, User, UserContactProfile
+from ...models import OtpChallenge, Role, Student, User, UserContactProfile, UserStatus
 from ...schemas import (
     ChangePasswordRequest,
     LoginRequest,
@@ -76,6 +76,14 @@ def login():
     user = User.query.filter_by(email=payload.email.strip().lower()).first()
     if user is None or not user.check_password(payload.password):
         raise ApiError(401, "INVALID_CREDENTIALS", "Email or password is incorrect.")
+    if user.status != UserStatus.ACTIVE:
+        if user.has_any_role("student"):
+            raise ApiError(
+                403,
+                "ACCOUNT_PENDING_APPROVAL",
+                "Your student account is pending admin approval. Please contact administration.",
+            )
+        raise ApiError(403, "ACCOUNT_INACTIVE", "Your account is inactive. Please contact administration.")
 
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
@@ -99,15 +107,39 @@ def register():
     role = Role.query.filter_by(name=mapped_role).first()
     if role is None:
         raise ApiError(500, "ROLE_SETUP_ERROR", "Requested role is not configured in the database.", {"role": mapped_role})
+
+    is_student_registration = mapped_role == "student"
+    initial_status = UserStatus.INACTIVE if is_student_registration else UserStatus.ACTIVE
     user = User(
         email=email,
         title=payload.title,
         first_name=payload.first_name,
         last_name=payload.last_name,
+        status=initial_status,
     )
     user.set_password(payload.password)
     user.roles.append(role)
     db.session.add(user)
+    db.session.flush()
+
+    if is_student_registration:
+        student = Student(
+            user_id=user.id,
+            status=UserStatus.INACTIVE,
+            admission_date=datetime.now(timezone.utc).replace(tzinfo=None).date(),
+        )
+        db.session.add(student)
+        db.session.flush()
+        db.session.commit()
+        return success_response(
+            {
+                "user": user.to_dict(),
+                "approvalRequired": True,
+            },
+            message="Registration submitted successfully. Your account will be activated after admin approval.",
+            status_code=201,
+        )
+
     db.session.commit()
     return success_response({"user": user.to_dict(), "token": generate_token(user.id)}, status_code=201)
 

@@ -6,6 +6,8 @@ from ..api.errors import ApiError
 from ..extensions import db
 from ..models import Assessment, AssessmentSubmission, Subject
 from ..rag.assessment import generate_grounded_questions
+from ..rag.assessment.llm import try_modify_llm_questions
+from ..rag.llm_clients import SUPPORTED_EXTERNAL_PROVIDERS
 from ..repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
 from .ai_settings import get_ai_settings
 from .materials import get_materials_for_generation
@@ -122,13 +124,101 @@ def generate_assessment_questions(payload: dict[str, Any]) -> list[dict[str, Any
             "Add at least one study material for this course before generating assessment questions.",
         )
 
+    requested_question_count = max(1, int(payload.get("questionCount", 1)))
+    question_types = payload.get("questionTypes") or {}
+    typed_distribution_count = sum(max(int(value or 0), 0) for value in question_types.values())
+    effective_question_count = typed_distribution_count if typed_distribution_count > 0 else requested_question_count
+
     return generate_grounded_questions(
         subject_name=subject.name,
         materials=materials,
-        question_count=max(1, int(payload.get("questionCount", 1))),
+        question_count=effective_question_count,
         total_marks=max(1, int(payload.get("totalMarks", 1))),
         difficulty_level=payload.get("difficultyLevel", "medium"),
-        question_types=payload.get("questionTypes") or {},
+        question_types=question_types,
         custom_prompt=payload.get("customPrompt"),
         ai_settings=get_ai_settings(include_secret=True),
     )
+
+
+def modify_assessment_questions(
+    *,
+    questions: list[dict[str, Any]],
+    modification_prompt: str,
+) -> list[dict[str, Any]]:
+    ai_settings = get_ai_settings(include_secret=True)
+    updated = try_modify_llm_questions(
+        questions=questions,
+        modification_prompt=modification_prompt,
+        ai_settings=ai_settings,
+    )
+    if updated:
+        return updated
+
+    provider = str(ai_settings.get("provider") or "grounded-rag").strip().lower()
+    if provider in SUPPORTED_EXTERNAL_PROVIDERS and not ai_settings.get("fallbackToGroundedRag", True):
+        raise ApiError(
+            503,
+            "AI_PROVIDER_UNAVAILABLE",
+            "The configured AI provider did not return usable modified questions and fallback is disabled.",
+        )
+
+    return _heuristic_modify_questions(questions, modification_prompt)
+
+
+def _heuristic_modify_questions(
+    questions: list[dict[str, Any]],
+    modification_prompt: str,
+) -> list[dict[str, Any]]:
+    prompt = (modification_prompt or "").strip().lower()
+    force_hard = any(token in prompt for token in ["hard", "challenging", "advanced", "difficult"])
+    force_easy = any(token in prompt for token in ["easy", "easier", "simpl", "beginner", "basic"])
+    prefer_mcq = "mcq" in prompt or "multiple choice" in prompt
+    prefer_short = "short" in prompt
+    prefer_long = "long" in prompt or "descriptive" in prompt
+    include_numerical = "numerical" in prompt or "calculation" in prompt
+
+    updated_questions: list[dict[str, Any]] = []
+    for question in questions:
+        next_question = dict(question)
+        question_text = str(next_question.get("questionText") or "").strip()
+        question_type = str(next_question.get("questionType") or "short").strip()
+
+        if prefer_mcq and question_type != "mcq":
+            question_type = "mcq"
+        elif prefer_long and question_type in {"mcq", "trueFalse"}:
+            question_type = "long"
+        elif prefer_short and question_type == "long":
+            question_type = "short"
+
+        if include_numerical and "calculate" not in question_text.lower():
+            question_text = f"{question_text} Include a calculation or numerical justification.".strip()
+
+        if force_hard:
+            next_question["difficulty"] = "hard"
+            next_question["marks"] = max(int(next_question.get("marks") or 1), 2)
+        elif force_easy:
+            next_question["difficulty"] = "easy"
+            next_question["marks"] = max(1, int(next_question.get("marks") or 1))
+
+        next_question["questionType"] = question_type
+        next_question["questionText"] = question_text
+
+        if question_type == "mcq":
+            options = next_question.get("options")
+            normalized_options = [str(item).strip() for item in (options or []) if str(item).strip()]
+            if len(normalized_options) < 2:
+                normalized_options = ["Option A", "Option B", "Option C", "Option D"]
+            next_question["options"] = normalized_options[:4]
+            correct = str(next_question.get("correctAnswer") or "").strip()
+            next_question["correctAnswer"] = correct if correct in next_question["options"] else next_question["options"][0]
+        elif question_type == "trueFalse":
+            next_question["options"] = ["True", "False"]
+            normalized_answer = str(next_question.get("correctAnswer") or "").strip().lower()
+            next_question["correctAnswer"] = "False" if normalized_answer == "false" else "True"
+        else:
+            next_question["options"] = None
+
+        updated_questions.append(next_question)
+
+    return updated_questions

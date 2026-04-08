@@ -24,10 +24,6 @@ type MaterialForm = {
   unit: string;
   week: string;
   title: string;
-  description: string;
-  sourceText: string;
-  externalUrl: string;
-  imageUrlsText: string;
   file: File | null;
 };
 
@@ -45,10 +41,6 @@ const initialForm: MaterialForm = {
   unit: "",
   week: "",
   title: "",
-  description: "",
-  sourceText: "",
-  externalUrl: "",
-  imageUrlsText: "",
   file: null,
 };
 
@@ -106,20 +98,8 @@ const FacultyMaterials = function () {
       return;
     }
 
-    const imageUrls = form.imageUrlsText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    const hasContext =
-      Boolean(form.description.trim()) ||
-      Boolean(form.sourceText.trim()) ||
-      Boolean(form.externalUrl.trim()) ||
-      imageUrls.length > 0 ||
-      Boolean(form.file);
-
-    if (!hasContext) {
-      setMessage("Add at least one context source: description, source text, URL, image URL, or file.");
+    if (!form.file) {
+      setMessage("Attach a file before publishing the material.");
       return;
     }
 
@@ -128,12 +108,10 @@ const FacultyMaterials = function () {
         subjectId: form.subjectId,
         title: form.title.trim(),
         type: form.type,
-        description: form.description.trim() || undefined,
+        className: selectedSubject?.className,
+        section: selectedSubject?.section,
         unit: form.unit.trim() || undefined,
         week: form.week.trim() || undefined,
-        sourceText: form.sourceText.trim() || undefined,
-        externalUrl: form.externalUrl.trim() || undefined,
-        imageUrls,
         file: form.file,
       }).unwrap();
 
@@ -141,10 +119,6 @@ const FacultyMaterials = function () {
       setForm((current) => ({
         ...current,
         title: "",
-        description: "",
-        sourceText: "",
-        externalUrl: "",
-        imageUrlsText: "",
         file: null,
       }));
     } catch (error) {
@@ -215,7 +189,7 @@ const FacultyMaterials = function () {
             <div>
               <p className="text-lg font-semibold text-slate-900">Material Publisher</p>
               <p className="text-sm text-slate-500">
-                Attach raw text, URLs, images, or files so the question generator has usable study context.
+                Select course details and upload the study-material file for students.
               </p>
             </div>
           </div>
@@ -239,6 +213,16 @@ const FacultyMaterials = function () {
                   ))
                 )}
               </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700">Class</label>
+              <input
+                value={selectedSubject ? `${selectedSubject.className}${selectedSubject.section ? ` - ${selectedSubject.section}` : ""}` : ""}
+                className={fieldClass}
+                placeholder="Auto-filled from selected course"
+                readOnly
+              />
             </div>
 
             <div>
@@ -282,46 +266,6 @@ const FacultyMaterials = function () {
                 onChange={(event) => updateField("title", event.target.value)}
                 className={fieldClass}
                 placeholder="Example: Week 3 Search Strategies Notes"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(event) => updateField("description", event.target.value)}
-                className={`${fieldClass} min-h-28 resize-y`}
-                placeholder="Summarize the material, learning goals, or the context that should be visible to students and the RAG pipeline."
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700">Source Text</label>
-              <textarea
-                value={form.sourceText}
-                onChange={(event) => updateField("sourceText", event.target.value)}
-                className={`${fieldClass} min-h-36 resize-y`}
-                placeholder="Paste notes, explanations, or extracted text here if you want stronger grounded question generation."
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700">External URL</label>
-              <input
-                value={form.externalUrl}
-                onChange={(event) => updateField("externalUrl", event.target.value)}
-                className={fieldClass}
-                placeholder="Optional source URL for the material"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700">Image URLs</label>
-              <textarea
-                value={form.imageUrlsText}
-                onChange={(event) => updateField("imageUrlsText", event.target.value)}
-                className={`${fieldClass} min-h-24 resize-y`}
-                placeholder="Optional comma-separated image URLs that should be attached to generated questions"
               />
             </div>
 

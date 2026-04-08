@@ -5,7 +5,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from ..api.errors import ApiError
 from ..extensions import db
-from ..models import User
+from ..models import User, UserStatus
 
 
 ROLE_ALIASES = {
@@ -48,6 +48,8 @@ def auth_required(fn):
         user = db.session.get(User, payload["user_id"])
         if user is None:
             raise ApiError(401, "USER_NOT_FOUND", "Authenticated user no longer exists.")
+        if user.status != UserStatus.ACTIVE:
+            raise ApiError(403, "ACCOUNT_INACTIVE", "Your account is inactive. Please contact administration.")
 
         g.current_user = user
         return fn(*args, **kwargs)

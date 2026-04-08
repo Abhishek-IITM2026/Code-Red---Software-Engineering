@@ -13,38 +13,31 @@ import type {
 
 const SELECTED_CHILD_KEY = "parent-selected-child-id";
 
+const getInitialSelectedChildId = () =>
+  typeof window === "undefined" ? "" : window.localStorage.getItem(SELECTED_CHILD_KEY) || "";
+
 export const useParentChildren = () => {
   const { data: linkedStudents = [], isLoading: isChildrenLoading } = useGetLinkedStudentsQuery();
-  const [selectedChildId, setSelectedChildId] = useState("");
+  const [selectedChildId, setSelectedChildId] = useState(getInitialSelectedChildId);
+  const effectiveSelectedChildId = useMemo(() => {
+    if (!linkedStudents.length) return "";
+    return linkedStudents.find((child) => child.studentId === selectedChildId)?.studentId || linkedStudents[0].studentId;
+  }, [linkedStudents, selectedChildId]);
 
   useEffect(() => {
-    if (!linkedStudents.length) {
+    if (!effectiveSelectedChildId || typeof window === "undefined") {
       return;
     }
 
-    const storedChildId =
-      typeof window === "undefined" ? "" : window.localStorage.getItem(SELECTED_CHILD_KEY) || "";
-    const nextChildId =
-      linkedStudents.find((child) => child.studentId === storedChildId)?.studentId ||
-      linkedStudents[0].studentId;
-
-    setSelectedChildId((current) => current || nextChildId);
-  }, [linkedStudents]);
-
-  useEffect(() => {
-    if (!selectedChildId || typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(SELECTED_CHILD_KEY, selectedChildId);
-  }, [selectedChildId]);
+    window.localStorage.setItem(SELECTED_CHILD_KEY, effectiveSelectedChildId);
+  }, [effectiveSelectedChildId]);
 
   const {
     data: workspace,
     isLoading: isWorkspaceLoading,
     isFetching: isWorkspaceFetching,
-  } = useGetChildWorkspaceQuery(selectedChildId, {
-    skip: !selectedChildId,
+  } = useGetChildWorkspaceQuery(effectiveSelectedChildId, {
+    skip: !effectiveSelectedChildId,
   });
 
   const children = useMemo<ParentChildProfile[]>(
@@ -53,7 +46,7 @@ export const useParentChildren = () => {
         id: child.studentId,
         name: child.studentName,
         className: child.class,
-        classId: child.studentId,
+        classId: child.classId || "",
         section: child.section,
         sectionId: child.section,
       })),
@@ -84,8 +77,8 @@ export const useParentChildren = () => {
         }
       : null;
 
-    return fromWorkspace || children.find((child) => child.id === selectedChildId) || fallback;
-  }, [children, selectedChildId, workspace]);
+    return fromWorkspace || children.find((child) => child.id === effectiveSelectedChildId) || fallback;
+  }, [children, effectiveSelectedChildId, workspace]);
 
   const attendanceRows = (workspace?.attendanceRows || []) as AttendanceRow[];
   const performanceSubjects = (workspace?.performanceSubjects || []) as PerformanceSubject[];
@@ -96,7 +89,7 @@ export const useParentChildren = () => {
   return {
     children,
     selectedChild,
-    selectedChildId,
+    selectedChildId: effectiveSelectedChildId,
     setSelectedChildId,
     attendanceRows,
     performanceSubjects,

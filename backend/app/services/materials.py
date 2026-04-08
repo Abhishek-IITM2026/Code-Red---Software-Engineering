@@ -16,15 +16,23 @@ def serialize_material(material: Material) -> dict[str, Any]:
     payload = material.to_dict()
     source = MaterialSourceRepository().get_by_material(material.id) or {}
     content_preview = source.get("contentText") or source.get("sourceText") or ""
+    document = source.get("document") or {}
+    class_name = material.subject.institute_class.name if material.subject and material.subject.institute_class else None
+    section = material.subject.institute_class.section if material.subject and material.subject.institute_class else None
     payload.update(
         {
             "documentId": source.get("documentId"),
             "documentName": source.get("documentName"),
+            "fileName": source.get("documentName"),
             "documentUrl": source.get("documentUrl"),
             "externalUrl": source.get("externalUrl"),
             "imageUrls": source.get("imageUrls") or [],
             "contentTextPreview": normalize_text(content_preview)[:280] or None,
             "ragContextAvailable": bool(source.get("contentText") or source.get("sourceText") or source.get("imageUrls")),
+            "uploadedAt": document.get("createdAt"),
+            "storagePath": document.get("storagePath"),
+            "className": class_name,
+            "section": section,
         }
     )
     return payload
@@ -75,6 +83,8 @@ def create_material_with_source(
     title: str,
     unit: str | None,
     week: str | None,
+    class_name: str | None = None,
+    section: str | None = None,
     material_type: str,
     description: str | None,
     source_text: str | None = None,
@@ -85,6 +95,10 @@ def create_material_with_source(
 ) -> Material:
     uploaded_document = _resolve_uploaded_document(
         actor=actor,
+        subject=subject,
+        week=week,
+        class_name=class_name,
+        section=section,
         document_id=document_id,
         uploaded_file=uploaded_file,
     )
@@ -114,9 +128,29 @@ def create_material_with_source(
     return material
 
 
-def _resolve_uploaded_document(*, actor: User, document_id: int | None, uploaded_file: FileStorage | None) -> UploadedDocument | None:
+def _resolve_uploaded_document(
+    *,
+    actor: User,
+    subject: Subject,
+    week: str | None,
+    class_name: str | None,
+    section: str | None,
+    document_id: int | None,
+    uploaded_file: FileStorage | None,
+) -> UploadedDocument | None:
     if uploaded_file is not None:
-        saved_file = save_uploaded_file(uploaded_file, category="documents", kind="document")
+        path_segments = _material_storage_segments(
+            subject=subject,
+            week=week,
+            class_name=class_name,
+            section=section,
+        )
+        saved_file = save_uploaded_file(
+            uploaded_file,
+            category="documents",
+            kind="document",
+            path_segments=path_segments,
+        )
         uploaded_document = UploadedDocument(
             user_id=actor.id,
             category="study-material",
@@ -148,3 +182,18 @@ def _has_source_payload(payload: dict[str, Any]) -> bool:
         or payload.get("externalUrl")
         or payload.get("imageUrls")
     )
+
+
+def _material_storage_segments(
+    *,
+    subject: Subject,
+    week: str | None,
+    class_name: str | None,
+    section: str | None,
+) -> list[str]:
+    institute_class = subject.institute_class
+    resolved_class_name = class_name or (institute_class.name if institute_class is not None else None) or "unassigned-class"
+    resolved_section = section or (institute_class.section if institute_class and institute_class.section else None)
+    class_segment = resolved_class_name if not resolved_section else f"{resolved_class_name}-{resolved_section}"
+    week_segment = week or "general"
+    return [class_segment, subject.name, week_segment]

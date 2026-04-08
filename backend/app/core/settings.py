@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     MONGO_MATERIAL_SOURCE_COLLECTION: str = "material_sources"
     MONGO_AI_SETTINGS_COLLECTION: str = "ai_settings"
     USE_MONGO_MOCK: bool = False
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
     UPLOAD_ROOT: str = str(BACKEND_DIR / "uploads")
     UPLOAD_URL_PREFIX: str = "/uploads"
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024

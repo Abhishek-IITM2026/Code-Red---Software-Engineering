@@ -46,7 +46,7 @@ def generate_grounded_questions(
     if llm_questions:
         return llm_questions
     provider = str((ai_settings or {}).get("provider") or "grounded-rag").strip().lower()
-    if provider in {"openai-compatible-cloud", "openai-compatible-local"} and not (ai_settings or {}).get(
+    if provider in {"openai-compatible-cloud", "openai-compatible-local", "gemini"} and not (ai_settings or {}).get(
         "fallbackToGroundedRag",
         True,
     ):

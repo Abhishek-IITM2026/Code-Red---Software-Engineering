@@ -148,10 +148,20 @@ def sync_legacy_courses_if_needed() -> int:
     return inserted
 
 
-def list_program_courses_for_class(class_id: int | None, *, statuses: tuple[str, ...] = ("upcoming", "active")):
+def list_program_courses_for_class(
+    class_id: int | list[int] | tuple[int, ...] | set[int] | None,
+    *,
+    statuses: tuple[str, ...] = ("upcoming", "active"),
+):
     query = Subject.query.filter(Subject.course_type != "core")
     if class_id is not None:
-        query = query.filter(Subject.class_id == class_id)
+        if isinstance(class_id, (list, tuple, set)):
+            class_ids = {int(item) for item in class_id}
+            if not class_ids:
+                return []
+            query = query.filter(Subject.class_id.in_(class_ids))
+        else:
+            query = query.filter(Subject.class_id == int(class_id))
     if statuses:
         query = query.filter(Subject.status.in_(statuses))
     return query.order_by(Subject.start_date.asc(), Subject.id.desc()).all()

@@ -35,6 +35,7 @@ from ...schemas import (
     PromotionActionRequest,
     StaffStatusRequest,
     StaffWriteRequest,
+    StudentApprovalRequest,
     StudentStatusRequest,
     StudentWriteRequest,
     parse_json,
@@ -164,6 +165,23 @@ def _student_payload(student: Student):
         "updatedAt": student.updated_at.isoformat(),
         "attendance": attendance["percentage"],
         "average": performance["average"],
+    }
+
+
+def _is_student_pending_approval(student: Student) -> bool:
+    return student.user.status == UserStatus.INACTIVE and student.current_enrollment() is None
+
+
+def _student_approval_payload(student: Student):
+    return {
+        "id": str(student.id),
+        "email": student.user.email,
+        "firstName": student.user.first_name,
+        "lastName": student.user.last_name,
+        "phone": student.user.contact_profile.phone_number if student.user.contact_profile else None,
+        "enrollmentNo": student.roll_number or "",
+        "requestedAt": student.created_at.isoformat(),
+        "status": "pending",
     }
 
 
@@ -478,12 +496,13 @@ def _dashboard_payload():
         .limit(5)
         .all()
     ]
+    pending_approvals = len([student for student in Student.query.all() if _is_student_pending_approval(student)])
     return {
         "totalStudents": total_students,
         "totalFaculty": total_faculty,
         "totalStaff": total_staff,
         "attendanceRate": round(sum(student_attendance) / len(student_attendance), 2) if student_attendance else 0,
-        "pendingApprovals": len([student for student in Student.query.all() if get_attendance_stats(student.id)["percentage"] < 75]),
+        "pendingApprovals": pending_approvals,
         "upcomingEvents": upcoming_events,
     }
 
@@ -564,7 +583,15 @@ def get_dashboard():
 @administration_bp.get("/students")
 @roles_required("administration")
 def list_students():
-    return success_response([_student_payload(student) for student in Student.query.all()])
+    records = [student for student in Student.query.all() if not _is_student_pending_approval(student)]
+    return success_response([_student_payload(student) for student in records])
+
+
+@administration_bp.get("/students/pending-approvals")
+@roles_required("administration")
+def list_pending_student_approvals():
+    pending_students = [student for student in Student.query.order_by(Student.created_at.asc()).all() if _is_student_pending_approval(student)]
+    return success_response([_student_approval_payload(student) for student in pending_students])
 
 
 @administration_bp.get("/students/<int:student_id>")
@@ -574,6 +601,38 @@ def get_student(student_id: int):
     if student is None:
         raise ApiError(404, "STUDENT_NOT_FOUND", "Student was not found.")
     return success_response(_student_payload(student))
+
+
+@administration_bp.post("/students/<int:student_id>/approve")
+@roles_required("administration")
+def approve_student(student_id: int):
+    student = db.session.get(Student, student_id)
+    if student is None:
+        raise ApiError(404, "STUDENT_NOT_FOUND", "Student was not found.")
+    if not _is_student_pending_approval(student):
+        raise ApiError(400, "STUDENT_ALREADY_APPROVED", "This student no longer requires approval.")
+
+    payload = parse_json(StudentApprovalRequest, request.get_json())
+    class_name = payload.class_name.strip()
+    section = payload.section.strip()
+    if not class_name or not section:
+        raise ApiError(422, "VALIDATION_ERROR", "className and section are required for approval.")
+
+    institute_class = _find_or_create_class(class_name, section)
+    db.session.add(
+        ClassEnrollment(
+            student_id=student.id,
+            class_id=institute_class.id,
+            academic_year=institute_class.academic_year,
+        )
+    )
+
+    enrollment_no = (payload.enrollment_no or "").strip()
+    student.roll_number = enrollment_no or student.roll_number or f"STD-{student.id:05d}"
+    student.status = UserStatus.ACTIVE
+    student.user.status = UserStatus.ACTIVE
+    db.session.commit()
+    return success_response(_student_payload(student), message="Student approved and activated.")
 
 
 @administration_bp.post("/students")

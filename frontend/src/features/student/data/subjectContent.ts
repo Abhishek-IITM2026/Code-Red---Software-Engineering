@@ -18,6 +18,7 @@ export interface SubjectMaterial {
   chapterId?: string;
   chapterTitle?: string;
   fileName?: string;
+  downloadUrl?: string;
   uploadedBy?: string;
   isFacultyUpload?: boolean;
 }
@@ -379,6 +380,7 @@ export const saveFacultyUploadedMaterial = (input: FacultyMaterialUploadInput): 
     chapterId: input.chapterId,
     chapterTitle: input.chapterTitle,
     fileName: input.fileName,
+    downloadUrl: undefined,
     uploadedBy: input.uploadedBy,
     isFacultyUpload: true,
   };

@@ -17,59 +17,6 @@ interface ScheduleViewProps {
   errorOverride?: unknown;
 }
 
-const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
-
-const DEMO_SCHEDULES: ClassSchedule[] = [
-  {
-    id: 's1', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 1, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'Mathematics', facultyId: '1', facultyName: 'Ramesh Sharma', roomNumber: 'Room 101',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's2', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 1, timeSlot: { id: '2', startTime: '09:00', endTime: '10:00' },
-    subject: 'Physics', facultyId: '1', facultyName: 'Ramesh Sharma', roomNumber: 'Lab 1',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's3', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 2, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'Chemistry', facultyId: '2', facultyName: 'Sunita Devi', roomNumber: 'Lab 2',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's4', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 2, timeSlot: { id: '2', startTime: '09:00', endTime: '10:00' },
-    subject: 'Biology', facultyId: '2', facultyName: 'Sunita Devi', roomNumber: 'Lab 2',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's5', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 3, timeSlot: { id: '4', startTime: '10:15', endTime: '11:15' },
-    subject: 'English', facultyId: '3', facultyName: 'Amit Kumar', roomNumber: 'Room 201',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's6', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 4, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'History', facultyId: '4', facultyName: 'Priya Singh', roomNumber: 'Room 102',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's7', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 5, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'Geography', facultyId: '4', facultyName: 'Priya Singh', roomNumber: 'Room 103',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's8', classId: '9', className: 'Class 9', sectionId: '9-A', sectionName: 'A',
-    dayOfWeek: 1, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'Mathematics', facultyId: '5', facultyName: 'Vikram Reddy', roomNumber: 'Room 102',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-];
-
 const ScheduleView: React.FC<ScheduleViewProps> = ({
   userRole,
   classId,
@@ -102,41 +49,56 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     skip: !!schedulesOverride || !!(userRole === 'faculty' && facultyIdStr) || !!((userRole !== 'faculty') && classId && sectionId),
   });
 
-  // Select appropriate data based on role - prioritize backend API data
-  let schedules: ClassSchedule[] = [];
-  let isLoading = false;
-  let error: any = null;
+  const selectedSource = useMemo(() => {
+    if (schedulesOverride) {
+      return {
+        schedules: schedulesOverride,
+        isLoading: isLoadingOverride ?? false,
+        error: errorOverride,
+      };
+    }
 
-  if (schedulesOverride) {
-    schedules = schedulesOverride;
-    isLoading = isLoadingOverride ?? false;
-    error = errorOverride;
-  } else if (userRole === 'faculty' && facultyIdStr) {
-    // Faculty view: use backend faculty schedules
-    schedules = facultySchedules.length > 0 ? facultySchedules : [];
-    isLoading = isFacultyLoading;
-    error = facultyError;
-    
-    // Fallback to demo data only if API request completed with no results (not loading/no error)
-    if (schedules.length === 0 && !isFacultyLoading && !facultyError) {
-      schedules = DEMO_SCHEDULES.filter((s) => s.facultyId === facultyIdStr);
+    if (userRole === 'faculty' && facultyIdStr) {
+      return {
+        schedules: facultySchedules,
+        isLoading: isFacultyLoading,
+        error: facultyError,
+      };
     }
-  } else if ((userRole === 'student' || userRole === 'parent') && classId && sectionId) {
-    // Student/Parent view: use backend class schedules
-    schedules = classSchedules.length > 0 ? classSchedules : [];
-    isLoading = isClassLoading;
-    error = classError;
-    
-    // Fallback to demo data only if API request completed with no results (not loading/no error)
-    if (schedules.length === 0 && !isClassLoading && !classError) {
-      schedules = DEMO_SCHEDULES.filter((s) => s.classId === classId && s.sectionId === sectionId);
+
+    if ((userRole === 'student' || userRole === 'parent') && classId && sectionId) {
+      return {
+        schedules: classSchedules,
+        isLoading: isClassLoading,
+        error: classError,
+      };
     }
-  } else {
-    // General view: use all schedules
-    schedules = allSchedules.length > 0 ? allSchedules : DEMO_SCHEDULES;
-    isLoading = isAllLoading;
-    error = allError;
-  }
+
+    return {
+      schedules: allSchedules,
+      isLoading: isAllLoading,
+      error: allError,
+    };
+  }, [
+    allError,
+    allSchedules,
+    classError,
+    classId,
+    classSchedules,
+    errorOverride,
+    facultyError,
+    facultyIdStr,
+    facultySchedules,
+    isAllLoading,
+    isClassLoading,
+    isFacultyLoading,
+    isLoadingOverride,
+    schedulesOverride,
+    sectionId,
+    userRole,
+  ]);
+
+  const { schedules, isLoading, error } = selectedSource;
 
   // Filter schedules based on selected day and search query
   // Role-based filtering is already handled by backend queries
@@ -297,7 +259,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               </h3>
             </div>
             <div className="divide-y divide-slate-100">
-              {daySchedules.map((schedule, index) => (
+              {daySchedules.map((schedule) => (
                 <div
                   key={schedule.id}
                   className="flex flex-col gap-4 p-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"

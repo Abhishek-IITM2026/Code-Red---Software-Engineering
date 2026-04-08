@@ -15,33 +15,6 @@ const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2
 const btnPrimary = "inline-flex items-center justify-center rounded-lg bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90";
 const btnSecondary = "inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50";
 
-export const DEMO_SCHEDULES: ClassSchedule[] = [
-  {
-    id: 's1', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 1, timeSlot: { id: '1', startTime: '08:00', endTime: '09:00' },
-    subject: 'Mathematics', facultyId: 'f1', facultyName: 'Ramesh Sharma', roomNumber: 'Room 101',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's2', classId: '10', className: 'Class 10', sectionId: '10-A', sectionName: 'A',
-    dayOfWeek: 1, timeSlot: { id: '2', startTime: '09:10', endTime: '10:00' },
-    subject: 'Physics', facultyId: 'f1', facultyName: 'Ramesh Sharma', roomNumber: 'Lab 1',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's3', classId: '10', className: 'Class 10', sectionId: '10-B', sectionName: 'B',
-    dayOfWeek: 2, timeSlot: { id: '3', startTime: '08:15', endTime: '09:05' },
-    subject: 'Chemistry', facultyId: 'f2', facultyName: 'Sunita Devi', roomNumber: 'Lab 2',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-  {
-    id: 's4', classId: '9', className: 'Class 9', sectionId: '9-A', sectionName: 'A',
-    dayOfWeek: 4, timeSlot: { id: '4', startTime: '11:00', endTime: '11:50' },
-    subject: 'English', facultyId: 'f3', facultyName: 'Amit Kumar', roomNumber: 'Room 201',
-    createdAt: '2024-01-01', updatedAt: '2024-01-01'
-  },
-];
-
 const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, onEdit, onDelete, onSelectForNotification, isLoading = false, isDeleting = false }) => {
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');

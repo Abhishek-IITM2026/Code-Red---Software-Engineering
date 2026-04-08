@@ -4,9 +4,9 @@ from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import Schedule, AuthorityAssignment, Faculty
+from ...models import AuthorityAssignment, Faculty, InstituteClass, Parent, Schedule
 from ...schemas import ScheduleListQuery, ScheduleWriteRequest, parse_json, parse_query
-from ...services.query import get_current_student
+from ...services.query import get_current_student, get_enrollment_class_scope_ids
 
 
 schedule_bp = Blueprint("schedule", __name__)
@@ -28,6 +28,21 @@ def _resolve_faculty_id(raw_faculty_id: int | None) -> int | None:
 
     faculty = Faculty.query.filter_by(user_id=raw_faculty_id).first()
     return faculty.id if faculty is not None else None
+
+
+def _expand_class_scope_ids(class_id: int, section_id: str | None = None) -> list[int]:
+    class_ids: set[int] = {int(class_id)}
+    institute_class = db.session.get(InstituteClass, int(class_id))
+    if institute_class is None:
+        return sorted(class_ids)
+
+    section = section_id or institute_class.section
+    related_classes = InstituteClass.query.filter_by(
+        name=institute_class.name,
+        section=section,
+    ).all()
+    class_ids.update(item.id for item in related_classes)
+    return sorted(class_ids)
 
 
 def _has_schedule_creation_authority():
@@ -56,8 +71,34 @@ def _has_schedule_creation_authority():
 def list_schedule():
     filters = parse_query(ScheduleListQuery, request.args.to_dict())
     query = Schedule.query
+
+    if g.current_user.has_any_role("administration", "admin", "director", "superadmin"):
+        pass
+    elif g.current_user.has_any_role("faculty", "teacher"):
+        faculty_profile = _current_faculty_profile()
+        if faculty_profile is None:
+            raise ApiError(403, "FORBIDDEN", "Faculty profile is required to access schedules.")
+        query = query.filter_by(faculty_id=faculty_profile.id)
+    elif g.current_user.has_any_role("student"):
+        student = get_current_student()
+        enrollment = student.current_enrollment()
+        if enrollment is None:
+            return success_response([])
+        class_scope_ids = get_enrollment_class_scope_ids(enrollment)
+        query = query.filter(Schedule.class_id.in_(class_scope_ids))
+    elif g.current_user.has_any_role("parent"):
+        parent = Parent.query.filter_by(user_id=g.current_user.id).first()
+        if parent is None or parent.student is None:
+            raise ApiError(404, "PARENT_NOT_FOUND", "Parent profile was not found.")
+        enrollment = parent.student.current_enrollment()
+        if enrollment is None:
+            return success_response([])
+        class_scope_ids = get_enrollment_class_scope_ids(enrollment)
+        query = query.filter(Schedule.class_id.in_(class_scope_ids))
+
     if filters.class_id:
-        query = query.filter_by(class_id=filters.class_id)
+        class_scope_ids = _expand_class_scope_ids(filters.class_id, filters.section_id)
+        query = query.filter(Schedule.class_id.in_(class_scope_ids))
     if filters.faculty_id:
         resolved_faculty_id = _resolve_faculty_id(filters.faculty_id)
         query = query.filter_by(faculty_id=resolved_faculty_id) if resolved_faculty_id is not None else query.filter_by(id=-1)
@@ -156,5 +197,11 @@ def delete_schedule(schedule_id: int):
 def my_schedule():
     student = get_current_student()
     enrollment = student.current_enrollment()
-    query = Schedule.query.filter_by(class_id=enrollment.class_id) if enrollment else Schedule.query.filter_by(id=-1)
+    class_scope_ids = get_enrollment_class_scope_ids(enrollment) if enrollment else []
+    query = (
+        Schedule.query.filter(Schedule.class_id.in_(class_scope_ids), Schedule.is_active.is_(True))
+        .order_by(Schedule.day_of_week.asc(), Schedule.start_time.asc(), Schedule.id.asc())
+        if class_scope_ids
+        else Schedule.query.filter_by(id=-1)
+    )
     return success_response([item.to_dict() for item in query.all()])

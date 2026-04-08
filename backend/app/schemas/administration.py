@@ -14,15 +14,13 @@ class MaterialCreateRequest(StrictModel):
     unit: str | None = None
     week: str | None = None
     material_type: str = Field(alias="type")
-    description: str | None = None
-    source_text: str | None = Field(default=None, alias="sourceText")
-    external_url: str | None = Field(default=None, alias="externalUrl")
-    image_urls: list[str] = Field(default_factory=list, alias="imageUrls")
+    class_name: str | None = Field(default=None, alias="className")
+    section: str | None = None
     document_id: int | None = Field(default=None, alias="documentId")
 
 
 class AISettingsWriteRequest(StrictModel):
-    provider: Literal["grounded-rag", "openai-compatible-cloud", "openai-compatible-local"] = "grounded-rag"
+    provider: Literal["grounded-rag", "openai-compatible-cloud", "openai-compatible-local", "gemini"] = "gemini"
     model: str = "grounded-rag-v1"
     base_url: str | None = Field(default=None, alias="baseUrl")
     api_key: str | None = Field(default=None, alias="apiKey")
@@ -94,6 +92,12 @@ class StudentWriteRequest(StrictModel):
 
 class StudentStatusRequest(StrictModel):
     status: Literal["active", "inactive", "suspended"]
+
+
+class StudentApprovalRequest(StrictModel):
+    class_name: str = Field(alias="className")
+    section: str
+    enrollment_no: str | None = Field(default=None, alias="enrollmentNo")
 
 
 class StaffWriteRequest(StrictModel):

@@ -23,6 +23,45 @@ export interface Subject {
   credits: number;
 }
 
+export interface SubjectContentMaterial {
+  id: string;
+  subjectId?: string;
+  courseId?: string;
+  title: string;
+  unit?: string | null;
+  week?: string | null;
+  type: 'notes' | 'video' | 'pdf' | 'worksheet' | string;
+  description?: string | null;
+  documentId?: string | null;
+  documentName?: string | null;
+  fileName?: string | null;
+  documentUrl?: string | null;
+  externalUrl?: string | null;
+  imageUrls?: string[];
+  contentTextPreview?: string | null;
+  ragContextAvailable?: boolean;
+  uploadedAt?: string | null;
+  storagePath?: string | null;
+  className?: string | null;
+  section?: string | null;
+}
+
+export interface SubjectWeeklyContent {
+  id: string;
+  week: string;
+  title: string;
+  summary: string;
+  focus: string;
+  keyPoints?: string[];
+}
+
+export interface StudentSubjectContentResponse {
+  subjectId: string;
+  subjectName?: string;
+  weeklyContent?: SubjectWeeklyContent[];
+  materials: SubjectContentMaterial[];
+}
+
 export interface Attendance {
   id: string;
   studentId: string;
@@ -115,6 +154,27 @@ export interface CoursePayment {
   paidAt: string;
 }
 
+export interface SubjectChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface SubjectChatCitation {
+  materialId: string;
+  materialTitle: string;
+  snippet: string;
+}
+
+export interface SubjectChatResponse {
+  subjectId: string;
+  subjectName: string;
+  question: string;
+  answer: string;
+  citations: SubjectChatCitation[];
+  followUpQuestions: string[];
+  confidence: 'high' | 'medium' | 'low';
+}
+
 // API Slice
 export const studentApi = createApi({
   reducerPath: 'studentApi',
@@ -139,6 +199,11 @@ export const studentApi = createApi({
     // Get enrolled subjects
     getSubjects: builder.query<Subject[], void>({
       query: () => '/students/me/subjects',
+      providesTags: ['Subjects'],
+    }),
+
+    getSubjectContent: builder.query<StudentSubjectContentResponse, string>({
+      query: (subjectId) => `/students/me/subjects/${subjectId}/content`,
       providesTags: ['Subjects'],
     }),
 
@@ -237,6 +302,17 @@ export const studentApi = createApi({
       }),
       invalidatesTags: ['Courses', 'Payments'],
     }),
+
+    askSubjectChatbot: builder.mutation<
+      SubjectChatResponse,
+      { subjectId: string; question: string; history?: SubjectChatMessage[] }
+    >({
+      query: ({ subjectId, question, history = [] }) => ({
+        url: `/students/me/subjects/${subjectId}/chat`,
+        method: 'POST',
+        body: { question, history },
+      }),
+    }),
   }),
 });
 
@@ -244,6 +320,7 @@ export const studentApi = createApi({
 export const {
   useGetProfileQuery,
   useGetSubjectsQuery,
+  useGetSubjectContentQuery,
   useGetAttendanceQuery,
   useGetMarksQuery,
   useGetAssignmentsQuery,
@@ -255,6 +332,7 @@ export const {
   useGetMyCourseEnrollmentsQuery,
   useEnrollInCourseMutation,
   usePayCourseEnrollmentMutation,
+  useAskSubjectChatbotMutation,
 } = studentApi;
 
 export default studentApi;

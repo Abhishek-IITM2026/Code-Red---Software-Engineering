@@ -44,7 +44,7 @@ export interface AssessmentSubmission {
 }
 
 export interface AIRuntimeSettings {
-  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local';
+  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
   model: string;
   baseUrl?: string | null;
   temperature: number;
@@ -76,7 +76,7 @@ type ModifyQuestionsRequest = {
 export const assessmentApi = createApi({
   reducerPath: 'assessmentApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3500/api',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
       if (token) {

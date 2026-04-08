@@ -1,17 +1,30 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiBook, FiCheckCircle, FiClock, FiFileText, FiLayers } from "react-icons/fi";
-import { getMergedStudentSubjects } from "../data/subjectContent";
+import { useGetAssignmentsQuery, useGetSubjectsQuery } from "../api/studentApi";
 
 const StudentSubjects = function () {
   const navigate = useNavigate();
-  const [studentSubjects, setStudentSubjects] = useState(() => getMergedStudentSubjects());
+  const { data: studentSubjects = [] } = useGetSubjectsQuery();
+  const { data: assignments = [] } = useGetAssignmentsQuery({});
 
-  useEffect(() => {
-    const refreshSubjects = () => setStudentSubjects(getMergedStudentSubjects());
-    window.addEventListener("student-subject-materials-updated", refreshSubjects);
-    return () => window.removeEventListener("student-subject-materials-updated", refreshSubjects);
-  }, []);
+  const assignmentStatsBySubject = useMemo(() => {
+    const stats = new Map<string, { total: number; pending: number }>();
+    assignments.forEach((assignment) => {
+      const current = stats.get(assignment.subjectId) || { total: 0, pending: 0 };
+      current.total += 1;
+      if (assignment.status === "open" || assignment.status === "pending") {
+        current.pending += 1;
+      }
+      stats.set(assignment.subjectId, current);
+    });
+    return stats;
+  }, [assignments]);
+
+  const totalPending = Array.from(assignmentStatsBySubject.values()).reduce(
+    (sum, item) => sum + item.pending,
+    0,
+  );
 
   return (
     <div className="space-y-8">
@@ -35,17 +48,12 @@ const StudentSubjects = function () {
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Chapter blocks</p>
               <p className="mt-2 text-2xl font-bold text-slate-900">
-                {studentSubjects.reduce((sum, subject) => sum + subject.chapters.length, 0)}
+                {studentSubjects.length}
               </p>
             </div>
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <p className="text-sm text-slate-500">Pending work</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {
-                  studentSubjects.flatMap((subject) => subject.assignments)
-                    .filter((assignment) => assignment.status === "pending").length
-                }
-              </p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{totalPending}</p>
             </div>
           </div>
         </div>
@@ -53,13 +61,13 @@ const StudentSubjects = function () {
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {studentSubjects.map((subject) => {
-          const pendingAssignments = subject.assignments.filter((assignment) => assignment.status === "pending").length;
+          const stats = assignmentStatsBySubject.get(subject.id) || { total: 0, pending: 0 };
 
           return (
             <button
-              key={subject.name}
+              key={subject.id}
               type="button"
-              onClick={() => navigate(`/student/subjects/${encodeURIComponent(subject.name)}/chapters`)}
+              onClick={() => navigate(`/student/subjects/${encodeURIComponent(subject.id)}/chapters`)}
               className="rounded-3xl bg-white p-6 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-4">
@@ -76,31 +84,33 @@ const StudentSubjects = function () {
                   {subject.code}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-900">{subject.name}</h2>
-                <p className="mt-1 text-sm text-slate-500">{subject.teacher}</p>
-                <p className="mt-4 text-sm leading-6 text-slate-600">{subject.description}</p>
+                <p className="mt-1 text-sm text-slate-500">Teacher ID: {subject.teacherId || "Not assigned"}</p>
+                <p className="mt-4 text-sm leading-6 text-slate-600">
+                  Subject content, assessments, and study materials are scoped to your account enrollment.
+                </p>
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl bg-slate-50 p-3">
                   <div className="flex items-center gap-2 text-slate-500">
                     <FiLayers className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase tracking-[0.14em]">Chapters</span>
+                    <span className="text-xs font-medium uppercase tracking-[0.14em]">Credits</span>
                   </div>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">{subject.chapters.length}</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{subject.credits}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-3">
                   <div className="flex items-center gap-2 text-slate-500">
                     <FiFileText className="h-4 w-4" />
                     <span className="text-xs font-medium uppercase tracking-[0.14em]">Assignments</span>
                   </div>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">{subject.assignments.length}</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{stats.total}</p>
                 </div>
               </div>
 
               <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
                 <div className="flex items-center gap-2 text-slate-500">
                   <FiClock className="h-4 w-4" />
-                  <span>{pendingAssignments} pending</span>
+                  <span>{stats.pending} pending</span>
                 </div>
                 <span className="inline-flex items-center gap-2 font-semibold text-[var(--primary)]">
                   Open Subject
@@ -110,6 +120,11 @@ const StudentSubjects = function () {
             </button>
           );
         })}
+        {studentSubjects.length === 0 ? (
+          <div className="rounded-3xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+            No subjects are assigned to this student yet.
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

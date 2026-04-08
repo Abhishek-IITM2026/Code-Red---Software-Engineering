@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiUserPlus, FiArrowRight } from "react-icons/fi";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiUser, FiUserPlus } from "react-icons/fi";
 import { Button, Input, Card, Select } from "../../../components/common";
 import { register, clearError } from "../store/authSlice";
 import type { AppDispatch, RootState } from "../../../app/store";
@@ -56,10 +56,21 @@ const Register = () => {
       role: formData.role
     };
 
-    const result = await dispatch(register(registerData) as any);
+    const result = await dispatch(register(registerData));
     if (register.fulfilled.match(result)) {
-      const role = result.payload.user.role?.toLowerCase();
-      navigate(roleRedirects[role || "student"] || "/student/dashboard", { replace: true });
+      if (result.payload.token) {
+        const role = result.payload.user.role?.toLowerCase();
+        navigate(roleRedirects[role || "student"] || "/student/dashboard", { replace: true });
+      } else {
+        navigate("/auth/login", {
+          replace: true,
+          state: {
+            registrationMessage:
+              result.payload.message ||
+              "Registration submitted. Please wait for admin approval before logging in.",
+          },
+        });
+      }
     }
   };
 

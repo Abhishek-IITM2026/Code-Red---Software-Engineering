@@ -10,42 +10,6 @@ import type {
 // Mock OTP storage (in real app, this would be on the server)
 const mockOTPStore: Record<string, { otp: string; expiresAt: number }> = {};
 
-// Mock users for demo
-const mockUsers: Record<string, User & { password: string }> = {
-  "student@example.com": {
-    id: "1",
-    email: "student@example.com",
-    firstName: "Neha",
-    lastName: "Patel",
-    role: "student",
-    password: "student123"
-  },
-  "faculty@example.com": {
-    id: "2",
-    email: "faculty@example.com",
-    firstName: "Ravi",
-    lastName: "Sharma",
-    role: "faculty",
-    password: "faculty123"
-  },
-  "parent@example.com": {
-    id: "3",
-    email: "parent@example.com",
-    firstName: "Meera",
-    lastName: "Patel",
-    role: "parent",
-    password: "parent123"
-  },
-  "admin@example.com": {
-    id: "4",
-    email: "admin@example.com",
-    firstName: "Asha",
-    lastName: "Admin",
-    role: "admin",
-    password: "admin123"
-  }
-};
-
 const getStoredAuth = (): { user: User | null; token: string | null } => {
   const token = localStorage.getItem("token");
   const user = localStorage.getItem("user");
@@ -65,12 +29,11 @@ const initialState: AuthState = {
   isAuthenticated: !!storedAuth.token,
 };
 
-// Simulated token generation
-const generateToken = (user: User): string => {
-  return btoa(JSON.stringify({ userId: user.id, role: user.role, timestamp: Date.now() }));
+type ProfileMutationResponse = {
+  user?: User;
 };
 
-// Login - works with mock data or real API
+// Login
 export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
@@ -92,17 +55,7 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
 
       return data as AuthResponse;
     } catch {
-      const mockUser = mockUsers[credentials.email];
-      if (mockUser && mockUser.password === credentials.password) {
-        const { password, ...user } = mockUser;
-        const token = generateToken(user);
-
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        return { user, token };
-      }
-      return rejectWithValue("Invalid email or password.");
+      return rejectWithValue("Unable to reach the backend. Check that the API server is running on http://localhost:3500.");
     }
   }
 );
@@ -125,25 +78,17 @@ export const register = createAsyncThunk<AuthResponse, RegisterData>(
         return rejectWithValue(data.error?.message || "Registration failed");
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
 
       return data as AuthResponse;
     } catch {
-      // Mock registration success
-      const newUser: User = {
-        id: String(Date.now()),
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        role: userData.role || "student"
-      };
-      const token = generateToken(newUser);
-      
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(newUser));
-      
-      return { user: newUser, token };
+      return rejectWithValue("Unable to reach the backend. Check that the API server is running on http://localhost:3500.");
     }
   }
 );
@@ -383,9 +328,15 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.isAuthenticated = true;
+        if (action.payload.token) {
+          state.user = action.payload.user;
+          state.token = action.payload.token;
+          state.isAuthenticated = true;
+        } else {
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
+        }
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -427,7 +378,7 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(updateProfile.fulfilled, (state, action: PayloadAction<any>) => {
+      .addCase(updateProfile.fulfilled, (state, action: PayloadAction<ProfileMutationResponse>) => {
         state.isLoading = false;
         if (action.payload.user) {
           state.user = action.payload.user;
@@ -442,7 +393,7 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(updateProfilePicture.fulfilled, (state, action: PayloadAction<any>) => {
+      .addCase(updateProfilePicture.fulfilled, (state, action: PayloadAction<ProfileMutationResponse>) => {
         state.isLoading = false;
         if (action.payload.user) {
           state.user = action.payload.user;

@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
-import { FiEdit3, FiPlus, FiSearch, FiTrash2, FiUsers, FiX } from "react-icons/fi";
+import { FiCheckCircle, FiEdit3, FiSearch, FiTrash2, FiUsers, FiX } from "react-icons/fi";
 import {
-  useCreateStudentMutation,
+  useApproveStudentRegistrationMutation,
   useDeleteStudentMutation,
+  useListPendingStudentApprovalsQuery,
   useListStudentsQuery,
   useUpdateStudentMutation,
   useUpdateStudentStatusMutation,
+  type PendingStudentApproval,
   type StudentRecord,
 } from "../api/adminApi";
 
@@ -13,6 +15,21 @@ const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
 type StudentForm = Omit<StudentRecord, "id" | "createdAt" | "updatedAt" | "attendance" | "average">;
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (!error || typeof error !== "object") return fallback;
+  const payload = error as {
+    data?: {
+      detail?: Array<{ msg?: string }>;
+      message?: string;
+    };
+    error?: string;
+  };
+  const details = Array.isArray(payload.data?.detail)
+    ? payload.data?.detail?.map((item) => item.msg).filter(Boolean).join(", ")
+    : null;
+  return details || payload.data?.message || payload.error || fallback;
+};
 
 const emptyForm: StudentForm = {
   email: "",
@@ -28,8 +45,15 @@ const emptyForm: StudentForm = {
 
 const ManageStudentRecords = function () {
   const [formError, setFormError] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [approvingStudentId, setApprovingStudentId] = useState<string | null>(null);
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+  const [approvalForms, setApprovalForms] = useState<
+    Record<string, { className: string; section: string; enrollmentNo: string }>
+  >({});
   const { data: students = [], isLoading } = useListStudentsQuery();
-  const [createStudent, { isLoading: isCreating }] = useCreateStudentMutation();
+  const { data: pendingApprovals = [] } = useListPendingStudentApprovalsQuery();
+  const [approveStudentRegistration] = useApproveStudentRegistrationMutation();
   const [updateStudent, { isLoading: isUpdating }] = useUpdateStudentMutation();
   const [updateStatus] = useUpdateStudentStatusMutation();
   const [deleteStudent] = useDeleteStudentMutation();
@@ -68,13 +92,6 @@ const ManageStudentRecords = function () {
 
   const classOptions = Array.from(new Set(students.map((student) => student.class))).filter(Boolean);
 
-  const openCreate = () => {
-    setEditingStudent(null);
-    setForm(emptyForm);
-    setFormError(null);
-    setIsFormOpen(true);
-  };
-
   const openEdit = (student: StudentRecord) => {
     setEditingStudent(student);
     setForm({
@@ -100,6 +117,10 @@ const ManageStudentRecords = function () {
   };
 
   const handleSubmit = async () => {
+    if (!editingStudent) {
+      setFormError("Please select a student to edit.");
+      return;
+    }
     if (!form.firstName || !form.lastName || !form.email || !form.class || !form.section || !form.enrollmentNo) {
       setFormError("Please fill in all required fields.");
       return;
@@ -107,20 +128,66 @@ const ManageStudentRecords = function () {
 
     try {
       setFormError(null);
-      if (editingStudent) {
-        await updateStudent({
-          id: editingStudent.id,
-          data: form,
-        }).unwrap();
-      } else {
-        await createStudent(form).unwrap();
-      }
+      await updateStudent({
+        id: editingStudent.id,
+        data: form,
+      }).unwrap();
       closeForm();
-    } catch (error: any) {
-      const details = Array.isArray(error?.data?.detail)
-        ? error.data.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ")
-        : null;
-      setFormError(details || error?.data?.message || error?.error || "Failed to save student changes.");
+    } catch (error: unknown) {
+      setFormError(getErrorMessage(error, "Failed to save student changes."));
+    }
+  };
+
+  const ensureApprovalForm = (record: PendingStudentApproval) =>
+    approvalForms[record.id] || {
+      className: "Class 10",
+      section: "A",
+      enrollmentNo: record.enrollmentNo || "",
+    };
+
+  const updateApprovalForm = (
+    studentId: string,
+    field: "className" | "section" | "enrollmentNo",
+    value: string,
+  ) => {
+    setApprovalForms((current) => {
+      const existing = current[studentId] || { className: "Class 10", section: "A", enrollmentNo: "" };
+      return {
+        ...current,
+        [studentId]: {
+          ...existing,
+          [field]: value,
+        },
+      };
+    });
+  };
+
+  const handleApproveStudent = async (record: PendingStudentApproval) => {
+    const payload = ensureApprovalForm(record);
+    if (!payload.className.trim() || !payload.section.trim()) {
+      setApprovalError("Class and section are required before approval.");
+      return;
+    }
+    try {
+      setApprovalError(null);
+      setApprovingStudentId(record.id);
+      await approveStudentRegistration({
+        id: record.id,
+        data: {
+          className: payload.className.trim(),
+          section: payload.section.trim(),
+          enrollmentNo: payload.enrollmentNo.trim() || undefined,
+        },
+      }).unwrap();
+      setApprovalForms((current) => {
+        const next = { ...current };
+        delete next[record.id];
+        return next;
+      });
+    } catch (error: unknown) {
+      setApprovalError(getErrorMessage(error, "Failed to approve student."));
+    } finally {
+      setApprovingStudentId(null);
     }
   };
 
@@ -150,11 +217,14 @@ const ManageStudentRecords = function () {
 
           <button
             type="button"
-            onClick={openCreate}
+            onClick={() => {
+              setApprovalError(null);
+              setIsApprovalOpen(true);
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white shadow-sm transition hover:opacity-90"
           >
-            <FiPlus className="h-5 w-5" />
-            Add Student
+            <FiCheckCircle className="h-5 w-5" />
+            Pending Approvals ({pendingApprovals.length})
           </button>
         </div>
 
@@ -304,13 +374,108 @@ const ManageStudentRecords = function () {
         </div>
       </section>
 
+      {isApprovalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">Pending Student Approvals</p>
+                <p className="text-sm text-slate-500">
+                  Assign class and section, then approve to activate student access.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsApprovalOpen(false)}
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5">
+              {approvalError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {approvalError}
+                </div>
+              ) : null}
+
+              {pendingApprovals.map((record) => {
+                const approvalForm = ensureApprovalForm(record);
+                const isApproving = approvingStudentId === record.id;
+                return (
+                  <div key={record.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">
+                          {record.firstName} {record.lastName}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">{record.email}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Requested on {new Date(record.requestedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <label>
+                          <span className="text-xs font-medium text-slate-600">Class</span>
+                          <input
+                            value={approvalForm.className}
+                            onChange={(event) => updateApprovalForm(record.id, "className", event.target.value)}
+                            className={fieldClass}
+                          />
+                        </label>
+                        <label>
+                          <span className="text-xs font-medium text-slate-600">Section</span>
+                          <input
+                            value={approvalForm.section}
+                            onChange={(event) => updateApprovalForm(record.id, "section", event.target.value)}
+                            className={fieldClass}
+                          />
+                        </label>
+                        <label>
+                          <span className="text-xs font-medium text-slate-600">Enrollment</span>
+                          <input
+                            value={approvalForm.enrollmentNo}
+                            onChange={(event) => updateApprovalForm(record.id, "enrollmentNo", event.target.value)}
+                            className={fieldClass}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void handleApproveStudent(record)}
+                        disabled={isApproving}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FiCheckCircle className="h-4 w-4" />
+                        {isApproving ? "Approving..." : "Approve & Activate"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {pendingApprovals.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500">
+                  No student approvals are pending right now.
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isFormOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>
-                <p className="text-lg font-semibold text-slate-900">{editingStudent ? "Edit Student" : "Create Student"}</p>
-                <p className="text-sm text-slate-500">Submit changes directly to the administration backend.</p>
+                <p className="text-lg font-semibold text-slate-900">Edit Student</p>
+                <p className="text-sm text-slate-500">Update student details directly in the backend.</p>
               </div>
               <button type="button" onClick={closeForm} className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100">
                 <FiX className="h-5 w-5" />
@@ -372,11 +537,11 @@ const ManageStudentRecords = function () {
               <button
                 type="button"
                 onClick={() => void handleSubmit()}
-                disabled={isCreating || isUpdating}
+                disabled={isUpdating}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <FiUsers className="h-4 w-4" />
-                {editingStudent ? "Save Changes" : "Create Student"}
+                Save Changes
               </button>
             </div>
           </div>

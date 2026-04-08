@@ -17,10 +17,11 @@ const StepGenerate: React.FC = () => {
 
   const providerLabel = aiSettings
     ? {
+        gemini: 'Google Gemini',
         'grounded-rag': 'Grounded RAG',
         'openai-compatible-cloud': 'OpenAI-Compatible Cloud',
         'openai-compatible-local': 'OpenAI-Compatible Local',
-      }[aiSettings.provider]
+      }[aiSettings.provider] || aiSettings.provider
     : null;
 
   const handleBack = () => {

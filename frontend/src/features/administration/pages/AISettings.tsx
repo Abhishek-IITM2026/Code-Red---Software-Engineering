@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { FiCpu, FiKey, FiRefreshCw, FiShield, FiSliders } from "react-icons/fi";
 import {
   useGetAISettingsQuery,
   useUpdateAISettingsMutation,
+  type AISettings,
   type AISettingsWritePayload,
 } from "../api/adminApi";
 
@@ -10,9 +11,9 @@ const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
 const defaultForm: AISettingsWritePayload = {
-  provider: "grounded-rag",
-  model: "grounded-rag-v1",
-  baseUrl: "",
+  provider: "gemini",
+  model: "gemini-1.5-flash",
+  baseUrl: "https://generativelanguage.googleapis.com/v1beta",
   apiKey: "",
   clearApiKey: false,
   temperature: 0.2,
@@ -24,47 +25,56 @@ const defaultForm: AISettingsWritePayload = {
 };
 
 const providerLabels: Record<AISettingsWritePayload["provider"], string> = {
+  gemini: "Google Gemini",
   "grounded-rag": "Grounded RAG",
   "openai-compatible-cloud": "OpenAI-Compatible Cloud",
   "openai-compatible-local": "OpenAI-Compatible Local",
+};
+
+const buildFormFromSettings = (settings?: AISettings): AISettingsWritePayload => {
+  if (!settings) return defaultForm;
+  return {
+    provider: settings.provider,
+    model: settings.model,
+    baseUrl: settings.baseUrl || "",
+    apiKey: "",
+    clearApiKey: false,
+    temperature: settings.temperature,
+    maxTokens: settings.maxTokens,
+    generationRateLimit: settings.generationRateLimit,
+    modificationRateLimit: settings.modificationRateLimit,
+    fallbackToGroundedRag: settings.fallbackToGroundedRag,
+    notes: settings.notes || "",
+  };
 };
 
 const AISettings = function () {
   const { data, isLoading, isFetching } = useGetAISettingsQuery();
   const [updateAISettings, { isLoading: isSaving }] = useUpdateAISettingsMutation();
   const [form, setForm] = useState<AISettingsWritePayload>(defaultForm);
+  const [isFormDirty, setIsFormDirty] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    if (!data) {
-      return;
-    }
-    setForm({
-      provider: data.provider,
-      model: data.model,
-      baseUrl: data.baseUrl || "",
-      apiKey: "",
-      clearApiKey: false,
-      temperature: data.temperature,
-      maxTokens: data.maxTokens,
-      generationRateLimit: data.generationRateLimit,
-      modificationRateLimit: data.modificationRateLimit,
-      fallbackToGroundedRag: data.fallbackToGroundedRag,
-      notes: data.notes || "",
-    });
-  }, [data]);
+  const syncedForm = useMemo(() => buildFormFromSettings(data), [data]);
+  const activeForm = isFormDirty ? form : syncedForm;
+
+  const mutateForm = (updater: (current: AISettingsWritePayload) => AISettingsWritePayload) => {
+    setForm((current) => updater(isFormDirty ? current : syncedForm));
+    setIsFormDirty(true);
+  };
 
   const handleSave = async () => {
     setStatusMessage("");
     try {
-      await updateAISettings({
-        ...form,
-        baseUrl: form.baseUrl?.trim() || null,
-        apiKey: form.apiKey?.trim() || null,
-        notes: form.notes?.trim() || null,
+      const updated = await updateAISettings({
+        ...activeForm,
+        baseUrl: activeForm.baseUrl?.trim() || null,
+        apiKey: activeForm.apiKey?.trim() || null,
+        notes: activeForm.notes?.trim() || null,
       }).unwrap();
       setStatusMessage("AI settings saved. The updated provider, model, and rate controls are now active.");
-      setForm((current) => ({ ...current, apiKey: "", clearApiKey: false }));
+      setForm(buildFormFromSettings(updated));
+      setIsFormDirty(false);
     } catch (error) {
       const fallbackMessage = "Unable to save AI settings right now.";
       if (typeof error === "object" && error && "data" in error) {
@@ -113,13 +123,13 @@ const AISettings = function () {
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Active Provider</p>
             <p className="mt-2 text-xl font-bold text-slate-900">
-              {providerLabels[data?.provider || form.provider]}
+              {providerLabels[data?.provider || activeForm.provider]}
             </p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-sm text-slate-500">Generation Rate Limit</p>
             <p className="mt-2 text-xl font-bold text-slate-900">
-              {data?.generationRateLimit || form.generationRateLimit}
+              {data?.generationRateLimit || activeForm.generationRateLimit}
             </p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -140,7 +150,7 @@ const AISettings = function () {
             <div>
               <p className="text-lg font-semibold text-slate-900">Provider and Runtime</p>
               <p className="text-sm text-slate-500">
-                Choose grounded local generation or connect an OpenAI-compatible cloud/local endpoint.
+                Choose Gemini, grounded local generation, or connect an OpenAI-compatible cloud/local endpoint.
               </p>
             </div>
           </div>
@@ -149,15 +159,16 @@ const AISettings = function () {
             <div>
               <label className="text-sm font-medium text-slate-700">Provider</label>
               <select
-                value={form.provider}
+                value={activeForm.provider}
                 onChange={(event) =>
-                  setForm((current) => ({
+                  mutateForm((current) => ({
                     ...current,
                     provider: event.target.value as AISettingsWritePayload["provider"],
                   }))
                 }
                 className={fieldClass}
               >
+                <option value="gemini">Google Gemini</option>
                 <option value="grounded-rag">Grounded RAG</option>
                 <option value="openai-compatible-cloud">OpenAI-Compatible Cloud</option>
                 <option value="openai-compatible-local">OpenAI-Compatible Local</option>
@@ -167,20 +178,20 @@ const AISettings = function () {
             <div>
               <label className="text-sm font-medium text-slate-700">Model</label>
               <input
-                value={form.model}
-                onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
+                value={activeForm.model}
+                onChange={(event) => mutateForm((current) => ({ ...current, model: event.target.value }))}
                 className={fieldClass}
-                placeholder="Example: gpt-4.1-mini or qwen2.5:14b"
+                placeholder="Example: gemini-1.5-flash or gpt-4.1-mini"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium text-slate-700">Base URL</label>
               <input
-                value={form.baseUrl || ""}
-                onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.target.value }))}
+                value={activeForm.baseUrl || ""}
+                onChange={(event) => mutateForm((current) => ({ ...current, baseUrl: event.target.value }))}
                 className={fieldClass}
-                placeholder="Example: http://localhost:11434/v1 or https://api.openai.com/v1"
+                placeholder="Example: https://generativelanguage.googleapis.com/v1beta or http://localhost:11434/v1"
               />
             </div>
 
@@ -188,8 +199,8 @@ const AISettings = function () {
               <label className="text-sm font-medium text-slate-700">API Key</label>
               <input
                 type="password"
-                value={form.apiKey || ""}
-                onChange={(event) => setForm((current) => ({ ...current, apiKey: event.target.value, clearApiKey: false }))}
+                value={activeForm.apiKey || ""}
+                onChange={(event) => mutateForm((current) => ({ ...current, apiKey: event.target.value, clearApiKey: false }))}
                 className={fieldClass}
                 placeholder={data?.hasApiKey ? `Stored key: ${data.apiKeyPreview}` : "Paste a new provider key"}
               />
@@ -198,9 +209,9 @@ const AISettings = function () {
             <label className="inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
               <input
                 type="checkbox"
-                checked={form.clearApiKey || false}
+                checked={activeForm.clearApiKey || false}
                 onChange={(event) =>
-                  setForm((current) => ({
+                  mutateForm((current) => ({
                     ...current,
                     clearApiKey: event.target.checked,
                     apiKey: event.target.checked ? "" : current.apiKey,
@@ -219,9 +230,9 @@ const AISettings = function () {
                   min="0"
                   max="2"
                   step="0.1"
-                  value={form.temperature}
+                  value={activeForm.temperature}
                   onChange={(event) =>
-                    setForm((current) => ({
+                    mutateForm((current) => ({
                       ...current,
                       temperature: Number(event.target.value) || 0,
                     }))
@@ -236,9 +247,9 @@ const AISettings = function () {
                   min="256"
                   max="8192"
                   step="1"
-                  value={form.maxTokens}
+                  value={activeForm.maxTokens}
                   onChange={(event) =>
-                    setForm((current) => ({
+                    mutateForm((current) => ({
                       ...current,
                       maxTokens: Number(event.target.value) || 256,
                     }))
@@ -268,9 +279,9 @@ const AISettings = function () {
               <div>
                 <label className="text-sm font-medium text-slate-700">Generate Questions Limit</label>
                 <input
-                  value={form.generationRateLimit}
+                  value={activeForm.generationRateLimit}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, generationRateLimit: event.target.value }))
+                    mutateForm((current) => ({ ...current, generationRateLimit: event.target.value }))
                   }
                   className={fieldClass}
                   placeholder="Example: 15 per minute"
@@ -279,23 +290,23 @@ const AISettings = function () {
               <div>
                 <label className="text-sm font-medium text-slate-700">Modify Questions Limit</label>
                 <input
-                  value={form.modificationRateLimit}
+                  value={activeForm.modificationRateLimit}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, modificationRateLimit: event.target.value }))
+                    mutateForm((current) => ({ ...current, modificationRateLimit: event.target.value }))
                   }
                   className={fieldClass}
                   placeholder="Example: 15 per minute"
                 />
               </div>
               <label className="inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.fallbackToGroundedRag}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, fallbackToGroundedRag: event.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                />
+              <input
+                type="checkbox"
+                checked={activeForm.fallbackToGroundedRag}
+                onChange={(event) =>
+                  mutateForm((current) => ({ ...current, fallbackToGroundedRag: event.target.checked }))
+                }
+                className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
+              />
                 Fall back to grounded RAG if the external provider is unavailable
               </label>
             </div>
@@ -317,8 +328,8 @@ const AISettings = function () {
             <div className="mt-6">
               <label className="text-sm font-medium text-slate-700">Notes</label>
               <textarea
-                value={form.notes || ""}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                value={activeForm.notes || ""}
+                onChange={(event) => mutateForm((current) => ({ ...current, notes: event.target.value }))}
                 className={`${fieldClass} min-h-36 resize-y`}
                 placeholder="Example: Local OpenAI-compatible gateway is available only on the campus VPN."
               />

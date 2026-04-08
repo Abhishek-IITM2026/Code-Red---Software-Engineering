@@ -41,7 +41,34 @@ const StepModify: React.FC = () => {
 
   const handleUpdateQuestion = (questionId: string, updates: Partial<Question>) => {
     const updatedQuestions = config.questions.map((q) =>
-      q.id === questionId ? { ...q, ...updates } : q
+      q.id === questionId
+        ? (() => {
+            const nextQuestion: Question = { ...q, ...updates };
+
+            if (nextQuestion.questionType === 'mcq') {
+              const normalizedOptions =
+                Array.isArray(nextQuestion.options) && nextQuestion.options.length >= 2
+                  ? nextQuestion.options.map((option) => String(option))
+                  : ['Option A', 'Option B', 'Option C', 'Option D'];
+              nextQuestion.options = normalizedOptions;
+              const correctAnswer =
+                typeof nextQuestion.correctAnswer === 'string'
+                  ? nextQuestion.correctAnswer
+                  : '';
+              nextQuestion.correctAnswer = normalizedOptions.includes(correctAnswer)
+                ? correctAnswer
+                : normalizedOptions[0];
+            } else if (nextQuestion.questionType === 'trueFalse') {
+              nextQuestion.options = ['True', 'False'];
+              const normalized = String(nextQuestion.correctAnswer || '').trim().toLowerCase();
+              nextQuestion.correctAnswer = normalized === 'false' ? 'False' : 'True';
+            } else {
+              nextQuestion.options = undefined;
+            }
+
+            return nextQuestion;
+          })()
+        : q
     );
     setQuestions(updatedQuestions);
   };
@@ -251,7 +278,10 @@ const StepModify: React.FC = () => {
                           Options
                         </label>
                         <div className="space-y-2">
-                          {question.options?.map((opt, i) => (
+                          {(question.options && question.options.length > 0
+                            ? question.options
+                            : ['Option A', 'Option B', 'Option C', 'Option D']
+                          ).map((opt, i) => (
                             <div key={i} className="flex items-center gap-2">
                               <span className="w-6 text-sm font-medium text-[var(--text-secondary)]">
                                 {String.fromCharCode(65 + i)}.
@@ -265,21 +295,17 @@ const StepModify: React.FC = () => {
                                 }}
                                 placeholder={`Option ${String.fromCharCode(65 + i)}`}
                               />
-                              {question.correctAnswer && Array.isArray(question.correctAnswer) && (
-                                <button
-                                  onClick={() => {
-                                    const newCorrect = [...(Array.isArray(question.correctAnswer) ? question.correctAnswer : [])];
-                                    if (!newCorrect.includes(String.fromCharCode(65 + i))) {
-                                      newCorrect.push(String.fromCharCode(65 + i));
-                                    }
-                                    handleUpdateQuestion(question.id, { correctAnswer: newCorrect });
-                                  }}
-                                  className={`p-2 rounded-lg ${Array.isArray(question.correctAnswer) && question.correctAnswer.includes(String.fromCharCode(65 + i)) ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--surface)] text-[var(--text-secondary)]'}`}
-                                  title="Mark as correct"
-                                >
-                                  <FiCheck className="w-4 h-4" />
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleUpdateQuestion(question.id, { correctAnswer: opt })}
+                                className={`p-2 rounded-lg ${
+                                  question.correctAnswer === opt
+                                    ? 'bg-[var(--success)]/10 text-[var(--success)]'
+                                    : 'bg-[var(--surface)] text-[var(--text-secondary)]'
+                                }`}
+                                title="Mark as correct"
+                              >
+                                <FiCheck className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
                         </div>

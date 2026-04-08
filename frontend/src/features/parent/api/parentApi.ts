@@ -28,6 +28,7 @@ export interface StudentAccess {
   studentId: string;
   studentName: string;
   class: string;
+  classId?: string;
   section: string;
   rollNumber?: string;
   avgAttendance: number;
@@ -276,6 +277,7 @@ export const parentApi = createApi({
           firstName?: string;
           lastName?: string;
           class?: string;
+          classId?: string;
           section?: string;
           rollNumber?: string;
         }>
@@ -284,6 +286,7 @@ export const parentApi = createApi({
           studentId: child.id,
           studentName: [child.firstName, child.lastName].filter(Boolean).join(' ').trim() || 'Student',
           class: child.class || '',
+          classId: child.classId || '',
           section: child.section || '',
           rollNumber: child.rollNumber,
           avgAttendance: 0,

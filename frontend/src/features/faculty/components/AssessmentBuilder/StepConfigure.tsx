@@ -29,6 +29,11 @@ const StepConfigure: React.FC = () => {
   };
 
   const handleGenerate = () => {
+    const effectiveQuestionCount = totalQuestions > 0 ? totalQuestions : config.questionCount;
+    updateConfig({
+      questionCount: effectiveQuestionCount,
+      aiPrompt: config.aiPrompt?.trim() ? config.aiPrompt : defaultPrompt,
+    });
     goToStep('generate', 5);
   };
 
@@ -140,6 +145,11 @@ const StepConfigure: React.FC = () => {
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Total questions: {totalQuestions}
         </p>
+        {totalQuestions !== config.questionCount ? (
+          <p className="mt-1 text-xs text-amber-600">
+            Question count will be auto-aligned to {totalQuestions} based on your type distribution.
+          </p>
+        ) : null}
       </div>
 
       {/* AI Prompt */}
@@ -156,7 +166,7 @@ const StepConfigure: React.FC = () => {
           </div>
         </div>
         <textarea
-          value={config.aiPrompt || defaultPrompt}
+          value={config.aiPrompt}
           onChange={(e) => updateConfig({ aiPrompt: e.target.value })}
           rows={4}
           className="w-full bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from urllib import error as urllib_error
-from urllib import request as urllib_request
 
+from ..llm_clients import (
+    EXTERNAL_PROVIDER_ERRORS,
+    SUPPORTED_EXTERNAL_PROVIDERS,
+    extract_text_content,
+    post_external_chat_completion,
+    resolve_external_runtime,
+)
 from .retrieval import build_question_type_plan, distribute_marks, rank_chunks, summarize_text
-
-
-SUPPORTED_EXTERNAL_PROVIDERS = {"openai-compatible-cloud", "openai-compatible-local"}
 
 
 def try_generate_llm_grounded_questions(
@@ -23,13 +25,11 @@ def try_generate_llm_grounded_questions(
     ai_settings: dict[str, Any] | None,
 ) -> list[dict[str, Any]] | None:
     settings = ai_settings or {}
-    provider = str(settings.get("provider") or "grounded-rag").strip().lower()
+    provider, base_url, model, api_key = resolve_external_runtime(settings)
     if provider not in SUPPORTED_EXTERNAL_PROVIDERS:
         return None
 
-    base_url = str(settings.get("baseUrl") or "").strip().rstrip("/")
-    model = str(settings.get("model") or "").strip()
-    if not base_url or not model or not chunks:
+    if not model or not chunks:
         return None
 
     marks_plan = distribute_marks(total_marks=max(int(total_marks or 1), 1), count=max(int(question_count or 1), 1))
@@ -72,18 +72,23 @@ def try_generate_llm_grounded_questions(
     )
 
     try:
-        response_payload = _post_chat_completion(
+        response_payload = post_external_chat_completion(
+            provider=provider,
             base_url=base_url,
-            api_key=settings.get("apiKey"),
+            api_key=api_key,
             model=model,
             prompt=prompt,
+            system_prompt=(
+                "You are a careful academic assessment generator. "
+                "Use only the provided context and return machine-readable JSON."
+            ),
             temperature=float(settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(settings.get("maxTokens", 1200) or 1200),
         )
-    except (OSError, urllib_error.URLError, urllib_error.HTTPError, ValueError, json.JSONDecodeError):
+    except EXTERNAL_PROVIDER_ERRORS:
         return None
 
-    raw_content = _extract_message_content(response_payload)
+    raw_content = extract_text_content(provider, response_payload)
     if not raw_content:
         return None
 
@@ -100,67 +105,76 @@ def try_generate_llm_grounded_questions(
     )
 
 
-def _post_chat_completion(
+def try_modify_llm_questions(
     *,
-    base_url: str,
-    api_key: str | None,
-    model: str,
-    prompt: str,
-    temperature: float,
-    max_tokens: int,
-) -> dict[str, Any]:
-    payload = {
-        "model": model,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "messages": [
+    questions: list[dict[str, Any]],
+    modification_prompt: str,
+    ai_settings: dict[str, Any] | None,
+) -> list[dict[str, Any]] | None:
+    settings = ai_settings or {}
+    provider, base_url, model, api_key = resolve_external_runtime(settings)
+    if provider not in SUPPORTED_EXTERNAL_PROVIDERS:
+        return None
+    if not model or not questions:
+        return None
+
+    prompt_payload = {
+        "modificationPrompt": modification_prompt,
+        "questions": [
             {
-                "role": "system",
-                "content": (
-                    "You are a careful academic assessment generator. "
-                    "Use only the provided context and return machine-readable JSON."
-                ),
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
+                "id": str(question.get("id") or ""),
+                "questionText": str(question.get("questionText") or ""),
+                "questionType": str(question.get("questionType") or "short"),
+                "options": question.get("options"),
+                "correctAnswer": question.get("correctAnswer"),
+                "marks": question.get("marks"),
+                "difficulty": question.get("difficulty"),
+                "imageUrls": question.get("imageUrls"),
+                "contextSnippet": question.get("contextSnippet"),
+                "sourceMaterialIds": question.get("sourceMaterialIds"),
+                "sourceMaterialTitles": question.get("sourceMaterialTitles"),
+            }
+            for question in questions
         ],
     }
-    headers = {
-        "Content-Type": "application/json",
-    }
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    request = urllib_request.Request(
-        f"{base_url}/chat/completions",
-        data=json.dumps(payload).encode("utf-8"),
-        headers=headers,
-        method="POST",
+    prompt = (
+        "Modify the assessment questions based on the provided instruction. "
+        "Preserve the question count unless the instruction explicitly asks to add or remove questions. "
+        "Keep marks reasonable and ensure questionType is one of mcq|short|long|trueFalse. "
+        "Return valid JSON only using this schema: "
+        '[{"id":"...","questionText":"...","questionType":"mcq|short|long|trueFalse",'
+        '"options":["..."],"correctAnswer":"...","marks":5,"difficulty":"easy|medium|hard",'
+        '"imageUrls":["..."],"contextSnippet":"...","sourceMaterialIds":["1"],"sourceMaterialTitles":["Notes"]}]'
+        "\nDo not include markdown fences or extra commentary.\n"
+        f"{json.dumps(prompt_payload, ensure_ascii=True)}"
     )
-    with urllib_request.urlopen(request, timeout=45) as response:
-        return json.loads(response.read().decode("utf-8"))
 
-
-def _extract_message_content(payload: dict[str, Any]) -> str | None:
-    choices = payload.get("choices")
-    if not isinstance(choices, list) or not choices:
+    try:
+        response_payload = post_external_chat_completion(
+            provider=provider,
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            prompt=prompt,
+            system_prompt=(
+                "You are a careful academic assessment editor. "
+                "Return only strict JSON matching the requested schema."
+            ),
+            temperature=float(settings.get("temperature", 0.2) or 0.2),
+            max_tokens=int(settings.get("maxTokens", 1200) or 1200),
+        )
+    except EXTERNAL_PROVIDER_ERRORS:
         return None
-    message = choices[0].get("message") if isinstance(choices[0], dict) else None
-    if not isinstance(message, dict):
-        return None
-    content = message.get("content")
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        text_parts = []
-        for item in content:
-            if isinstance(item, dict) and isinstance(item.get("text"), str):
-                text_parts.append(item["text"])
-        return "".join(text_parts) or None
-    return None
 
+    raw_content = extract_text_content(provider, response_payload)
+    if not raw_content:
+        return None
+
+    parsed_questions = _parse_json_questions(raw_content)
+    if not parsed_questions:
+        return None
+
+    return _normalize_modified_questions(parsed_questions, questions)
 
 def _parse_json_questions(raw_content: str) -> list[dict[str, Any]] | None:
     cleaned = raw_content.strip()
@@ -228,6 +242,84 @@ def _normalize_question_payloads(
                 "contextSnippet": str(source.get("contextSnippet") or summarize_text(chunk.get("text") or "", max_words=50)),
                 "sourceMaterialIds": source_material_ids,
                 "sourceMaterialTitles": source_material_titles,
+            }
+        )
+
+    return normalized
+
+
+def _normalize_modified_questions(
+    parsed_questions: list[dict[str, Any]],
+    original_questions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    total = max(len(original_questions), len(parsed_questions))
+
+    for index in range(total):
+        source = parsed_questions[index] if index < len(parsed_questions) else {}
+        original = original_questions[index] if index < len(original_questions) else {}
+
+        original_type = _normalize_question_type(original.get("questionType"))
+        question_type = _normalize_question_type(source.get("questionType") or original_type)
+        fallback_difficulty = str(original.get("difficulty") or "medium")
+        difficulty = _normalize_difficulty(source.get("difficulty"), fallback=fallback_difficulty)
+        marks = max(1, int(source.get("marks") or original.get("marks") or 1))
+
+        options = _normalize_string_list(source.get("options"))
+        if question_type == "trueFalse":
+            options = ["True", "False"]
+        elif question_type == "mcq":
+            if len(options) < 2:
+                options = _normalize_string_list(original.get("options"))
+            if len(options) < 2:
+                options = ["Option A", "Option B", "Option C", "Option D"]
+        else:
+            options = []
+
+        correct_answer = source.get("correctAnswer", original.get("correctAnswer"))
+        if question_type == "trueFalse":
+            normalized_answer = str(correct_answer or "").strip().lower()
+            correct_answer = "False" if normalized_answer == "false" else "True"
+        elif question_type == "mcq":
+            if isinstance(correct_answer, list):
+                correct_answer = next((str(item).strip() for item in correct_answer if str(item).strip()), "")
+            correct_answer = str(correct_answer or "").strip()
+            if not correct_answer or correct_answer not in options:
+                correct_answer = options[0]
+        elif isinstance(correct_answer, list):
+            correct_answer = [str(item).strip() for item in correct_answer if str(item).strip()]
+        elif correct_answer is not None:
+            correct_answer = str(correct_answer).strip()
+
+        image_urls = _normalize_string_list(source.get("imageUrls")) or _normalize_string_list(original.get("imageUrls"))
+        source_material_ids = _normalize_string_list(source.get("sourceMaterialIds")) or _normalize_string_list(
+            original.get("sourceMaterialIds")
+        )
+        source_material_titles = _normalize_string_list(source.get("sourceMaterialTitles")) or _normalize_string_list(
+            original.get("sourceMaterialTitles")
+        )
+
+        question_text = str(
+            source.get("questionText")
+            or source.get("question")
+            or original.get("questionText")
+            or f"Question {index + 1}"
+        ).strip()
+        context_snippet = str(source.get("contextSnippet") or original.get("contextSnippet") or "").strip()
+
+        normalized.append(
+            {
+                "id": str(original.get("id") or source.get("id") or f"rag-{index + 1}"),
+                "questionText": question_text,
+                "questionType": question_type,
+                "options": options or None,
+                "correctAnswer": correct_answer,
+                "marks": marks,
+                "difficulty": difficulty,
+                "imageUrls": image_urls or None,
+                "contextSnippet": context_snippet or None,
+                "sourceMaterialIds": source_material_ids or None,
+                "sourceMaterialTitles": source_material_titles or None,
             }
         )
 

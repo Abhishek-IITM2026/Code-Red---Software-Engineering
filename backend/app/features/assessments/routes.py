@@ -25,12 +25,13 @@ from ...services.assessments import (
     delete_assessment_questions,
     evaluate_submission,
     generate_assessment_questions,
+    modify_assessment_questions,
     serialize_assessment,
     serialize_assessment_for_student,
     serialize_assessment_submission,
     update_assessment_questions,
 )
-from ...services.query import get_assignments, get_current_student
+from ...services.query import get_assignments, get_current_student, get_student_subjects
 from ...repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
 
 
@@ -65,9 +66,11 @@ def generate_questions():
 @limiter.limit(_question_modification_limit)
 def modify_questions():
     payload = parse_json(ModifyQuestionsRequest, request.get_json())
-    prompt = payload.modification_prompt.strip()
     questions = [question.model_dump(by_alias=True) for question in payload.questions]
-    updated = [{**question, "questionText": f"{question['questionText']} [{prompt}]"} for question in questions]
+    updated = modify_assessment_questions(
+        questions=questions,
+        modification_prompt=payload.modification_prompt.strip(),
+    )
     return success_response(updated)
 
 
@@ -232,17 +235,39 @@ def delete_assessment(assessment_id: int):
 @roles_required("student", "faculty", "administration")
 def list_assignments():
     filters = parse_query(AssignmentListQuery, request.args.to_dict())
-    return success_response(get_assignments(filters.subject_id, filters.status))
+    allowed_subject_ids: list[int] | None = None
+    if getattr(g, "current_user", None) and g.current_user.student is not None:
+        student = get_current_student()
+        allowed_subject_ids = [int(subject["id"]) for subject in get_student_subjects(student.id)]
+
+    return success_response(
+        get_assignments(
+            filters.subject_id,
+            filters.status,
+            allowed_subject_ids=allowed_subject_ids,
+        )
+    )
 
 
 @assessments_bp.post("/assignments/<int:assignment_id>/submit")
 @roles_required("student")
 def submit_assignment(assignment_id: int):
+    student = get_current_student()
     assignment = db.session.get(Assignment, assignment_id)
     if assignment is None:
         raise ApiError(404, "ASSIGNMENT_NOT_FOUND", "Assignment was not found.")
+    enrollment = student.current_enrollment()
+    if enrollment is None:
+        raise ApiError(403, "FORBIDDEN", "You are not enrolled in a class.")
+    assignment_subject = assignment.subject
+    if assignment_subject is None or assignment_subject.class_id != enrollment.class_id:
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to submit this assignment.")
     payload = parse_json(AssignmentSubmissionRequest, request.get_json())
-    submission = AssignmentSubmission(assignment_id=assignment_id, student_id=1, submission_url=payload.submission_url)
+    submission = AssignmentSubmission(
+        assignment_id=assignment_id,
+        student_id=student.id,
+        submission_url=payload.submission_url,
+    )
     db.session.add(submission)
     db.session.commit()
     return success_response({"success": True, "submittedAt": submission.submitted_at.isoformat()}, status_code=201)

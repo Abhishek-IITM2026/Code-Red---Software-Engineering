@@ -25,7 +25,9 @@ export interface RegisterData {
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  token?: string;
+  approvalRequired?: boolean;
+  message?: string;
 }
 
 export interface AuthState {

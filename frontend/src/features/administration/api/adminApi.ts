@@ -9,7 +9,7 @@ export interface DashboardStats {
   totalStaff: number;
   attendanceRate: number;
   pendingApprovals: number;
-  upcomingEvents: any[];
+  upcomingEvents: unknown[];
 }
 
 export type StudentWritePayload = Omit<
@@ -32,6 +32,23 @@ export interface StudentRecord {
   updatedAt: string;
   attendance?: number;
   average?: number;
+}
+
+export interface PendingStudentApproval {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  enrollmentNo?: string;
+  requestedAt: string;
+  status: 'pending';
+}
+
+export interface StudentApprovalPayload {
+  className: string;
+  section: string;
+  enrollmentNo?: string;
 }
 
 export interface StaffRecord {
@@ -81,7 +98,7 @@ export interface Course {
 }
 
 export interface AISettings {
-  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local';
+  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
   model: string;
   baseUrl?: string | null;
   temperature: number;
@@ -197,6 +214,7 @@ export const adminApi = createApi({
   tagTypes: [
     'Dashboard',
     'Students',
+    'StudentApprovals',
     'Staff',
     'Courses',
     'AISettings',
@@ -214,6 +232,11 @@ export const adminApi = createApi({
     listStudents: builder.query<StudentRecord[], void>({
       query: () => '/administration/students',
       providesTags: ['Students'],
+    }),
+
+    listPendingStudentApprovals: builder.query<PendingStudentApproval[], void>({
+      query: () => '/administration/students/pending-approvals',
+      providesTags: ['StudentApprovals'],
     }),
 
     getStudent: builder.query<StudentRecord, string>({
@@ -249,6 +272,23 @@ export const adminApi = createApi({
         body: { status },
       }),
       invalidatesTags: (_result, _err, { id }) => ['Students', { type: 'Students', id }],
+    }),
+
+    approveStudentRegistration: builder.mutation<
+      StudentRecord,
+      { id: string; data: StudentApprovalPayload }
+    >({
+      query: ({ id, data }) => ({
+        url: `/administration/students/${id}/approve`,
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (_result, _err, { id }) => [
+        'Students',
+        'Dashboard',
+        'StudentApprovals',
+        { type: 'Students', id },
+      ],
     }),
 
     deleteStudent: builder.mutation<{ success: boolean }, string>({
@@ -442,7 +482,7 @@ export const adminApi = createApi({
 
     generateReport: builder.mutation<
       { reportUrl: string },
-      { reportType: string; filters?: Record<string, any> }
+      { reportType: string; filters?: Record<string, unknown> }
     >({
       query: (data) => ({
         url: '/administration/reports/generate',
@@ -456,10 +496,12 @@ export const adminApi = createApi({
 export const {
   useGetDashboardQuery,
   useListStudentsQuery,
+  useListPendingStudentApprovalsQuery,
   useGetStudentQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
   useUpdateStudentStatusMutation,
+  useApproveStudentRegistrationMutation,
   useDeleteStudentMutation,
   useListStaffQuery,
   useGetStaffMemberQuery,

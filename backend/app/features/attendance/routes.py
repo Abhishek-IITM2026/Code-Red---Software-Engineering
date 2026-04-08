@@ -18,11 +18,27 @@ attendance_bp = Blueprint("attendance", __name__)
 @roles_required("student", "faculty", "administration")
 def get_attendance():
     query = Attendance.query
+    current_role_names = user_role_names(g.current_user)
+    is_student = "student" in current_role_names
+    is_faculty = "faculty" in current_role_names or "teacher" in current_role_names
 
-    if "student" in user_role_names(g.current_user) and request.args.get("studentId"):
+    if is_student:
         student = get_current_student()
-        if str(student.id) != request.args["studentId"]:
+        if request.args.get("studentId") and str(student.id) != request.args["studentId"]:
             raise ApiError(403, "FORBIDDEN", "Students can only access their own attendance records.")
+        query = query.filter_by(student_id=student.id)
+
+    if is_faculty and not g.current_user.has_any_role("administration", "admin", "director", "superadmin"):
+        faculty_profile = getattr(g.current_user, "faculty", None)
+        if faculty_profile is None:
+            raise ApiError(403, "FORBIDDEN", "Faculty profile is required to access attendance records.")
+        assignments = FacultySubjectAssignment.query.filter_by(faculty_id=faculty_profile.id).all()
+        allowed_class_ids = {assignment.class_id for assignment in assignments}
+        allowed_subject_ids = {assignment.subject_id for assignment in assignments}
+        if not allowed_class_ids or not allowed_subject_ids:
+            return success_response([])
+        query = query.filter(Attendance.class_id.in_(allowed_class_ids), Attendance.subject_id.in_(allowed_subject_ids))
+
     if request.args.get("studentId"):
         query = query.filter_by(student_id=int(request.args["studentId"]))
     if request.args.get("subjectId"):
@@ -52,7 +68,13 @@ def _save_attendance(status_code: int):
             class_id=payload.class_id,
             faculty_id=g.current_user.faculty.id,
         ).first()
-    if subject_assignment is None:
+        if subject_assignment is None:
+            raise ApiError(
+                403,
+                "FORBIDDEN",
+                "You can only mark attendance for classes assigned to you.",
+            )
+    else:
         subject_assignment = FacultySubjectAssignment.query.filter_by(class_id=payload.class_id).first()
     if subject_assignment is None:
         raise ApiError(404, "SUBJECT_ASSIGNMENT_NOT_FOUND", "No subject assignment exists for the selected class.")

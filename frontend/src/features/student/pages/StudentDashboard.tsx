@@ -2,8 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiAward, FiBook, FiCalendar, FiCheckCircle, FiClock, FiTrendingUp, FiUser } from "react-icons/fi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../app/store";
-import { studentSubjects } from "../data/subjectContent";
-import { useGetAttendanceStatsQuery, useGetPerformanceSummaryQuery, useGetUpcomingCoursesQuery } from "../api/studentApi";
+import {
+  useGetAssignmentsQuery,
+  useGetAttendanceStatsQuery,
+  useGetPerformanceSummaryQuery,
+  useGetSubjectsQuery,
+  useGetUpcomingCoursesQuery,
+} from "../api/studentApi";
 
 const quickCards = [
   {
@@ -53,12 +58,17 @@ const quickCards = [
 const StudentDashboard = function () {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
-  const totalPending = studentSubjects
-    .flatMap((subject) => subject.assignments)
-    .filter((assignment) => assignment.status === "pending").length;
+  const { data: enrolledSubjects = [] } = useGetSubjectsQuery();
+  const { data: assignments = [] } = useGetAssignmentsQuery({});
+  const subjectIds = new Set(enrolledSubjects.map((subject) => subject.id));
+  const totalPending = assignments.filter(
+    (assignment) => subjectIds.has(assignment.subjectId) && (assignment.status === "open" || assignment.status === "pending"),
+  ).length;
   const { data: upcomingCourses = [] } = useGetUpcomingCoursesQuery();
   const { data: attendanceStats } = useGetAttendanceStatsQuery();
   const { data: performanceSummary } = useGetPerformanceSummaryQuery();
+  const highlightedSubjects = enrolledSubjects.slice(0, 3);
+  const primarySubjectName = highlightedSubjects[0]?.name || "your enrolled subjects";
 
   return (
     <div className="space-y-8">
@@ -140,22 +150,27 @@ const StudentDashboard = function () {
           </div>
 
           <div className="mt-6 space-y-4">
-            {studentSubjects.slice(0, 3).map((subject) => (
+            {highlightedSubjects.map((subject) => (
               <button
-                key={subject.name}
+                key={subject.id}
                 type="button"
-                onClick={() => navigate(`/student/subjects/${encodeURIComponent(subject.name)}/chapters`)}
+                onClick={() => navigate(`/student/subjects/${encodeURIComponent(subject.id)}/chapters`)}
                 className="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-[var(--primary)] hover:bg-slate-50"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-900">{subject.name}</p>
-                    <p className="mt-1 text-sm text-slate-500">{subject.progressLabel}</p>
+                    <p className="mt-1 text-sm text-slate-500">{subject.code} • {subject.credits} credits</p>
                   </div>
                   <span className="text-sm font-medium text-[var(--primary)]">Open</span>
                 </div>
               </button>
             ))}
+            {highlightedSubjects.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                No subjects are assigned to your account yet.
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -173,7 +188,7 @@ const StudentDashboard = function () {
           <div className="mt-6 space-y-4 text-sm text-slate-600">
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Strongest area</p>
-              <p className="mt-1">You are performing best in Computer Science and Mathematics right now.</p>
+              <p className="mt-1">Your current learning focus is {primarySubjectName}.</p>
             </div>
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Recommended next step</p>

@@ -424,29 +424,21 @@ export const facultyApi = createApi({
         subjectId: string;
         title: string;
         type: string;
-        description?: string;
+        className?: string;
+        section?: string;
         unit?: string;
         week?: string;
-        sourceText?: string;
-        externalUrl?: string;
-        imageUrls?: string[];
         file?: File | null;
       }
     >({
-      query: ({ subjectId, title, type, description, unit, week, sourceText, externalUrl, imageUrls, file }) => {
+      query: ({ subjectId, title, type, className, section, unit, week, file }) => {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('type', type);
-        if (description) formData.append('description', description);
+        if (className) formData.append('className', className);
+        if (section) formData.append('section', section);
         if (unit) formData.append('unit', unit);
         if (week) formData.append('week', week);
-        if (sourceText) formData.append('sourceText', sourceText);
-        if (externalUrl) formData.append('externalUrl', externalUrl);
-        (imageUrls || []).forEach((imageUrl) => {
-          if (imageUrl.trim()) {
-            formData.append('imageUrls', imageUrl.trim());
-          }
-        });
         if (file) formData.append('file', file);
         return {
           url: `/faculty/subjects/${subjectId}/materials`,

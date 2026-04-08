@@ -21,6 +21,7 @@ Update this file in the same change set whenever a code change affects any of th
 
 - `backend/` is a Flask app-factory backend with blueprints, SQLAlchemy, Flask-Migrate, Pydantic validation, Celery, Redis-backed rate limiting, Mongo-backed document storage with in-memory fallback, and local file uploads.
 - `frontend/` is a Vite + React + TypeScript app using React Router, Redux Toolkit, RTK Query, Tailwind, and a CSS-variable theme system.
+- Frontend API consumers are expected to target `http://localhost:3500/api` by default unless `VITE_API_URL` overrides that for another environment.
 - Some older docs in `frontend/docs/` and `backend/docs/` are useful references but may be stale. This file is the repo-wide context source to keep current.
 
 ## Backend Context
@@ -45,6 +46,7 @@ Update this file in the same change set whenever a code change affects any of th
 Important runtime note:
 
 - Backend settings are read from `backend/.env` first, then project-root `.env`.
+- The checked-in backend local `.env` enables `AUTO_CREATE_TABLES=true` and `SEED_ON_STARTUP=true` so `python run.py` seeds a local dev SQLite database on startup.
 - `AUTO_CREATE_TABLES` and `SEED_ON_STARTUP` can modify startup behavior significantly.
 
 ### Backend route mounting
@@ -146,6 +148,13 @@ This means assessment code changes often need coordinated updates across:
 - `backend/app/rag/assessment/`
 - frontend faculty/student assessment API consumers
 
+Student chat changes often need coordinated updates across:
+
+- `backend/app/features/students/routes.py`
+- `backend/app/rag/student_chat.py`
+- `backend/app/services/materials.py`
+- student portal API/UI files under `frontend/src/features/student/`
+
 ### Uploads and static file serving
 
 - Upload helpers: `backend/app/upload_storage.py`
@@ -155,6 +164,7 @@ Current behavior:
 
 - uploads are stored under `backend/uploads/`
 - profile pictures and documents have separate subfolders
+- faculty study-material files are stored under `backend/uploads/documents/<class>/<subject>/<week>/...` when uploaded as files
 - profile pictures can be uploaded as multipart files or base64 data URLs
 - public URLs are served from `/uploads/<path>`
 
@@ -200,6 +210,7 @@ Current modules:
 Two notable implementation details:
 
 - assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/`
+- student subject pages now expose a RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials and returns cited snippets
 - administration owns assessment AI provider/model/api-key/rate-limit configuration through `backend/app/features/administration/routes.py`
 - assessment AI routes under `backend/app/features/assessments/routes.py` now read dynamic per-route limits from the stored AI settings instead of a hard-coded limiter string
 - generated question payloads can include `imageUrls`, `contextSnippet`, and source material references
@@ -285,7 +296,9 @@ Current route behavior tied to this flow:
 
 - `GET /api/ai/settings` exposes sanitized runtime details to faculty and administration without returning the raw API key
 - `POST /api/ai/generate-questions` and `POST /api/ai/modify-questions` use the stored rate-limit strings
+- `POST /api/students/me/subjects/<id>/chat` uses the same AI settings plus material-source retrieval for student-facing grounded answers
 - `GET /api/faculty/subjects/<id>/materials` now returns an empty array for valid courses with no materials instead of 404, which the builder relies on
+- `GET /api/students/me/subjects/<id>/content` now returns enriched study-material metadata including download URLs/file names so the student subject page can render backend-backed materials by week
 
 Important current limitation:
 

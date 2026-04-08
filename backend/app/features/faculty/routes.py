@@ -18,13 +18,29 @@ faculty_bp = Blueprint("faculty", __name__)
 @faculty_bp.get("")
 @roles_required("faculty", "administration")
 def list_faculty():
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+        if faculty is None:
+            raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+        return success_response([faculty.to_dict()])
     return success_response([faculty.to_dict() for faculty in Faculty.query.all()])
 
 
 @faculty_bp.get("/classes")
 @roles_required("faculty", "administration")
 def faculty_classes():
-    assignments = FacultySubjectAssignment.query.all()
+    assignments_query = FacultySubjectAssignment.query
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+        if faculty is None:
+            raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+        assignments_query = assignments_query.filter_by(faculty_id=faculty.id)
+
+    assignments = assignments_query.all()
     classes = []
     seen = set()
     for assignment in assignments:
@@ -45,7 +61,16 @@ def faculty_classes():
 @faculty_bp.get("/classes/overview")
 @roles_required("faculty", "administration")
 def faculty_classes_overview():
-    assignments = FacultySubjectAssignment.query.all()
+    assignments_query = FacultySubjectAssignment.query
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+        if faculty is None:
+            raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+        assignments_query = assignments_query.filter_by(faculty_id=faculty.id)
+
+    assignments = assignments_query.all()
     classes: dict[int, dict] = {}
 
     for assignment in assignments:
@@ -77,7 +102,16 @@ def faculty_classes_overview():
 @faculty_bp.get("/classes/<int:class_id>/subjects")
 @roles_required("faculty", "administration")
 def class_subjects(class_id: int):
-    assignments = FacultySubjectAssignment.query.filter_by(class_id=class_id).all()
+    assignments_query = FacultySubjectAssignment.query.filter_by(class_id=class_id)
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+        if faculty is None:
+            raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+        assignments_query = assignments_query.filter_by(faculty_id=faculty.id)
+
+    assignments = assignments_query.all()
     subjects = []
     for assignment in assignments:
         subject = assignment.subject or db.session.get(Subject, assignment.subject_id)
@@ -131,11 +165,13 @@ def publish_subject_material(subject_id: int):
         title=payload.title,
         unit=payload.unit,
         week=payload.week,
+        class_name=payload.class_name,
+        section=payload.section,
         material_type=payload.material_type,
-        description=payload.description,
-        source_text=payload.source_text,
-        external_url=payload.external_url,
-        image_urls=payload.image_urls,
+        description=None,
+        source_text=None,
+        external_url=None,
+        image_urls=[],
         document_id=payload.document_id,
         uploaded_file=request.files.get("file"),
     )
@@ -147,15 +183,40 @@ def publish_subject_material(subject_id: int):
 def faculty_student_performance():
     class_id = request.args.get("classId")
     students_query = Student.query
+
+    allowed_class_ids: set[int] | None = None
+    allowed_subject_ids: set[int] | None = None
+    if g.current_user.has_any_role("faculty", "teacher") and not g.current_user.has_any_role(
+        "administration", "admin", "director", "superadmin"
+    ):
+        faculty = Faculty.query.filter_by(user_id=g.current_user.id).first()
+        if faculty is None:
+            raise ApiError(404, "FACULTY_NOT_FOUND", "Faculty profile was not found.")
+        assignments = FacultySubjectAssignment.query.filter_by(faculty_id=faculty.id).all()
+        allowed_class_ids = {assignment.class_id for assignment in assignments}
+        allowed_subject_ids = {assignment.subject_id for assignment in assignments}
+        if not allowed_class_ids:
+            return success_response([])
+
     if class_id:
         students_query = students_query.join(ClassEnrollment, ClassEnrollment.student_id == Student.id).filter(
             ClassEnrollment.class_id == int(class_id)
         )
+    elif allowed_class_ids is not None:
+        students_query = students_query.join(ClassEnrollment, ClassEnrollment.student_id == Student.id).filter(
+            ClassEnrollment.class_id.in_(allowed_class_ids)
+        )
+
+    if class_id and allowed_class_ids is not None and int(class_id) not in allowed_class_ids:
+        return success_response([])
 
     students = []
     for student in students_query.all():
         enrollment = student.current_enrollment()
-        marks = Mark.query.filter_by(student_id=student.id).all()
+        marks_query = Mark.query.filter_by(student_id=student.id)
+        if allowed_subject_ids is not None:
+            marks_query = marks_query.filter(Mark.subject_id.in_(allowed_subject_ids))
+        marks = marks_query.all()
         attendance = get_attendance_stats(student.id)
         average_marks = round(sum(mark.marks_obtained for mark in marks) / len(marks), 2) if marks else 0
         trend = "stable"

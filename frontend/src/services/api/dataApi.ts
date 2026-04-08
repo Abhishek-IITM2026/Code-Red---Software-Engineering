@@ -9,6 +9,7 @@ export interface Student {
   lastName: string;
   role: string;
   class: string;
+  classId?: string;
   section: string;
   rollNumber?: string;
 }

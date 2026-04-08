@@ -8,6 +8,7 @@ from .administration import (
     PromotionActionRequest,
     StaffStatusRequest,
     StaffWriteRequest,
+    StudentApprovalRequest,
     StudentStatusRequest,
     StudentWriteRequest,
 )
@@ -46,6 +47,7 @@ from .leave import LeaveRequestCreateRequest, LeaveRequestReviewRequest
 from .notifications import EmailMessageListQuery, EmailSendRequest, EmailSyncRequest, ScheduleNotificationRequest
 from .payroll import SalarySlipListQuery
 from .schedule import ScheduleListQuery, ScheduleWriteRequest
+from .students import StudentSubjectChatRequest
 from .validation import parse_json, parse_query
 
 __all__ = [
@@ -93,7 +95,9 @@ __all__ = [
     "ScheduleWriteRequest",
     "StaffStatusRequest",
     "StaffWriteRequest",
+    "StudentApprovalRequest",
     "StudentStatusRequest",
+    "StudentSubjectChatRequest",
     "StudentWriteRequest",
     "parse_json",
     "parse_query",

@@ -1,23 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FiMail, FiLock, FiEye, FiEyeOff, FiLogIn, FiUser, FiUserPlus, FiShield } from "react-icons/fi";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiLogIn } from "react-icons/fi";
 import { Button, Input, Card } from "../../../components/common";
 import { login, clearError } from "../store/authSlice";
 import type { AppDispatch, RootState } from "../../../app/store";
-
-const demoUsers = [
-  { email: "student001@example.com", password: "student123", role: "Student", icon: FiUser },
-  { email: "duttakrishna1955@gmail.com", password: "faculty123", role: "Faculty", icon: FiShield },
-  { email: "parent001@example.com", password: "parent123", role: "Parent", icon: FiUser },
-  { email: "dheerajkumarvishwakarma5@gmail.com", password: "admin123", role: "Admin", icon: FiShield },
-];
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const registrationMessage =
+    ((location.state as { registrationMessage?: string } | null)?.registrationMessage || "").trim();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -34,12 +29,10 @@ const Login = () => {
     administration: "/administration/dashboard"
   };
 
-  const from = (location.state as any)?.from?.pathname || "/student/dashboard";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
-    const result = await dispatch(login(formData) as any);
+    const result = await dispatch(login(formData));
     if (login.fulfilled.match(result)) {
       const role = result.payload.user.role?.toLowerCase();
       navigate(roleRedirects[role || "student"] || "/student/dashboard", { replace: true });
@@ -51,15 +44,6 @@ const Login = () => {
     if (error) dispatch(clearError());
   };
 
-  const handleDemoLogin = async (email: string, password: string) => {
-    setFormData({ email, password });
-    dispatch(clearError());
-    const result = await dispatch(login({ email, password }) as any);
-    if (login.fulfilled.match(result)) {
-      const role = result.payload.user.role?.toLowerCase();
-      navigate(roleRedirects[role || "student"] || "/student/dashboard", { replace: true });
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)]">
@@ -84,6 +68,11 @@ const Login = () => {
         {/* Login Form */}
         <Card className="!p-8" hover={false}>
           <form onSubmit={handleSubmit} className="space-y-5">
+            {registrationMessage && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+                {registrationMessage}
+              </div>
+            )}
             {error && (
               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
                 {error}
@@ -158,31 +147,6 @@ const Login = () => {
           </div>
         </Card>
 
-        {/* Demo Login Buttons */}
-        <div className="mt-6">
-          <p className="text-sm font-medium text-[var(--text)] mb-3 text-center">Quick Demo Login</p>
-          <div className="grid grid-cols-2 gap-3">
-            {demoUsers.map((user) => (
-              <button
-                key={user.email}
-                onClick={() => handleDemoLogin(user.email, user.password)}
-                disabled={isLoading}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary)]/5 transition-all disabled:opacity-50"
-              >
-                <user.icon className="w-4 h-4 text-[var(--primary)]" />
-                <span className="text-sm font-medium text-[var(--text)]">{user.role}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Credentials Info */}
-        <div className="mt-4 p-4 rounded-xl bg-[var(--secondary)] border border-[var(--border)]">
-          <p className="text-xs font-medium text-[var(--text)] mb-2">Demo Credentials</p>
-          <p className="text-xs text-[var(--text-secondary)]">
-            Email: <span className="font-mono">student001@example.com</span> | Password: <span className="font-mono">student123</span>
-          </p>
-        </div>
       </div>
     </div>
   );
