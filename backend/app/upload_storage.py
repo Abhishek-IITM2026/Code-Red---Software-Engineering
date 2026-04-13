@@ -39,7 +39,7 @@ DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[-\w.+/]+);base64,(?P<data>.+)$",
 def init_upload_storage(app) -> None:
     upload_root = Path(app.config["UPLOAD_ROOT"])
     upload_root.mkdir(parents=True, exist_ok=True)
-    for directory_name in ("profile-pictures", "documents"):
+    for directory_name in ("profile-pictures", "documents", "images"):
         (upload_root / directory_name).mkdir(parents=True, exist_ok=True)
 
 

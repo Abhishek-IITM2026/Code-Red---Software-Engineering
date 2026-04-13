@@ -39,9 +39,17 @@ const StepConfigure: React.FC = () => {
 
   // Calculate total questions from types
   const totalQuestions = Object.values(config.questionTypes).reduce((a, b) => a + b, 0);
+  const availableWeeks = Array.from(
+    new Set(
+      config.selectedMaterials
+        .map((material) => material.week?.trim())
+        .filter((week): week is string => Boolean(week)),
+    ),
+  );
 
   const defaultPrompt = `Generate questions based on the selected materials. 
 - Focus on the key concepts and topics covered.
+- Prefer ${config.questionStyle === 'nonTechnical' ? 'plain-language, learner-friendly' : config.questionStyle === 'technical' ? 'technical, domain-accurate' : 'balanced'} questions.
 - Include a mix of conceptual and application-based questions.
 - Ensure questions are clear and unambiguous.`;
 
@@ -89,6 +97,43 @@ const StepConfigure: React.FC = () => {
           min={1}
           max={100}
         />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-[var(--text)] mb-2">
+            Week Focus
+          </label>
+          <select
+            value={config.week}
+            onChange={(e) => updateConfig({ week: e.target.value })}
+            className="w-full bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+          >
+            <option value="">All Selected Weeks</option>
+            {availableWeeks.map((week) => (
+              <option key={week} value={week}>
+                {week}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--text)] mb-2">
+            Question Style
+          </label>
+          <select
+            value={config.questionStyle}
+            onChange={(e) =>
+              updateConfig({ questionStyle: e.target.value as 'technical' | 'nonTechnical' | 'mixed' })
+            }
+            className="w-full bg-[var(--input-bg)] text-[var(--text)] border border-[var(--border)] rounded-xl px-4 py-3 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+          >
+            <option value="mixed">Mixed</option>
+            <option value="technical">Technical</option>
+            <option value="nonTechnical">Non-Technical</option>
+          </select>
+        </div>
       </div>
 
       {/* Difficulty Level */}

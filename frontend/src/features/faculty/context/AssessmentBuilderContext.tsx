@@ -50,6 +50,7 @@ export interface AssessmentConfig {
   classSection: string;
   subjectId: string | null;
   subjectName: string;
+  week: string;
   
   // Step 3: Selected Materials
   selectedMaterials: Material[];
@@ -59,6 +60,7 @@ export interface AssessmentConfig {
   totalMarks: number;
   questionCount: number;
   difficultyLevel: 'easy' | 'medium' | 'hard' | 'mixed';
+  questionStyle: 'technical' | 'nonTechnical' | 'mixed';
   questionTypes: {
     mcq: number;
     short: number;
@@ -113,11 +115,13 @@ const initialConfig: AssessmentConfig = {
   classSection: '',
   subjectId: null,
   subjectName: '',
+  week: '',
   selectedMaterials: [],
   aiPrompt: '',
   totalMarks: 100,
   questionCount: 10,
   difficultyLevel: 'mixed',
+  questionStyle: 'mixed',
   questionTypes: {
     mcq: 5,
     short: 3,
@@ -162,6 +166,7 @@ function assessmentBuilderReducer(
           classSection: action.payload.classSection,
           subjectId: null,
           subjectName: '',
+          week: '',
           selectedMaterials: [],
           questions: [],
         },
@@ -175,6 +180,7 @@ function assessmentBuilderReducer(
           ...state.config,
           subjectId: action.payload.subjectId,
           subjectName: action.payload.subjectName,
+          week: '',
           selectedMaterials: [],
         },
         currentStep: 'materials',

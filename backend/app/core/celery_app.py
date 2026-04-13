@@ -19,6 +19,7 @@ celery_app.conf.update(
 
 
 def init_celery(app) -> Celery:
+    """Initialize Celery with Flask app context wrapper"""
     # Update with Flask app config (overrides env vars if needed)
     celery_app.conf.update(
         broker_url=app.config["CELERY_BROKER_URL"],

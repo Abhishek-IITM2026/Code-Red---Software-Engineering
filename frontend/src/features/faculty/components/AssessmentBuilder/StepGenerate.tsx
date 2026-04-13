@@ -17,6 +17,7 @@ const StepGenerate: React.FC = () => {
 
   const providerLabel = aiSettings
     ? {
+        ollama: 'Ollama',
         gemini: 'Google Gemini',
         'grounded-rag': 'Grounded RAG',
         'openai-compatible-cloud': 'OpenAI-Compatible Cloud',
@@ -41,6 +42,8 @@ const StepGenerate: React.FC = () => {
         questionCount: config.questionCount,
         totalMarks: config.totalMarks,
         difficultyLevel: config.difficultyLevel,
+        week: config.week || undefined,
+        questionStyle: config.questionStyle,
         questionTypes: config.questionTypes,
         customPrompt: config.aiPrompt,
       }).unwrap();
@@ -121,12 +124,23 @@ const StepGenerate: React.FC = () => {
             <span className="font-medium">Difficulty:</span> {config.difficultyLevel}
           </div>
           <div>
+            <span className="font-medium">Style:</span> {config.questionStyle}
+          </div>
+          <div>
             <span className="font-medium">Materials:</span> {config.selectedMaterials.length} selected
           </div>
+          {config.week ? (
+            <div>
+              <span className="font-medium">Week:</span> {config.week}
+            </div>
+          ) : null}
           {aiSettings ? (
             <>
               <div>
                 <span className="font-medium">Active Engine:</span> {providerLabel} / {aiSettings.model}
+              </div>
+              <div>
+                <span className="font-medium">Mode:</span> {aiSettings.mode}
               </div>
               <div>
                 <span className="font-medium">Rate Limit:</span> {aiSettings.generationRateLimit}

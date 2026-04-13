@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from ..rag.assessment.retrieval import build_material_chunks, rank_chunks, summarize_text, tokenize, extract_keywords
 from ..rag.llm_clients import (
     EXTERNAL_PROVIDER_ERRORS,
     SUPPORTED_EXTERNAL_PROVIDERS,
@@ -10,9 +11,16 @@ from ..rag.llm_clients import (
     post_external_chat_completion,
     resolve_external_runtime,
 )
-from ..rag.assessment.retrieval import build_material_chunks, rank_chunks, summarize_text, tokenize
-
-
+from .multimodal import (
+    build_deadline_guard_response,
+    derive_material_scope,
+    ensure_material_sources_ready,
+    ensure_multimodal_index,
+    find_active_assessment_guards,
+    should_block_direct_answer,
+    retrieve_context,
+)
+from .multimodal.runtime import normalize_week_label
 
 
 def _is_casual_student_prompt(question: str) -> bool:
@@ -50,11 +58,16 @@ def _build_casual_response(subject_name: str) -> dict[str, Any]:
             f"Give me a revision summary for {subject_name}.",
         ],
         "confidence": "medium",
+        "referencedImages": [],
     }
+
+
 def answer_subject_question(
     *,
+    subject_id: int,
     subject_name: str,
     question: str,
+    week: str | None,
     materials: list[dict[str, Any]],
     history: list[dict[str, str]] | None = None,
     ai_settings: dict[str, Any] | None = None,
@@ -62,73 +75,239 @@ def answer_subject_question(
     if _is_casual_student_prompt(question):
         return _build_casual_response(subject_name)
 
+    material_scope = derive_material_scope(materials)
+    scoped_weeks = set(material_scope.get("weeks") or set())
+    normalized_week = normalize_week_label(week) if week else None
+    if normalized_week:
+        scoped_weeks.add(normalized_week)
+
+    ensure_material_sources_ready(materials, triggered_by="student-chat-material-refresh")
+    bootstrap = ensure_multimodal_index(triggered_by="student-chat")
+
+    active_assessments = find_active_assessment_guards(subject_id=subject_id, week=week)
+    if active_assessments and should_block_direct_answer(question):
+        return build_deadline_guard_response(subject_name=subject_name, week=week or "this week", assessments=active_assessments)
+
+    retrieval = retrieve_context(
+        query=question,
+        subject=subject_name,
+        week=normalized_week,
+        allowed_source_files=material_scope.get("sourceFiles") or None,
+        allowed_weeks=scoped_weeks or None,
+    )
+    if retrieval.get("vectorAvailable") and (retrieval.get("textMatches") or retrieval.get("imageMatches")):
+        llm_answer = _try_generate_llm_answer(
+            subject_name=subject_name,
+            question=question,
+            week=week,
+            retrieval=retrieval,
+            history=history or [],
+            ai_settings=ai_settings or {},
+        )
+        if llm_answer is not None:
+            return llm_answer
+        return _build_multimodal_fallback_answer(
+            subject_name=subject_name,
+            question=question,
+            week=week,
+            retrieval=retrieval,
+        )
+
+    # FINAL FALLBACK: If vector search failed (low quality matches),
+    # try to search for the question keywords in the raw extracted text of the materials.
+    from ..repositories.rag import RAGDocumentRepository
+    doc_repo = RAGDocumentRepository()
+
+    all_found_text = []
+    for mat in materials:
+        # We need the sourceKey to query RAGDocument.
+        # The sourceKey is the storagePath in the multimodal system.
+        storage_path = mat.get("storagePath")
+        if storage_path:
+            text = doc_repo.get_all_text_for_material(storage_path)
+            if text:
+                all_found_text.append(text)
+
+    if all_found_text:
+        combined_text = " ".join(all_found_text)
+        # Use a simple keyword-based search in raw text as a last resort
+        if any(word.lower() in combined_text.lower() for word in question.split()):
+            return _build_grounded_fallback_answer(
+                subject_name=subject_name,
+                question=question,
+                ranked_chunks=[
+                    {
+                        "text": combined_text,
+                        "materialId": materials[0].get("id"),
+                        "materialTitle": materials[0].get("title"),
+                        "tokens": tokenize(combined_text),
+                    }
+                ]
+            )
+
+    multimodal_unavailable = _build_multimodal_unavailable_response(
+        subject_name=subject_name,
+        week=week,
+        materials=materials,
+        bootstrap=bootstrap,
+    )
+    if multimodal_unavailable is not None:
+        return multimodal_unavailable
+
     chunks = build_material_chunks(materials)
-    ranked_chunks = rank_chunks(
-        chunks,
-        subject_name=subject_name,
-        custom_prompt=question,
-        question_type="student-chat",
-        max_chunks=4,
-    ) if chunks else []
-
-    llm_answer = _try_generate_llm_answer(
-        subject_name=subject_name,
-        question=question,
-        ranked_chunks=ranked_chunks,
-        history=history or [],
-        ai_settings=ai_settings or {},
+    ranked_chunks = (
+        rank_chunks(
+            chunks,
+            subject_name=subject_name,
+            custom_prompt=question,
+            question_type="student-chat",
+            max_chunks=4,
+        )
+        if chunks
+        else []
     )
-    if llm_answer is not None:
-        return llm_answer
+    
+    if not chunks and materials:
+        # If multimodal retrieval found matches, use them instead of the empty MaterialSource fallback
+        if retrieval.get("vectorAvailable") and retrieval.get("textMatches"):
+            return _build_grounded_fallback_answer(
+                subject_name=subject_name,
+                question=question,
+                ranked_chunks=[
+                    {
+                        "text": m.get("text"),
+                        "materialId": m.get("documentId"),
+                        "materialTitle": m.get("sourceFile"),
+                        "week": m.get("week"),
+                        "tokens": tokenize(m.get("text") or ""),
+                    }
+                    for m in retrieval.get("textMatches")[:4]
+                ]
+            )
 
-    return _build_grounded_fallback_answer(
-        subject_name=subject_name,
-        question=question,
-        ranked_chunks=ranked_chunks,
-    )
+        return {
+            "answer": f"No study material content is available for {subject_name}{f' in {week}' if week else ''}. Please upload study materials first, then ask your question.",
+            "citations": [],
+            "followUpQuestions": [
+                f"Ask your teacher to upload study materials for {subject_name}.",
+                f"Check if materials are available for {week or 'this week'}.",
+            ],
+            "confidence": "low",
+            "referencedImages": [],
+        }
+    
+    if not materials:
+        return {
+            "answer": f"No study materials are available for {subject_name}{f' in {week}' if week else ''}. Please select or ask your teacher to upload materials first.",
+            "citations": [],
+            "followUpQuestions": [
+                f"Ask your teacher to upload study materials for {subject_name}.",
+                "Check available weeks with materials.",
+            ],
+            "confidence": "low",
+            "referencedImages": [],
+        }
+    
+    return _build_grounded_fallback_answer(subject_name=subject_name, question=question, ranked_chunks=ranked_chunks)
+
+
+def _build_multimodal_unavailable_response(
+    *,
+    subject_name: str,
+    week: str | None,
+    materials: list[dict[str, Any]],
+    bootstrap: dict[str, Any],
+) -> dict[str, Any] | None:
+    dependency_status = bootstrap.get("dependencyStatus") or {}
+    bootstrap_result = bootstrap.get("result") or {}
+    failures = bootstrap_result.get("failures") or []
+    has_pdf_material = any(str(item.get("type") or "").strip().lower() == "pdf" for item in materials)
+    
+    if has_pdf_material and not dependency_status.get("pymupdf", False):
+        return {
+            "answer": (
+                f"I could not use multimodal RAG for {subject_name}"
+                f"{f' in {week}' if week else ''} because PDF parsing is unavailable on the server right now. "
+                "PyMuPDF is not installed, so uploaded PDF study materials cannot be extracted into the vector index yet. "
+                "I'll answer using the study material text instead."
+            ),
+            "citations": [],
+            "followUpQuestions": [
+                "Ask your admin to install backend RAG dependencies if you want better PDF support.",
+                f"Ask follow-up questions about {subject_name}.",
+            ],
+            "confidence": "medium",
+            "referencedImages": [],
+        }
+    
+    if bootstrap.get("error"):
+        error_msg = str(bootstrap.get("error") or "").strip()
+        return {
+            "answer": (
+                f"The document index preparation encountered an error for {subject_name}"
+                f"{f' in {week}' if week else ''}: {error_msg} "
+                "I'll still answer using the available study materials."
+            ),
+            "citations": [],
+            "followUpQuestions": [
+                "Ask your admin to check backend RAG configuration.",
+                f"Ask another question about {subject_name}.",
+            ],
+            "confidence": "medium",
+            "referencedImages": [],
+        }
+    
+    return None
 
 
 def _try_generate_llm_answer(
     *,
     subject_name: str,
     question: str,
-    ranked_chunks: list[dict[str, Any]],
+    week: str | None,
+    retrieval: dict[str, Any],
     history: list[dict[str, str]],
     ai_settings: dict[str, Any],
 ) -> dict[str, Any] | None:
-    provider, base_url, model, api_key = resolve_external_runtime(ai_settings)
-    if provider not in SUPPORTED_EXTERNAL_PROVIDERS:
-        return None
-
-    if not model:
+    provider, base_url, model, api_key, _mode = resolve_external_runtime(ai_settings)
+    if provider not in SUPPORTED_EXTERNAL_PROVIDERS or not model:
         return None
 
     prompt_payload = {
         "subject": subject_name,
+        "week": week,
         "question": question,
         "recentHistory": history[-6:],
         "context": [
             {
-                "materialId": chunk.get("materialId"),
-                "materialTitle": chunk.get("materialTitle"),
-                "unit": chunk.get("unit"),
+                "chunkKey": chunk.get("chunkKey"),
+                "sourceFile": chunk.get("sourceFile"),
+                "page": chunk.get("page"),
                 "week": chunk.get("week"),
-                "documentUrl": chunk.get("documentUrl"),
-                "imageUrls": chunk.get("imageUrls") or [],
+                "images": chunk.get("images") or [],
                 "text": chunk.get("text"),
             }
-            for chunk in ranked_chunks
+            for chunk in retrieval.get("textMatches") or []
+        ],
+        "imageReferences": [
+            {
+                "url": image.get("url"),
+                "page": image.get("page"),
+                "sourceFile": image.get("sourceFile"),
+                "week": image.get("week"),
+            }
+            for image in retrieval.get("imageMatches") or []
         ],
     }
     prompt = (
-        "Answer the student's subject question as a helpful Gemini AI tutor. "
-        "Use the supplied course context only if it is directly relevant to the question. "
-        "If the context is not directly relevant, answer from broader academic knowledge. "
-        "Only include citations when you directly use the provided material. "
-        "Do not claim live internet browsing unless that is explicitly available in the model environment. "
+        "Answer the student's subject question as a careful academic tutor. "
+        "Mention the subject and week when they are known. "
+        "Use the supplied context when relevant. "
+        "If images are useful, mention them briefly using their references. "
         "Return valid JSON only with this schema: "
-        '{"answer":"...","citations":[{"materialId":"1","materialTitle":"Unit 1 Notes","snippet":"..."}],'
-        '"followUps":["...","..."],"confidence":"high|medium|low"}'
+        '{"answer":"...","citations":[{"materialId":"1","materialTitle":"Week 1 Notes","snippet":"..."}],'
+        '"followUps":["...","..."],"confidence":"high|medium|low",'
+        '"referencedImages":[{"url":"...","page":1,"sourceFile":"notes.pdf","subject":"Physics","week":"Week 2"}]}'
         "\nDo not include markdown fences or extra commentary.\n"
         f"{json.dumps(prompt_payload, ensure_ascii=True)}"
     )
@@ -141,9 +320,7 @@ def _try_generate_llm_answer(
             model=model,
             prompt=prompt,
             system_prompt=(
-                "You are a careful academic tutor. Use provided context when available, "
-                "but you may also answer from broader knowledge. "
-                "Return concise JSON that matches the required schema."
+                "You are a careful academic tutor. Return concise JSON that matches the required schema."
             ),
             temperature=float(ai_settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(ai_settings.get("maxTokens", 900) or 900),
@@ -157,24 +334,116 @@ def _try_generate_llm_answer(
 
     parsed = _parse_json_object(raw_content)
     if isinstance(parsed, dict):
-        citations = _normalize_citations(parsed.get("citations"), ranked_chunks)
         return {
-            "answer": str(parsed.get("answer") or "").strip() or _fallback_answer_text(subject_name, question, ranked_chunks),
-            "citations": citations,
+            "answer": str(parsed.get("answer") or "").strip() or _fallback_answer_text(subject_name, question, retrieval),
+            "citations": _normalize_citations(parsed.get("citations"), retrieval),
             "followUpQuestions": _normalize_follow_ups(parsed.get("followUps")),
             "confidence": _normalize_confidence(parsed.get("confidence")),
+            "referencedImages": _normalize_referenced_images(parsed.get("referencedImages"), retrieval),
         }
 
     normalized_answer = str(raw_content or "").strip()
     if normalized_answer:
         return {
             "answer": normalized_answer,
-            "citations": _normalize_citations(None, ranked_chunks),
+            "citations": _normalize_citations(None, retrieval),
             "followUpQuestions": [],
             "confidence": "medium",
+            "referencedImages": _normalize_referenced_images(None, retrieval),
+        }
+    return None
+
+
+def _build_multimodal_fallback_answer(
+    *,
+    subject_name: str,
+    question: str,
+    week: str | None,
+    retrieval: dict[str, Any],
+) -> dict[str, Any]:
+    text_matches = retrieval.get("textMatches") or []
+    image_matches = retrieval.get("imageMatches") or []
+    if not text_matches:
+        answer = (
+            f"I found image-based material for {subject_name}"
+            f"{f' in {week}' if week else ''}, but not enough extracted text to answer directly."
+        )
+        if image_matches:
+            answer += " I’ve attached the most relevant image references below for guided review."
+        return {
+            "answer": answer,
+            "citations": [],
+            "followUpQuestions": [
+                f"Explain the main concepts from {week or 'this subject'} in {subject_name}.",
+            ],
+            "confidence": "low",
+            "referencedImages": _normalize_referenced_images(None, retrieval),
         }
 
-    return None
+    primary = text_matches[0]
+    related = " ".join(item.get("text") or "" for item in text_matches[1:3])
+    answer_parts = [
+        f"For your question about {question.strip().rstrip('?')}, here is the closest grounded explanation from {subject_name}"
+        f"{f' for {week}' if week else ''}:",
+        summarize_text(primary.get("text") or "", max_words=70),
+    ]
+    if related:
+        answer_parts.append(f"Related context: {summarize_text(related, max_words=40)}")
+    if image_matches:
+        answer_parts.append("Relevant figure references are included below when they support the explanation.")
+    return {
+        "answer": " ".join(part for part in answer_parts if part).strip(),
+        "citations": _normalize_citations(None, retrieval),
+        "followUpQuestions": [
+            f"Can you explain this topic in simpler terms for {subject_name}?",
+            f"Which source should I revise first for {week or subject_name}?",
+        ],
+        "confidence": "medium",
+        "referencedImages": _normalize_referenced_images(None, retrieval),
+    }
+
+
+def _is_metadata_only(text: str, title: str) -> bool:
+    """Check if text is just metadata (title/description) without real content."""
+    if not text:
+        return True
+
+    text_lower = text.lower()
+    title_lower = title.lower()
+
+    metadata_patterns = [
+        "chapter",
+        "section",
+        "notes",
+        "material",
+        "topic",
+        "module",
+        "week",
+        "unit",
+        "structured",
+    ]
+
+    word_count = len(text.split())
+
+    # Relaxed word count threshold for RAG chunks
+    if word_count < 5:
+        return True
+
+    # Only reject if it's ALMOST entirely metadata patterns and very short
+    pattern_count = sum(1 for pattern in metadata_patterns if pattern in text_lower)
+    if word_count < 15 and pattern_count >= 3:
+        return True
+
+    # Check if it's just a repetition of the title
+    title_words = [w for w in title_lower.split() if len(w) > 3]
+    if not title_words:
+        return False
+
+    title_words_in_text = sum(1 for word in title_words if word in text_lower)
+    if word_count < 15 and title_words_in_text >= len(title_words) * 0.8:
+        return True
+
+    return False
 
 
 def _build_grounded_fallback_answer(
@@ -186,15 +455,16 @@ def _build_grounded_fallback_answer(
     if not ranked_chunks:
         return {
             "answer": (
-                f"I could not find uploaded {subject_name} material for this question yet. "
-                "I can still answer broader subject questions once an external AI provider is configured in AI Settings."
+                f"I could not find uploaded {subject_name} material matching your question. "
+                f"Ask your teacher to upload study materials with detailed content for {subject_name}."
             ),
             "citations": [],
             "followUpQuestions": [
-                f"Explain the basics of {subject_name}.",
-                f"What are the most important topics to revise in {subject_name}?",
+                f"What topics are covered in {subject_name}?",
+                f"When are the next {subject_name} assessments?",
             ],
             "confidence": "low",
+            "referencedImages": [],
         }
 
     question_tokens = set(tokenize(question))
@@ -207,85 +477,132 @@ def _build_grounded_fallback_answer(
     chunk_scores.sort(key=lambda item: item[0], reverse=True)
     primary_chunk = chunk_scores[0][1]
     supporting_chunks = [chunk for _, chunk in chunk_scores[1:3]]
-    best_overlap = chunk_scores[0][0]
 
-    question_focus = question.strip().rstrip("?")
-    answer_parts = [f"For your question about {question_focus}, here is what the uploaded material says:"]
-    answer_parts.append(summarize_text(primary_chunk.get("text") or "", max_words=70))
-
-    if best_overlap == 0 and question_tokens:
-        answer_parts = [
-            (
-                f"I could not find a direct match for \"{question_focus}\" in the available {subject_name} files. "
-                "I am sharing the closest related content below."
+    primary_text = (primary_chunk.get("text") or "").strip()
+    material_title = str(primary_chunk.get("materialTitle") or "Study Material")
+    
+    if not primary_text or len(primary_text.split()) < 5:
+        if _is_metadata_only(primary_text, material_title):
+            return {
+                "answer": (
+                    f"I found a reference to {material_title} in the materials, but it contains only a heading or brief label. "
+                    f"Please ask your teacher for more detailed notes on this topic."
+                ),
+                "citations": [
+                    {
+                        "materialId": str(primary_chunk.get("materialId") or ""),
+                        "materialTitle": material_title,
+                        "snippet": material_title,
+                    }
+                ],
+                "followUpQuestions": [
+                    f"Remind your teacher to upload {subject_name} materials with full content.",
+                    f"Is there a textbook or other resource for {subject_name}?",
+                ],
+                "confidence": "low",
+                "referencedImages": [],
+            }
+        return {
+            "answer": (
+                f"The available {material_title} material is quite brief. "
+                f"For better help, your teacher should upload more detailed study notes or resources."
             ),
-            summarize_text(primary_chunk.get("text") or "", max_words=60),
-        ]
+            "citations": [
+                {
+                    "materialId": str(primary_chunk.get("materialId") or ""),
+                    "materialTitle": material_title,
+                    "snippet": summarize_text(primary_text, max_words=32) if primary_text else material_title,
+                }
+            ],
+            "followUpQuestions": [
+                f"Ask your teacher to add more content to {material_title}.",
+                f"Try asking about the key concepts in {subject_name}.",
+            ],
+            "confidence": "low",
+            "referencedImages": [],
+        }
 
-    answer_parts = [
-        *answer_parts,
+    primary_summary = summarize_text(primary_text, max_words=80)
+    answer_parts = [primary_summary]
+    if supporting_chunks:
+        supporting_text = " ".join(chunk.get("text") or "" for chunk in supporting_chunks)
+        supporting_summary = summarize_text(supporting_text, max_words=50)
+        if supporting_summary:
+            answer_parts.append(supporting_summary)
+    
+    citations = [
+        {
+            "materialId": str(primary_chunk.get("materialId") or ""),
+            "materialTitle": material_title,
+            "snippet": primary_summary[:80] if primary_summary else material_title,
+        }
     ]
-    if supporting_chunks and best_overlap > 0:
-        answer_parts.append(
-            f"Related context: {summarize_text(' '.join(chunk.get('text') or '' for chunk in supporting_chunks), max_words=40)}"
-        )
-    answer_parts.append(f"This answer is grounded in the currently uploaded {subject_name} study materials.")
-
+    
+    extracted_keywords = extract_keywords(question)
+    followups = []
+    for keyword in extracted_keywords[:2]:
+        followups.append(f"How does {keyword} relate to {subject_name}?")
+    if len(followups) < 2:
+        followups.append(f"What are the practical applications of this topic?")
+    if len(followups) < 2:
+        followups.append(f"How would you approach a question about this in an exam?")
+    
     return {
-        "answer": " ".join(part for part in answer_parts if part).strip(),
-        "citations": _normalize_citations(None, [primary_chunk, *supporting_chunks]),
-        "followUpQuestions": [
-            f"Can you explain this topic in simpler terms with an example?",
-            f"Which part of {primary_chunk.get('materialTitle') or 'the material'} should I revise first?",
-        ],
-        "confidence": "medium" if best_overlap > 0 else "low",
+        "answer": " ".join(answer_parts).strip(),
+        "citations": citations,
+        "followUpQuestions": followups[:2],
+        "confidence": "medium",
+        "referencedImages": [],
     }
 
 
-def _fallback_answer_text(subject_name: str, question: str, ranked_chunks: list[dict[str, Any]]) -> str:
-    if not ranked_chunks:
+def _fallback_answer_text(subject_name: str, question: str, retrieval: dict[str, Any]) -> str:
+    text_matches = retrieval.get("textMatches") or []
+    if not text_matches:
         return (
-            f"I could not find uploaded material for this {subject_name} question, "
-            "but I can still help once broader AI provider access is available."
+            f"I found limited indexed material for {subject_name}, so I cannot confidently answer {question!r} yet."
         )
-    return (
-        f"For your question, \"{question}\", the most relevant uploaded material suggests: "
-        f"{summarize_text(ranked_chunks[0].get('text') or '', max_words=60)}"
-    )
+    primary = text_matches[0]
+    return summarize_text(primary.get("text") or "", max_words=80)
 
 
-def _normalize_citations(value: Any, ranked_chunks: list[dict[str, Any]]) -> list[dict[str, str]]:
-    citations: list[dict[str, str]] = []
-    if isinstance(value, list):
-        for item in value:
+def _normalize_citations(citations: Any, retrieval: dict[str, Any]) -> list[dict[str, str]]:
+    if isinstance(citations, list):
+        normalized: list[dict[str, str]] = []
+        for item in citations:
             if not isinstance(item, dict):
                 continue
-            citations.append(
+            normalized.append(
                 {
-                    "materialId": str(item.get("materialId") or "").strip(),
-                    "materialTitle": str(item.get("materialTitle") or "Study Material").strip(),
-                    "snippet": summarize_text(str(item.get("snippet") or "").strip(), max_words=26),
+                    "materialId": str(item.get("materialId") or ""),
+                    "materialTitle": str(item.get("materialTitle") or "Study Material"),
+                    "snippet": str(item.get("snippet") or "").strip(),
                 }
             )
-    if citations:
-        return citations[:3]
+        if normalized:
+            return normalized
 
-    for chunk in ranked_chunks[:3]:
-        citations.append(
+    normalized = []
+    for match in (retrieval.get("textMatches") or [])[:3]:
+        normalized.append(
             {
-                "materialId": str(chunk.get("materialId") or "").strip(),
-                "materialTitle": str(chunk.get("materialTitle") or "Study Material").strip(),
-                "snippet": summarize_text(chunk.get("text") or "", max_words=26),
+                "materialId": str(match.get("documentId") or ""),
+                "materialTitle": str(match.get("sourceFile") or "Study Material"),
+                "snippet": summarize_text(match.get("text") or "", max_words=32),
             }
         )
-    return citations
+    return normalized
 
 
 def _normalize_follow_ups(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
-    follow_ups = [str(item).strip() for item in value if str(item).strip()]
-    return follow_ups[:3]
+    normalized = []
+    for item in value:
+        text = str(item or "").strip()
+        if text:
+            normalized.append(text)
+    return normalized[:3]
 
 
 def _normalize_confidence(value: Any) -> str:
@@ -295,6 +612,38 @@ def _normalize_confidence(value: Any) -> str:
     return "medium"
 
 
+def _normalize_referenced_images(value: Any, retrieval: dict[str, Any]) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            normalized.append(
+                {
+                    "url": item.get("url"),
+                    "page": item.get("page"),
+                    "sourceFile": item.get("sourceFile"),
+                    "subject": item.get("subject"),
+                    "week": item.get("week"),
+                }
+            )
+        if normalized:
+            return normalized
+
+    normalized = []
+    for item in (retrieval.get("imageMatches") or [])[:3]:
+        normalized.append(
+            {
+                "url": item.get("url"),
+                "page": item.get("page"),
+                "sourceFile": item.get("sourceFile"),
+                "subject": item.get("subject"),
+                "week": item.get("week"),
+            }
+        )
+    return normalized
+
+
 def _parse_json_object(raw_content: str) -> dict[str, Any] | None:
     cleaned = raw_content.strip()
     if cleaned.startswith("```"):
@@ -302,13 +651,9 @@ def _parse_json_object(raw_content: str) -> dict[str, Any] | None:
         if cleaned.startswith("json"):
             cleaned = cleaned[4:].strip()
 
-    candidates = [cleaned]
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        candidates.append(cleaned[start : end + 1])
-
-    for candidate in candidates:
+    for candidate in (cleaned, _extract_json_candidate(cleaned)):
+        if not candidate:
+            continue
         try:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
@@ -316,3 +661,11 @@ def _parse_json_object(raw_content: str) -> dict[str, Any] | None:
         if isinstance(parsed, dict):
             return parsed
     return None
+
+
+def _extract_json_candidate(content: str) -> str | None:
+    start = content.find("{")
+    end = content.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return content[start : end + 1]

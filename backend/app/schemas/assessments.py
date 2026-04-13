@@ -11,6 +11,8 @@ class GenerateQuestionsRequest(StrictModel):
     materials: list[dict] = Field(default_factory=list)
     question_types: dict[str, int] = Field(default_factory=dict, alias="questionTypes")
     custom_prompt: str | None = Field(default=None, alias="customPrompt")
+    week: str | None = None
+    question_style: str = Field(default="mixed", alias="questionStyle")
 
 
 class QuestionPayload(StrictModel):
@@ -37,6 +39,7 @@ class AssessmentCreateRequest(StrictModel):
     description: str | None = None
     class_id: int = Field(alias="classId")
     subject_id: int = Field(alias="subjectId")
+    week: str | None = None
     questions: list[dict]
     total_marks: int = Field(alias="totalMarks")
     created_by: int | None = Field(default=2, alias="createdBy")
@@ -47,6 +50,7 @@ class AssessmentCreateRequest(StrictModel):
 class AssessmentUpdateRequest(StrictModel):
     title: str | None = None
     description: str | None = None
+    week: str | None = None
     due_date: str | None = Field(default=None, alias="dueDate")
     questions: list[dict] | None = None
     published: bool | None = None

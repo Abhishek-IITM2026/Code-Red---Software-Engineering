@@ -15,7 +15,9 @@ from ..upload_storage import save_uploaded_file
 def serialize_material(material: Material) -> dict[str, Any]:
     payload = material.to_dict()
     source = MaterialSourceRepository().get_by_material(material.id) or {}
-    content_preview = source.get("contentText") or source.get("sourceText") or ""
+    content_text = source.get("contentText") or ""
+    source_text = source.get("sourceText") or ""
+    content_preview = content_text or source_text or ""
     document = source.get("document") or {}
     class_name = material.subject.institute_class.name if material.subject and material.subject.institute_class else None
     section = material.subject.institute_class.section if material.subject and material.subject.institute_class else None
@@ -27,8 +29,10 @@ def serialize_material(material: Material) -> dict[str, Any]:
             "documentUrl": source.get("documentUrl"),
             "externalUrl": source.get("externalUrl"),
             "imageUrls": source.get("imageUrls") or [],
+            "contentText": content_text,
+            "sourceText": source_text,
             "contentTextPreview": normalize_text(content_preview)[:280] or None,
-            "ragContextAvailable": bool(source.get("contentText") or source.get("sourceText") or source.get("imageUrls")),
+            "ragContextAvailable": bool(content_text or source_text or source.get("imageUrls")),
             "uploadedAt": document.get("createdAt"),
             "storagePath": document.get("storagePath"),
             "className": class_name,
@@ -71,6 +75,7 @@ def get_materials_for_generation(subject_id: int, selected_materials: list[dict[
                 "documentId": source.get("documentId"),
                 "documentName": source.get("documentName"),
                 "documentUrl": source.get("documentUrl"),
+                "storagePath": ((source.get("document") or {}).get("storagePath")),
             }
         )
     return payloads

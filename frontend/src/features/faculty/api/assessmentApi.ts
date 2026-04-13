@@ -8,6 +8,7 @@ export interface GeneratedAssessment {
   description: string;
   classId: string;
   subjectId: string;
+  week?: string | null;
   questions: Question[];
   totalMarks: number;
   createdBy: string;
@@ -44,7 +45,8 @@ export interface AssessmentSubmission {
 }
 
 export interface AIRuntimeSettings {
-  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  provider: 'grounded-rag' | 'ollama' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  mode: 'local' | 'api-key';
   model: string;
   baseUrl?: string | null;
   temperature: number;
@@ -64,6 +66,8 @@ type GenerateQuestionsRequest = {
   questionCount: number;
   totalMarks: number;
   difficultyLevel: string;
+  week?: string;
+  questionStyle?: 'technical' | 'nonTechnical' | 'mixed';
   questionTypes: { mcq: number; short: number; long: number; trueFalse: number };
   customPrompt?: string;
 };

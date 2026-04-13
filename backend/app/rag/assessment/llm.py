@@ -22,10 +22,11 @@ def try_generate_llm_grounded_questions(
     difficulty_level: str,
     question_types: dict[str, int],
     custom_prompt: str | None,
+    question_style: str | None,
     ai_settings: dict[str, Any] | None,
 ) -> list[dict[str, Any]] | None:
     settings = ai_settings or {}
-    provider, base_url, model, api_key = resolve_external_runtime(settings)
+    provider, base_url, model, api_key, _mode = resolve_external_runtime(settings)
     if provider not in SUPPORTED_EXTERNAL_PROVIDERS:
         return None
 
@@ -48,6 +49,7 @@ def try_generate_llm_grounded_questions(
         "questionCount": len(marks_plan),
         "marksPlan": marks_plan,
         "questionTypePlan": question_type_plan,
+        "questionStyle": question_style or "mixed",
         "customPrompt": custom_prompt or "",
         "context": [
             {
@@ -112,7 +114,7 @@ def try_modify_llm_questions(
     ai_settings: dict[str, Any] | None,
 ) -> list[dict[str, Any]] | None:
     settings = ai_settings or {}
-    provider, base_url, model, api_key = resolve_external_runtime(settings)
+    provider, base_url, model, api_key, _mode = resolve_external_runtime(settings)
     if provider not in SUPPORTED_EXTERNAL_PROVIDERS:
         return None
     if not model or not questions:

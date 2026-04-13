@@ -1,14 +1,17 @@
 import json
+from pathlib import Path
 
-from flask import Blueprint, g, request
+from flask import Blueprint, current_app, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
 from ...models import ClassEnrollment, Faculty, FacultySubjectAssignment, Mark, Material, Student, Subject
+from ...repositories import MaterialSourceRepository
 from ...schemas import MaterialCreateRequest, parse_json
 from ...services.materials import create_material_with_source, list_subject_materials, serialize_material
+from ...tasks import ingest_documents
 from ...services.query import get_attendance_stats
 
 
@@ -169,13 +172,19 @@ def publish_subject_material(subject_id: int):
         section=payload.section,
         material_type=payload.material_type,
         description=None,
-        source_text=None,
-        external_url=None,
-        image_urls=[],
+        source_text=payload.source_text,
+        external_url=payload.external_url,
+        image_urls=payload.image_urls or [],
         document_id=payload.document_id,
         uploaded_file=request.files.get("file"),
     )
-    return success_response(serialize_material(material), status_code=201)
+    payload = serialize_material(material)
+    source = MaterialSourceRepository().get_by_material(material.id) or {}
+    storage_path = ((source.get("document") or {}).get("storagePath") if isinstance(source.get("document"), dict) else None) or payload.get("storagePath")
+    if storage_path:
+        absolute_source_path = Path(current_app.config["UPLOAD_ROOT"]).resolve() / storage_path
+        ingest_documents.delay(None, str(absolute_source_path), "faculty-upload")
+    return success_response(payload, status_code=201)
 
 
 @faculty_bp.get("/performance/students")

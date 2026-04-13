@@ -1,6 +1,6 @@
 # Codebase Context
 
-Updated: 2026-04-07
+Updated: 2026-04-10
 
 This is the repo-level context file for coding agents and future maintainers. It is based on the current code, not older summary docs.
 
@@ -132,9 +132,11 @@ Structured relational data lives in SQLAlchemy models. Major domains include:
 Current pattern:
 
 - relational assessment metadata stays in SQL
+- `Assessment.week` and `Assignment.week` now exist in SQL so weekly assessment policy and weekly task views are backend-backed
 - question and submission payloads can live in Mongo collections
-- administration-managed assessment AI settings also live in the document store as a singleton config document
+- administration-managed AI runtime settings now live in the document store as a singleton config document under the primary `rag-runtime` scope, with fallback to legacy `assessment-generation`
 - RAG-oriented material source metadata also lives in the document store keyed by material id
+- multimodal RAG metadata also lives in Mongo collections for ingestion runs, source documents, chunks, extracted images, student chat threads, and student chat messages
 - if Mongo or `pymongo` is unavailable, the app falls back to an in-memory document store
 - the resilient wrapper can fall back at call time even when Mongo was configured initially
 - the document store now supports simple filtered reads used by material-source lookup
@@ -163,8 +165,9 @@ Student chat changes often need coordinated updates across:
 Current behavior:
 
 - uploads are stored under `backend/uploads/`
-- profile pictures and documents have separate subfolders
+- profile pictures, documents, and extracted RAG images have separate subfolders
 - faculty study-material files are stored under `backend/uploads/documents/<class>/<subject>/<week>/...` when uploaded as files
+- extracted PDF images for multimodal RAG are stored under `backend/uploads/images/<subject>/<week>/...`
 - profile pictures can be uploaded as multipart files or base64 data URLs
 - public URLs are served from `/uploads/<path>`
 
@@ -173,6 +176,7 @@ Current behavior:
 - Celery bootstrap: `backend/app/core/celery_app.py`
 - Local fallback logic: `backend/app/core/runtime.py`
 - Tasks: `backend/app/tasks/notifications.py`
+- RAG task: `backend/app/tasks/rag.py`
 - Email service: `backend/app/services/email.py`
 - Notifications routes: `backend/app/features/notifications/routes.py`
 
@@ -181,6 +185,7 @@ Important behavior:
 - Redis is preferred for Celery broker/result storage and rate-limit storage
 - if Redis is unavailable locally, Celery and rate limiting fall back to in-memory behavior
 - notification routes try Celery first and may execute inline if the broker is unavailable
+- multimodal document ingestion is exposed as a Celery task and faculty material upload now queues targeted incremental ingestion when a file-backed source path is available
 - email sending/sync is a first-class backend capability, not just a mock-only layer
 
 ### Backend feature map
@@ -205,15 +210,18 @@ Current modules:
 - `parent`: parent profile and child dashboards
 - `assessments`: assessment CRUD, publish, AI question endpoints, submissions, assignments
 - `notifications`: email status/send/sync and schedule notifications
+- `rag`: admin-only ingestion endpoint
 - `uploads`: file-related endpoints
 
 Two notable implementation details:
 
-- assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/`
-- student subject pages now expose a RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials and returns cited snippets
-- administration owns assessment AI provider/model/api-key/rate-limit configuration through `backend/app/features/administration/routes.py`
+- assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/` plus the shared multimodal retrieval layer in `backend/app/rag/multimodal/`
+- student subject pages now expose a multimodal RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials, can return cited snippets plus referenced images, and persists conversation history in Mongo
+- student chat history endpoints now exist at `GET /api/v1/students/me/subjects/<subject_id>/chat/history` and `DELETE /api/v1/students/me/subjects/<subject_id>/chat/history`
+- administration owns shared student/faculty AI runtime configuration through `backend/app/features/administration/routes.py`
+- admin-only ingestion is available at `POST /api/v1/ingest` and legacy `POST /api/ingest`
 - assessment AI routes under `backend/app/features/assessments/routes.py` now read dynamic per-route limits from the stored AI settings instead of a hard-coded limiter string
-- generated question payloads can include `imageUrls`, `contextSnippet`, and source material references
+- generated question payloads can include `imageUrls`, `contextSnippet`, source material references, and now accept optional `week` plus `questionStyle`
 - some route prefixes are embedded in the feature route itself, for example leave routes define `/leave` inside a blueprint mounted without a route prefix
 
 ### Backend tests
@@ -232,6 +240,8 @@ Current backend test strategy:
 - seed data recreated for each test via `seed_database(force=True)`
 
 Seeded test identities currently include student, faculty, admin, and parent accounts and are used heavily by auth fixtures.
+
+Recent coverage additions include multimodal RAG discovery/parsing, idempotent ingestion/retrieval, and student chat history/deadline guard behavior in `backend/tests/test_rag_multimodal.py`.
 
 When backend behavior changes, the usual sync set is:
 
@@ -278,33 +288,45 @@ Current backend endpoints added/changed for this flow:
 - faculty upcoming-course visibility uses the same unified course table in `backend/app/features/faculty/routes.py`
 - this file
 
-### Study materials and assessment RAG
+### Study materials, multimodal RAG, and student chat
 
 Current assessment generation flow:
 
 - study materials still use SQL `materials` rows for core metadata such as title, week, type, and description
 - richer source context for those materials is stored in the document store via `MaterialSourceRepository`
 - faculty material creation can include uploaded documents, pasted source text, external URLs, and explicit image URLs
-- administration can manage assessment AI runtime settings: provider, model, base URL, API key, fallback mode, and generate/modify rate limits
+- administration can manage shared AI runtime settings: provider, mode, model, base URL, API key, fallback mode, and generate/modify rate limits
 - generated questions are built by `backend/app/rag/assessment/`:
   - `extractors.py` resolves uploaded study-material files and image URLs
   - `retrieval.py` chunks and ranks material context
   - `pipeline.py` creates grounded question drafts with answer keys and optional image references
-  - `llm.py` optionally calls an OpenAI-compatible cloud/local endpoint when administration has configured one, then falls back to grounded local generation if allowed
+  - `llm.py` can now call Ollama or an OpenAI-compatible cloud/local endpoint when administration has configured one, then falls back to grounded local generation if allowed
+- shared multimodal retrieval is implemented in `backend/app/rag/multimodal/`:
+  - `discovery.py` traverses `backend/uploads/documents/<class>/<subject>/<week>/...`
+  - `parser.py` extracts TXT content and PDF page text/images using PyMuPDF when available
+  - `embeddings.py` builds text embeddings and CLIP-style image/query embeddings, with deterministic fallback embeddings when optional model dependencies are unavailable locally
+  - `vector_store.py` uses persistent Chroma when installed and a JSON-backed local fallback otherwise
+  - `chat_memory.py` persists student thread/message history and provides bounded runtime context
+  - `policy.py` enforces week-aware due-date answer blocking for active assessments
+  - `service.py` orchestrates ingestion, retrieval, metadata persistence, and question-context assembly
 
 Current route behavior tied to this flow:
 
 - `GET /api/ai/settings` exposes sanitized runtime details to faculty and administration without returning the raw API key
 - `POST /api/ai/generate-questions` and `POST /api/ai/modify-questions` use the stored rate-limit strings
-- `POST /api/students/me/subjects/<id>/chat` uses the same AI settings plus material-source retrieval for student-facing grounded answers
+- `POST /api/students/me/subjects/<id>/chat` uses the same AI settings plus multimodal retrieval for student-facing grounded answers
+- `GET /api/students/me/subjects/<id>/chat/history` and `DELETE /api/students/me/subjects/<id>/chat/history` load and clear persisted student subject conversations
 - `GET /api/faculty/subjects/<id>/materials` now returns an empty array for valid courses with no materials instead of 404, which the builder relies on
 - `GET /api/students/me/subjects/<id>/content` now returns enriched study-material metadata including download URLs/file names so the student subject page can render backend-backed materials by week
+- faculty material publish now triggers targeted ingest when the saved material can be resolved to a local uploaded document path
 
-Important current limitation:
+Important current behavior and limitations:
 
-- image-aware questions are supported when a material already has direct image URLs or image uploads
-- text extraction currently supports plain text-style formats such as `txt`, `md`, `csv`, `json`, and `html`
-- binary office formats and PDFs can still contribute document URLs and manual source text, but they are not deeply parsed yet
+- multimodal ingestion currently supports `pdf` and `txt` from the folder-based upload corpus
+- PDFs are parsed page-by-page for text and extracted images; image-only PDFs contribute image retrieval but no OCR is performed in v1
+- student chat blocks direct answers for active same-subject same-week assessments before the due date, but still allows concept guidance and revision help
+- student chat memory is persisted per student + subject thread, with each message tagged by optional week, citations, and referenced images
+- retrieval is always local; AI Settings only switch the generation provider/runtime between local and API-key-backed modes
 
 ## Frontend Context
 
@@ -414,7 +436,10 @@ Feature areas under `frontend/src/features/`:
 - Parent fee invoices/payments are now driven by live RTK Query calls in `frontend/src/features/parent/api/parentApi.ts` and `frontend/src/features/parent/pages/ParentFees.tsx`.
 - Parent and faculty upcoming-course pages now expect the richer unified course payload: status, fee/installment metadata, and optional enrollment state for parent dashboards.
 - Faculty assessment generation now expects richer material payloads, can preview question images/context snippets, can see the active AI runtime summary, and can jump directly into manual question authoring from the generate step.
+- Faculty assessment generation now also supports optional `week` targeting and `questionStyle` values `technical`, `nonTechnical`, and `mixed`.
 - Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`.
+- Administration AI settings now cover the shared student/faculty runtime, including provider labels for `grounded-rag`, `ollama`, `gemini`, `openai-compatible-cloud`, and `openai-compatible-local`, plus `mode: local | api-key`.
+- Student subject chat is integrated into `frontend/src/features/student/pages/SubjectDetails.tsx`, loads/saves backend chat history, passes an optional selected week, renders referenced images, and uses browser-native speech recognition and speech synthesis when available.
 - Authority management is hybrid:
   - backend data comes through API hooks
   - localStorage is used for immediate persistence and UI sync
@@ -428,7 +453,7 @@ Feature areas under `frontend/src/features/`:
 
 - `package.json` has `vitest` scripts
 - a helper script exists at `frontend/test_frontend.sh`
-- no frontend test/spec source files were found during this review
+- frontend speech utility tests now exist at `frontend/src/features/student/utils/speech.test.ts`
 
 Treat frontend behavior changes as needing manual verification unless tests are added.
 

@@ -98,7 +98,8 @@ export interface Course {
 }
 
 export interface AISettings {
-  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  provider: 'grounded-rag' | 'ollama' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  mode: 'local' | 'api-key';
   model: string;
   baseUrl?: string | null;
   temperature: number;
@@ -114,6 +115,7 @@ export interface AISettings {
 
 export type AISettingsWritePayload = {
   provider: AISettings['provider'];
+  mode: AISettings['mode'];
   model: string;
   baseUrl?: string | null;
   apiKey?: string | null;

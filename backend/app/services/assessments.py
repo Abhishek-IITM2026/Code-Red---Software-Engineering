@@ -8,6 +8,8 @@ from ..models import Assessment, AssessmentSubmission, Subject
 from ..rag.assessment import generate_grounded_questions
 from ..rag.assessment.llm import try_modify_llm_questions
 from ..rag.llm_clients import SUPPORTED_EXTERNAL_PROVIDERS
+from ..rag.multimodal import build_question_context, derive_material_scope, retrieve_context
+from ..rag.multimodal.runtime import normalize_week_label
 from ..repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
 from .ai_settings import get_ai_settings
 from .materials import get_materials_for_generation
@@ -38,6 +40,7 @@ def create_assessment_with_questions(payload: dict[str, Any]) -> Assessment:
         description=payload.get("description"),
         class_id=int(payload["classId"]),
         subject_id=int(payload["subjectId"]),
+        week=payload.get("week"),
         total_marks=int(payload["totalMarks"]),
         created_by=int(payload.get("createdBy", 2)),
         due_date=payload.get("dueDate"),
@@ -128,6 +131,26 @@ def generate_assessment_questions(payload: dict[str, Any]) -> list[dict[str, Any
     question_types = payload.get("questionTypes") or {}
     typed_distribution_count = sum(max(int(value or 0), 0) for value in question_types.values())
     effective_question_count = typed_distribution_count if typed_distribution_count > 0 else requested_question_count
+    material_scope = derive_material_scope(materials)
+    requested_week = str(payload.get("week") or "").strip() or None
+    normalized_week = normalize_week_label(requested_week) if requested_week else None
+    retrieval = retrieve_context(
+        query=" ".join(
+            item
+            for item in [
+                subject.name,
+                payload.get("questionStyle"),
+                payload.get("customPrompt"),
+            ]
+            if item
+        ),
+        subject=subject.name,
+        week=normalized_week,
+        allowed_source_files=material_scope["sourceFiles"] or None,
+        allowed_weeks=material_scope["weeks"] or None,
+        top_k_text=max(effective_question_count, 4),
+    )
+    retrieved_chunks = build_question_context(payload.get("customPrompt") or subject.name, retrieval.get("textMatches") or [])
 
     return generate_grounded_questions(
         subject_name=subject.name,
@@ -137,6 +160,8 @@ def generate_assessment_questions(payload: dict[str, Any]) -> list[dict[str, Any
         difficulty_level=payload.get("difficultyLevel", "medium"),
         question_types=question_types,
         custom_prompt=payload.get("customPrompt"),
+        question_style=payload.get("questionStyle"),
+        retrieved_chunks=retrieved_chunks or None,
         ai_settings=get_ai_settings(include_secret=True),
     )
 

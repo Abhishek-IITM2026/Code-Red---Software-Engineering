@@ -131,7 +131,7 @@ def update_assessment(assessment_id: int):
         raise ApiError(404, "ASSESSMENT_NOT_FOUND", "Assessment was not found.")
     payload = parse_json(AssessmentUpdateRequest, request.get_json())
     updates = payload.model_dump(by_alias=True, exclude_none=True)
-    for field, attr in (("title", "title"), ("description", "description"), ("dueDate", "due_date"), ("published", "published")):
+    for field, attr in (("title", "title"), ("description", "description"), ("week", "week"), ("dueDate", "due_date"), ("published", "published")):
         if field in updates:
             setattr(assessment, attr, updates[field])
     if "questions" in updates:

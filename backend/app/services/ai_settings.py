@@ -10,11 +10,14 @@ from ..repositories import AISettingsRepository
 
 DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_MODEL = "llama3.2"
 
 DEFAULT_AI_SETTINGS: dict[str, Any] = {
-    "provider": "gemini",
-    "model": DEFAULT_GEMINI_MODEL,
-    "baseUrl": DEFAULT_GEMINI_BASE_URL,
+    "provider": "ollama",
+    "mode": "local",
+    "model": DEFAULT_OLLAMA_MODEL,
+    "baseUrl": DEFAULT_OLLAMA_BASE_URL,
     "apiKey": None,
     "temperature": 0.2,
     "maxTokens": 1200,
@@ -27,16 +30,14 @@ DEFAULT_AI_SETTINGS: dict[str, Any] = {
 
 
 def _runtime_env_defaults() -> dict[str, Any]:
-    api_key = str(current_app.config.get("GEMINI_API_KEY") or "").strip() or None
-    model = str(current_app.config.get("GEMINI_MODEL") or "").strip() or DEFAULT_GEMINI_MODEL
-    base_url = str(current_app.config.get("GEMINI_BASE_URL") or "").strip() or DEFAULT_GEMINI_BASE_URL
-    if not api_key:
-        return {}
+    base_url = str(current_app.config.get("OLLAMA_BASE_URL") or "").strip() or DEFAULT_OLLAMA_BASE_URL
+    model = str(current_app.config.get("OLLAMA_MODEL") or "").strip() or DEFAULT_OLLAMA_MODEL
     return {
-        "provider": "gemini",
+        "provider": "ollama",
+        "mode": "local",
         "model": model,
         "baseUrl": base_url,
-        "apiKey": api_key,
+        "apiKey": None,
     }
 
 
@@ -56,13 +57,29 @@ def _merge_settings(document: dict[str, Any] | None) -> dict[str, Any]:
         if key.startswith("_") or key == "scope":
             continue
         merged[key] = value
+    if not merged.get("mode"):
+        provider = str(merged.get("provider") or "").strip().lower()
+        merged["mode"] = "api-key" if provider in {"gemini", "openai-compatible-cloud"} else "local"
     if not merged.get("apiKey") and runtime_defaults.get("apiKey"):
         merged["apiKey"] = runtime_defaults["apiKey"]
-    if runtime_defaults.get("apiKey") and str(merged.get("provider") or "").strip().lower() == "grounded-rag":
-        merged["provider"] = "gemini"
     if str(merged.get("provider") or "").strip().lower() == "gemini":
-        merged["model"] = str(merged.get("model") or "").strip() or runtime_defaults.get("model") or DEFAULT_GEMINI_MODEL
-        merged["baseUrl"] = str(merged.get("baseUrl") or "").strip() or runtime_defaults.get("baseUrl") or DEFAULT_GEMINI_BASE_URL
+        merged["mode"] = "api-key"
+        merged["model"] = str(merged.get("model") or "").strip() or current_app.config.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+        merged["baseUrl"] = (
+            str(merged.get("baseUrl") or "").strip()
+            or current_app.config.get("GEMINI_BASE_URL")
+            or DEFAULT_GEMINI_BASE_URL
+        )
+        if not merged.get("apiKey"):
+            merged["apiKey"] = str(current_app.config.get("GEMINI_API_KEY") or "").strip() or None
+    if str(merged.get("provider") or "").strip().lower() == "ollama":
+        merged["model"] = str(merged.get("model") or "").strip() or current_app.config.get("OLLAMA_MODEL") or DEFAULT_OLLAMA_MODEL
+        merged["baseUrl"] = (
+            str(merged.get("baseUrl") or "").strip()
+            or current_app.config.get("OLLAMA_BASE_URL")
+            or DEFAULT_OLLAMA_BASE_URL
+        )
+        merged["mode"] = "local"
     return merged
 
 
@@ -70,6 +87,7 @@ def get_ai_settings(include_secret: bool = False) -> dict[str, Any]:
     settings = _merge_settings(AISettingsRepository().get())
     payload = {
         "provider": settings["provider"],
+        "mode": settings.get("mode", "local"),
         "model": settings["model"],
         "baseUrl": settings.get("baseUrl"),
         "temperature": settings["temperature"],
@@ -91,6 +109,7 @@ def update_ai_settings(payload: dict[str, Any]) -> dict[str, Any]:
     current = get_ai_settings(include_secret=True)
     next_settings = {
         "provider": payload.get("provider", current["provider"]),
+        "mode": payload.get("mode", current.get("mode", "local")),
         "model": payload.get("model", current["model"]),
         "baseUrl": payload.get("baseUrl", current.get("baseUrl")),
         "temperature": payload.get("temperature", current["temperature"]),

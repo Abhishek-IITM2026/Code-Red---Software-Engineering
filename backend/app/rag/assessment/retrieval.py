@@ -12,6 +12,18 @@ from .extractors import normalize_text
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "in", "is", "it",
     "its", "of", "on", "or", "that", "the", "their", "this", "to", "was", "with", "will",
+    "can", "could", "would", "should", "may", "might", "must",
+    "what", "which", "why", "when", "where", "how", "who", "whom",
+    "you", "your", "yours", "me", "my", "mine", "we", "our", "ours",
+    "do", "does", "did", "doing", "done",
+    "explain", "understand", "tell", "give", "show", "help", "describe", "define",
+    "if", "then", "but", "because", "so", "such", "also",
+    "get", "make", "take", "have", "just", "made",
+    "more", "most", "some", "any", "all", "each", "every", "other",
+    "about", "above", "after", "again", "before", "below", "between", "during",
+    "very", "too", "not", "no", "yes", "here", "there", "now", "then", "only",
+    "first", "second", "third", "last", "next",
+    "question", "answer", "topic", "material", "chapter", "section",
 }
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 

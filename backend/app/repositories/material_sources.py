@@ -22,6 +22,10 @@ class MaterialSourceRepository:
         documents = self.store.find_many(self.collection, {"materialId": str(material_id)}, limit=1)
         return documents[0] if documents else None
 
+    def get_by_storage_path(self, storage_path: str) -> dict[str, Any] | None:
+        documents = self.store.find_many(self.collection, {"storagePath": storage_path}, limit=1)
+        return documents[0] if documents else None
+
     def upsert(self, material_id: int, payload: dict[str, Any]) -> str:
         existing = self.get_by_material(material_id)
         document_payload = {"materialId": str(material_id), **payload}
