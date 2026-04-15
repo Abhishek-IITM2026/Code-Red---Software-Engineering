@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from flask import current_app
+
 from ...api.errors import ApiError
 from .llm import try_generate_llm_grounded_questions
 from .retrieval import (
@@ -23,9 +25,12 @@ def generate_grounded_questions(
     difficulty_level: str,
     question_types: dict[str, int],
     custom_prompt: str | None = None,
+    question_style: str | None = None,
+    retrieved_chunks: list[dict[str, Any]] | None = None,
     ai_settings: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    chunks = build_material_chunks(materials)
+    # Prioritize retrieved_chunks (from multimodal vector store) over build_material_chunks (which reads from MaterialSource)
+    chunks = retrieved_chunks or build_material_chunks(materials)
     if not chunks:
         raise ApiError(
             422,
@@ -33,20 +38,32 @@ def generate_grounded_questions(
             "Selected study materials do not contain usable text or image context for question generation.",
         )
 
-    llm_questions = try_generate_llm_grounded_questions(
-        subject_name=subject_name,
-        chunks=chunks,
-        question_count=question_count,
-        total_marks=total_marks,
-        difficulty_level=difficulty_level,
-        question_types=question_types,
-        custom_prompt=custom_prompt,
-        ai_settings=ai_settings,
-    )
+    try:
+        llm_questions = try_generate_llm_grounded_questions(
+            subject_name=subject_name,
+            chunks=chunks,
+            question_count=question_count,
+            total_marks=total_marks,
+            difficulty_level=difficulty_level,
+            question_types=question_types,
+            custom_prompt=custom_prompt,
+            question_style=question_style,
+            ai_settings=ai_settings,
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Assessment question generation LLM stage failed unexpectedly",
+            extra={
+                "subject": subject_name,
+                "questionCount": question_count,
+                "provider": str((ai_settings or {}).get("provider") or "grounded-rag"),
+            },
+        )
+        llm_questions = None
     if llm_questions:
         return llm_questions
     provider = str((ai_settings or {}).get("provider") or "grounded-rag").strip().lower()
-    if provider in {"openai-compatible-cloud", "openai-compatible-local", "gemini"} and not (ai_settings or {}).get(
+    if provider in {"ollama", "openai-compatible-cloud", "openai-compatible-local", "gemini"} and not (ai_settings or {}).get(
         "fallbackToGroundedRag",
         True,
     ):
@@ -65,7 +82,7 @@ def generate_grounded_questions(
         ranked_chunks = rank_chunks(
             chunks,
             subject_name=subject_name,
-            custom_prompt=custom_prompt,
+            custom_prompt=" ".join(item for item in [custom_prompt, question_style] if item),
             question_type=question_type,
         )
         primary_chunk = ranked_chunks[index % len(ranked_chunks)]
@@ -75,6 +92,7 @@ def generate_grounded_questions(
             subject_name=subject_name,
             question_type=question_type,
             difficulty_level=difficulty_level,
+            question_style=question_style or "mixed",
             marks=marks,
             primary_chunk=primary_chunk,
             supporting_chunks=supporting_chunks,
@@ -90,6 +108,7 @@ def _build_question(
     subject_name: str,
     question_type: str,
     difficulty_level: str,
+    question_style: str,
     marks: int,
     primary_chunk: dict[str, Any],
     supporting_chunks: list[dict[str, Any]],
@@ -117,6 +136,7 @@ def _build_question(
         prompt_focus=prompt_focus,
         context_snippet=context_snippet,
         image_urls=image_urls,
+        question_style=question_style,
     )
     question.update(
         {
@@ -132,8 +152,13 @@ def _build_question(
     return question
 
 
-def _build_mcq(*, index: int, topic: str, keywords: list[str], prompt_focus: str, context_snippet: str, image_urls: list[str], **_: Any) -> dict[str, Any]:
-    headline = f"Based on the material about {topic}, which option best matches the core idea?"
+def _build_mcq(*, index: int, topic: str, keywords: list[str], prompt_focus: str, context_snippet: str, image_urls: list[str], question_style: str, **_: Any) -> dict[str, Any]:
+    if question_style == "technical":
+        headline = f"Based on the technical material about {topic}, which option best matches the core principle?"
+    elif question_style == "nonTechnical":
+        headline = f"Based on the lesson about {topic}, which option best explains the main idea in simple terms?"
+    else:
+        headline = f"Based on the material about {topic}, which option best matches the core idea?"
     if image_urls:
         headline = f"{headline} Refer to the accompanying image if needed."
 
@@ -152,9 +177,12 @@ def _build_mcq(*, index: int, topic: str, keywords: list[str], prompt_focus: str
     }
 
 
-def _build_true_false(*, index: int, topic: str, keywords: list[str], prompt_focus: str, image_urls: list[str], **_: Any) -> dict[str, Any]:
+def _build_true_false(*, index: int, topic: str, keywords: list[str], prompt_focus: str, image_urls: list[str], question_style: str, **_: Any) -> dict[str, Any]:
     is_true = index % 2 == 0
-    statement = prompt_focus.rstrip(".")
+    if question_style == "nonTechnical":
+        statement = f"In simple terms, {prompt_focus.rstrip('.')}"
+    else:
+        statement = prompt_focus.rstrip(".")
     if not is_true and keywords:
         replacement = keywords[-1]
         if replacement not in statement.lower():
@@ -171,9 +199,14 @@ def _build_true_false(*, index: int, topic: str, keywords: list[str], prompt_foc
     }
 
 
-def _build_short_answer(*, topic: str, keywords: list[str], context_snippet: str, image_urls: list[str], **_: Any) -> dict[str, Any]:
+def _build_short_answer(*, topic: str, keywords: list[str], context_snippet: str, image_urls: list[str], question_style: str, **_: Any) -> dict[str, Any]:
     focus = keywords[0] if keywords else topic
-    prompt = f"In 2-3 sentences, explain {focus} using the study material for {topic}."
+    if question_style == "technical":
+        prompt = f"In 2-3 sentences, explain the technical concept of {focus} using the study material for {topic}."
+    elif question_style == "nonTechnical":
+        prompt = f"In 2-3 sentences, explain {focus} for a beginner using the study material for {topic}."
+    else:
+        prompt = f"In 2-3 sentences, explain {focus} using the study material for {topic}."
     if image_urls:
         prompt = f"{prompt} Use the attached image as supporting context."
     return {
@@ -184,9 +217,14 @@ def _build_short_answer(*, topic: str, keywords: list[str], context_snippet: str
     }
 
 
-def _build_long_answer(*, topic: str, keywords: list[str], context_snippet: str, image_urls: list[str], **_: Any) -> dict[str, Any]:
+def _build_long_answer(*, topic: str, keywords: list[str], context_snippet: str, image_urls: list[str], question_style: str, **_: Any) -> dict[str, Any]:
     pair = ", ".join(keyword for keyword in keywords[:2]) or topic
-    prompt = f"Write a detailed answer describing how {pair} connects within {topic}."
+    if question_style == "technical":
+        prompt = f"Write a detailed technical answer describing how {pair} connects within {topic}."
+    elif question_style == "nonTechnical":
+        prompt = f"Write a detailed answer explaining {pair} within {topic} using plain language and practical meaning."
+    else:
+        prompt = f"Write a detailed answer describing how {pair} connects within {topic}."
     if image_urls:
         prompt = f"{prompt} Reference the attached image in your explanation."
     return {

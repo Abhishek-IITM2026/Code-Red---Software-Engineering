@@ -47,6 +47,7 @@ const StepPublish: React.FC = () => {
         description: config.description,
         classId: config.classId!,
         subjectId: config.subjectId!,
+        week: config.week || undefined,
         questions: config.questions,
         totalMarks: config.totalMarks,
         dueDate: config.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -80,6 +81,7 @@ const StepPublish: React.FC = () => {
           description: config.description,
           classId: config.classId!,
           subjectId: config.subjectId!,
+          week: config.week || undefined,
           questions: config.questions,
           totalMarks: config.totalMarks,
           dueDate: config.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -131,6 +133,12 @@ const StepPublish: React.FC = () => {
               <span className="text-[var(--text-secondary)]">Subject:</span>
               <span className="font-medium text-[var(--text)]">{config.subjectName}</span>
             </div>
+            {config.week ? (
+              <div className="flex justify-between">
+                <span className="text-[var(--text-secondary)]">Week:</span>
+                <span className="font-medium text-[var(--text)]">{config.week}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">Questions:</span>
               <span className="font-medium text-[var(--text)]">{config.questions.length}</span>
@@ -192,6 +200,13 @@ const StepPublish: React.FC = () => {
             <span className="text-[var(--text-secondary)]">Subject:</span>
             <span className="font-medium text-[var(--text)]">{config.subjectName}</span>
           </div>
+          {config.week ? (
+            <div className="flex items-center gap-2">
+              <FiCalendar className="w-4 h-4 text-[var(--text-secondary)]" />
+              <span className="text-[var(--text-secondary)]">Week:</span>
+              <span className="font-medium text-[var(--text)]">{config.week}</span>
+            </div>
+          ) : null}
           <div className="flex items-center gap-2">
             <FiFileText className="w-4 h-4 text-[var(--text-secondary)]" />
             <span className="text-[var(--text-secondary)]">Questions:</span>

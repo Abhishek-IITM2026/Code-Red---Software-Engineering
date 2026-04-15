@@ -11,6 +11,11 @@ import {
 } from '../../../services/api/dataApi';
 import type { ClassSchedule } from '../../../services/api/dataApi';
 
+interface ConflictError {
+  message?: string;
+  conflictSchedule?: ClassSchedule;
+}
+
 type ViewMode = 'list' | 'notification';
 
 const ScheduleManagement = () => {
@@ -20,6 +25,8 @@ const ScheduleManagement = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClassSchedule | null>(null);
+  const [submitError, setSubmitError] = useState<ConflictError | null>(null);
+
 
   // API Hooks
   const { data: schedules = [], isLoading, error } = useGetAllSchedulesQuery();
@@ -30,14 +37,17 @@ const ScheduleManagement = () => {
   const handleEdit = (schedule: ClassSchedule) => {
     setEditingSchedule(schedule);
     setIsFormOpen(true);
+    setSubmitError(null);
   };
 
   const handleCreateOpen = () => {
     setEditingSchedule(null);
     setIsFormOpen(true);
+    setSubmitError(null);
   };
 
   const handleSaveSchedule = async (schedule: ClassSchedule) => {
+    setSubmitError(null);
     try {
       // Extract only the fields that the backend accepts for ScheduleWriteRequest
       const apiPayload = {
@@ -59,8 +69,26 @@ const ScheduleManagement = () => {
       }
       setIsFormOpen(false);
       setEditingSchedule(null);
-    } catch (err) {
+      setSubmitError(null);
+    } catch (err: any) {
       console.error('Failed to save schedule:', err);
+      
+      // Handle conflict error (409 status)
+      if (err?.status === 409 || err?.data?.code === 'SCHEDULE_CONFLICT') {
+        setSubmitError({
+          message: err.data?.message || 'This time slot conflicts with an existing schedule.',
+          conflictSchedule: err.data?.details?.conflictSchedule || undefined,
+        });
+      } else if (err?.data?.message) {
+        // Handle other API errors
+        setSubmitError({
+          message: err.data.message,
+        });
+      } else {
+        setSubmitError({
+          message: 'Failed to save schedule. Please try again.',
+        });
+      }
     }
   };
 
@@ -167,7 +195,9 @@ const ScheduleManagement = () => {
                 onCancel={() => {
                   setIsFormOpen(false);
                   setEditingSchedule(null);
+                  setSubmitError(null);
                 }}
+                error={submitError}
               />
             </div>
           </div>

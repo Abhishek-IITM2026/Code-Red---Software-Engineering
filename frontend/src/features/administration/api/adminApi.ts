@@ -3,13 +3,21 @@ import type { RootState } from '../../../app/store';
 import { payrollApi } from './payrollApi';
 
 // Types
+export interface UpcomingEvent {
+  id: string;
+  title: string;
+  className: string;
+  section: string;
+  startDate: string;
+}
+
 export interface DashboardStats {
   totalStudents: number;
   totalFaculty: number;
   totalStaff: number;
   attendanceRate: number;
   pendingApprovals: number;
-  upcomingEvents: unknown[];
+  upcomingEvents: UpcomingEvent[];
 }
 
 export type StudentWritePayload = Omit<
@@ -98,7 +106,8 @@ export interface Course {
 }
 
 export interface AISettings {
-  provider: 'grounded-rag' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  provider: 'grounded-rag' | 'ollama' | 'openai-compatible-cloud' | 'openai-compatible-local' | 'gemini';
+  mode: 'local' | 'api-key';
   model: string;
   baseUrl?: string | null;
   temperature: number;
@@ -114,6 +123,7 @@ export interface AISettings {
 
 export type AISettingsWritePayload = {
   provider: AISettings['provider'];
+  mode: AISettings['mode'];
   model: string;
   baseUrl?: string | null;
   apiKey?: string | null;

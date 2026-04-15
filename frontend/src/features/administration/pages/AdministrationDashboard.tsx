@@ -127,7 +127,7 @@ const AdministrationDashboard = function () {
 
           <div className="mt-6 space-y-4">
             {upcomingEvents.length > 0 ? (
-              upcomingEvents.slice(0, 4).map((event: { id: string; title: string; className: string; section: string; startDate: string }) => (
+              upcomingEvents.slice(0, 4).map((event) => (
                 <div key={event.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                   <p className="font-semibold text-slate-900">{event.title}</p>
                   <p className="mt-1 text-sm text-slate-500">

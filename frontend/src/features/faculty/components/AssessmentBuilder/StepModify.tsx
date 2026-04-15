@@ -14,6 +14,12 @@ const StepModify: React.FC = () => {
   
   const [modifyQuestions, { isLoading }] = useModifyQuestionsMutation();
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const promptSuggestions = [
+    'Make the paper more challenging for advanced students.',
+    'Convert two questions into MCQs with clear distractors.',
+    'Add one application-based question from this week’s materials.',
+    'Simplify the wording for average learners.',
+  ];
 
   const handleBack = () => {
     goToStep('generate', 5);
@@ -26,6 +32,10 @@ const StepModify: React.FC = () => {
       const result = await modifyQuestions({
         questions: config.questions,
         modificationPrompt: config.modificationPrompt,
+        subjectId: config.subjectId ? Number(config.subjectId) : undefined,
+        subjectName: config.subjectName || undefined,
+        week: config.week || undefined,
+        materials: config.selectedMaterials || [],
       }).unwrap();
 
       setQuestions(result);
@@ -137,25 +147,47 @@ const StepModify: React.FC = () => {
           <h4 className="font-semibold text-[var(--text)]">AI Modification</h4>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-3">
-          Enter additional prompts to modify the generated questions using AI
+          Refine the generated paper with natural-language prompts. You can apply multiple prompt rounds until the draft matches the format you want.
         </p>
-        <div className="flex gap-3">
-          <Input
-            placeholder="e.g., Make questions more challenging, Add more numerical problems..."
+        <div className="space-y-3">
+          <textarea
+            placeholder="Example: Make the paper more exam-oriented, keep 2 short answers, and add one numerical question from Week 3 materials."
             value={config.modificationPrompt}
             onChange={(e) => updateConfig({ modificationPrompt: e.target.value })}
-            className="flex-1"
+            rows={4}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--input-bg)] px-4 py-3 text-[var(--text)] outline-none transition focus:border-[var(--primary)]"
           />
-          <Button
-            onClick={handleModifyWithAI}
-            disabled={!config.modificationPrompt || isLoading}
-          >
-            {isLoading ? (
-              <FiRefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              'Apply'
-            )}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {promptSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => updateConfig({ modificationPrompt: suggestion })}
+                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={handleModifyWithAI}
+              disabled={!config.modificationPrompt || isLoading}
+            >
+              {isLoading ? (
+                <FiRefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                'Apply Prompt'
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => updateConfig({ modificationPrompt: '' })}
+              disabled={!config.modificationPrompt || isLoading}
+            >
+              Clear Prompt
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -56,6 +56,10 @@ type GenerateQuestionsRequest = {
 type ModifyQuestionsRequest = {
   questions: Question[];
   modificationPrompt: string;
+  subjectId?: number | null;
+  subjectName?: string | null;
+  week?: string | null;
+  materials?: Material[];
 };
 
 export const assessmentApi = createApi({

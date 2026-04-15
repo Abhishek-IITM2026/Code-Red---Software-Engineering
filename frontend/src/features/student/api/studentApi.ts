@@ -21,6 +21,8 @@ export interface Subject {
   code: string;
   teacherId: string;
   credits: number;
+  progressLabel?: string;
+  progress?: number;
 }
 
 export interface SubjectContentMaterial {
@@ -165,14 +167,34 @@ export interface SubjectChatCitation {
   snippet: string;
 }
 
+export interface SubjectChatImageReference {
+  url?: string | null;
+  page?: number | null;
+  sourceFile?: string | null;
+  subject?: string | null;
+  week?: string | null;
+}
+
+export interface SubjectChatHistoryEntry {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  week?: string | null;
+  citations?: SubjectChatCitation[];
+  referencedImages?: SubjectChatImageReference[];
+  createdAt?: string | null;
+}
+
 export interface SubjectChatResponse {
   subjectId: string;
   subjectName: string;
   question: string;
+  week?: string | null;
   answer: string;
   citations: SubjectChatCitation[];
   followUpQuestions: string[];
   confidence: 'high' | 'medium' | 'low';
+  referencedImages: SubjectChatImageReference[];
 }
 
 // API Slice
@@ -305,12 +327,26 @@ export const studentApi = createApi({
 
     askSubjectChatbot: builder.mutation<
       SubjectChatResponse,
-      { subjectId: string; question: string; history?: SubjectChatMessage[] }
+      { subjectId: string; question: string; history?: SubjectChatMessage[]; week?: string; materialIds?: string[] }
     >({
-      query: ({ subjectId, question, history = [] }) => ({
+      query: ({ subjectId, question, history = [], week, materialIds = [] }) => ({
         url: `/students/me/subjects/${subjectId}/chat`,
         method: 'POST',
-        body: { question, history },
+        body: { question, history, week, materialIds },
+      }),
+    }),
+
+    getSubjectChatHistory: builder.query<
+      { threadId: string; subjectId: string; subjectName: string; summary: string; messages: SubjectChatHistoryEntry[] },
+      string
+    >({
+      query: (subjectId) => `/students/me/subjects/${subjectId}/chat/history`,
+    }),
+
+    clearSubjectChatHistory: builder.mutation<{ success: boolean }, string>({
+      query: (subjectId) => ({
+        url: `/students/me/subjects/${subjectId}/chat/history`,
+        method: 'DELETE',
       }),
     }),
   }),
@@ -333,6 +369,8 @@ export const {
   useEnrollInCourseMutation,
   usePayCourseEnrollmentMutation,
   useAskSubjectChatbotMutation,
+  useGetSubjectChatHistoryQuery,
+  useClearSubjectChatHistoryMutation,
 } = studentApi;
 
 export default studentApi;

@@ -33,3 +33,80 @@ assessment questions have text or test + images. rag use to generate questions b
 
 
 give llm configures to administration like rate control, change llm api key, model etc.  and faculty can select study material, study material uplaod features and generate question and a option to manuly add questions also. note update CONTEXT.md after changes
+
+
+## implementation of multimodal rag to generate questions for assessments and answers questions useing rag
+
+Act as a senior software architect.
+Plan a complete implementation for:
+Multimodal RAG Architecture
+include:
+- CONTEXT.md to understand project overviews
+-  data source : backend/uploads/{class_name}/{subject_name}/{week_number}/ then files
+- use langchain
+- any vector db
+- pdf preprocessing to extract text + images
+- Requirements:
+
+1. Ingestion Pipeline:
+- Traverse folder structure
+- Extract:
+  - subject name
+  - week number
+  - file name
+- Support:
+  - PDF (use PyMuPDF)
+  - TXT
+
+2. PDF Processing:
+- Extract text per page
+- Extract images and save to:
+  uploads/images/{subject}/{week}/
+- Maintain mapping:
+  page → images
+
+3. Chunking:
+- Use LangChain text splitter
+- Chunk size: 500–800 tokens
+- Attach metadata:
+  {
+    subject,
+    week,
+    source_file,
+    page,
+    images
+  }
+
+4. Embeddings:
+- Text → sentence-transformers
+- Images → CLIP model
+
+5. Storage:
+- Store text embeddings in FAISS/Chroma
+- Store image embeddings in separate index
+- Store metadata in MongoDB
+
+6. Retriever:
+- Input: user query
+- Retrieve:
+  - top-k text chunks
+  - top-k relevant images
+- Filter by:
+  subject or week (if provided)
+
+7. LLM:
+- Use local LLM (Ollama) or OpenAI-compatible
+- Input:
+  - query
+  - retrieved text
+  - image references
+- Output:
+  - clear explanation
+  - mention subject/week
+  - reference images if useful
+
+8. Flask API:
+- POST /ingest → process all documents
+make plan to implement production ready multimodel rag. student can ask questions using rag and faculty can genrate questions for assessments. this rag model should be able to genrate technical and non technical questions
+
+

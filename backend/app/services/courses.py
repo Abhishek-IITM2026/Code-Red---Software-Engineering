@@ -148,6 +148,35 @@ def sync_legacy_courses_if_needed() -> int:
     return inserted
 
 
+def sync_schema_compatibility_if_needed() -> int:
+    if db.engine.dialect.name != "sqlite":
+        return 0
+
+    inspector = inspect(db.engine)
+    tables = set(inspector.get_table_names())
+    statements: list[str] = []
+
+    expected_columns = {
+        "assessments": {"week": "ALTER TABLE assessments ADD COLUMN week VARCHAR(50)"},
+        "assignments": {"week": "ALTER TABLE assignments ADD COLUMN week VARCHAR(50)"},
+    }
+
+    for table_name, column_map in expected_columns.items():
+        if table_name not in tables:
+            continue
+        existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        for column_name, statement in column_map.items():
+            if column_name not in existing_columns:
+                statements.append(statement)
+
+    for statement in statements:
+        db.session.execute(text(statement))
+
+    if statements:
+        db.session.commit()
+    return len(statements)
+
+
 def list_program_courses_for_class(
     class_id: int | list[int] | tuple[int, ...] | set[int] | None,
     *,

@@ -40,7 +40,7 @@ export const authApi = createApi({
       invalidatesTags: ['Auth'],
       transformResponse: (response: AuthResponse) => {
         // Store token and user in localStorage
-        localStorage.setItem('token', response.token);
+        if (response.token) localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         return response;
       },
@@ -55,7 +55,7 @@ export const authApi = createApi({
       }),
       invalidatesTags: ['Auth'],
       transformResponse: (response: AuthResponse) => {
-        localStorage.setItem('token', response.token);
+        if (response.token) localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         return response;
       },
@@ -87,7 +87,7 @@ export const authApi = createApi({
         method: 'POST',
       }),
       transformResponse: (response: AuthResponse) => {
-        localStorage.setItem('token', response.token);
+        if (response.token) localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         return response;
       },

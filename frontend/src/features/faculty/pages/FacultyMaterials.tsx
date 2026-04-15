@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiBookOpen,
@@ -14,6 +14,7 @@ import {
   useUploadMaterialMutation,
   type StudyMaterial,
 } from "../api/facultyApi";
+import { groupMaterialsByWeek } from "../utils/materialWeekGroups";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -25,6 +26,10 @@ type MaterialForm = {
   week: string;
   title: string;
   file: File | null;
+  sourceText: string;
+  externalUrl: string;
+  imageUrls: string;
+  contentMethod: "file" | "manual"; // Control which fields are visible
 };
 
 type SubjectOption = {
@@ -42,6 +47,10 @@ const initialForm: MaterialForm = {
   week: "",
   title: "",
   file: null,
+  sourceText: "",
+  externalUrl: "",
+  imageUrls: "",
+  contentMethod: "file",
 };
 
 const FacultyMaterials = function () {
@@ -71,21 +80,17 @@ const FacultyMaterials = function () {
     return options.sort((left, right) => left.name.localeCompare(right.name));
   }, [classOverview]);
 
-  useEffect(() => {
-    if (!form.subjectId && subjectOptions[0]) {
-      setForm((current) => ({ ...current, subjectId: subjectOptions[0].id }));
-    }
-  }, [form.subjectId, subjectOptions]);
-
-  const selectedSubject = subjectOptions.find((subject) => subject.id === form.subjectId) || null;
+  const activeSubjectId = form.subjectId || subjectOptions[0]?.id || "";
+  const selectedSubject = subjectOptions.find((subject) => subject.id === activeSubjectId) || null;
   const {
     data: selectedMaterials = [],
     isFetching: isMaterialsFetching,
-  } = useListMaterialsQuery(form.subjectId, {
-    skip: !form.subjectId,
+  } = useListMaterialsQuery(activeSubjectId, {
+    skip: !activeSubjectId,
   });
 
   const ragReadyCount = selectedMaterials.filter((material) => material.ragContextAvailable).length;
+  const groupedMaterials = useMemo(() => groupMaterialsByWeek(selectedMaterials), [selectedMaterials]);
 
   const updateField = <K extends keyof MaterialForm>(key: K, value: MaterialForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -93,26 +98,43 @@ const FacultyMaterials = function () {
 
   const handleUpload = async () => {
     setMessage("");
-    if (!form.subjectId || !form.title.trim()) {
+    if (!activeSubjectId || !form.title.trim()) {
       setMessage("Select a course and add a title before publishing the material.");
       return;
     }
 
-    if (!form.file) {
-      setMessage("Attach a file before publishing the material.");
-      return;
+    // Validate based on content method
+    if (form.contentMethod === "file") {
+      if (!form.file) {
+        setMessage("Please upload a file (PDF, document, worksheet, or media file).");
+        return;
+      }
+    } else {
+      // Manual content entry
+      if (!form.sourceText.trim() && !form.externalUrl.trim() && !form.imageUrls.trim()) {
+        setMessage("Paste text content, provide an external URL, or add image URLs.");
+        return;
+      }
     }
 
     try {
+      const imageUrlsArray = form.imageUrls
+        .split("\n")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0);
+
       await uploadMaterial({
-        subjectId: form.subjectId,
+        subjectId: activeSubjectId,
         title: form.title.trim(),
         type: form.type,
         className: selectedSubject?.className,
         section: selectedSubject?.section,
         unit: form.unit.trim() || undefined,
         week: form.week.trim() || undefined,
-        file: form.file,
+        file: form.contentMethod === "file" ? form.file : undefined,
+        sourceText: form.contentMethod === "manual" ? form.sourceText.trim() || undefined : undefined,
+        externalUrl: form.contentMethod === "manual" ? form.externalUrl.trim() || undefined : undefined,
+        imageUrls: form.contentMethod === "manual" && imageUrlsArray.length > 0 ? imageUrlsArray : undefined,
       }).unwrap();
 
       setMessage("Study material published successfully. It is now available in the assessment builder.");
@@ -120,6 +142,9 @@ const FacultyMaterials = function () {
         ...current,
         title: "",
         file: null,
+        sourceText: "",
+        externalUrl: "",
+        imageUrls: "",
       }));
     } catch (error) {
       const apiMessage =
@@ -198,7 +223,7 @@ const FacultyMaterials = function () {
             <div>
               <label className="text-sm font-medium text-slate-700">Course</label>
               <select
-                value={form.subjectId}
+                value={activeSubjectId}
                 onChange={(event) => updateField("subjectId", event.target.value)}
                 className={fieldClass}
                 disabled={subjectOptions.length === 0}
@@ -270,21 +295,97 @@ const FacultyMaterials = function () {
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-slate-700">Upload File</label>
-              <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5">
-                <span className="text-sm font-medium text-slate-700">
-                  Attach notes, PDF, worksheet, or media file
-                </span>
-                <span className="mt-1 text-xs text-slate-500">
-                  {form.file?.name || "Choose a file to store with this material"}
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={(event) => updateField("file", event.target.files?.[0] || null)}
-                />
-              </label>
+              <label className="text-sm font-medium text-slate-700">Content Source</label>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateField("contentMethod", "file")}
+                  className={`flex-1 rounded-2xl px-4 py-3 font-medium transition ${
+                    form.contentMethod === "file"
+                      ? "bg-[var(--primary)] text-white"
+                      : "border border-slate-200 bg-white text-slate-700 hover:border-[var(--primary)]"
+                  }`}
+                >
+                  <FiUploadCloud className="mr-2 inline h-4 w-4" />
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField("contentMethod", "manual")}
+                  className={`flex-1 rounded-2xl px-4 py-3 font-medium transition ${
+                    form.contentMethod === "manual"
+                      ? "bg-[var(--primary)] text-white"
+                      : "border border-slate-200 bg-white text-slate-700 hover:border-[var(--primary)]"
+                  }`}
+                >
+                  <FiFileText className="mr-2 inline h-4 w-4" />
+                  Paste Content
+                </button>
+              </div>
             </div>
+
+            {form.contentMethod === "file" ? (
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">Upload File</label>
+                <p className="mt-1 text-xs text-slate-500">
+                  Support: PDFs (text + images extracted), documents, worksheets, media files. RAG automatically indexes all content and images.
+                </p>
+                <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-[var(--primary)] hover:bg-[var(--primary)]/5">
+                  <span className="text-sm font-medium text-slate-700">
+                    Attach notes, PDF, worksheet, or media file
+                  </span>
+                  <span className="mt-1 text-xs text-slate-500">
+                    {form.file?.name || "Choose a file to store with this material"}
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(event) => updateField("file", event.target.files?.[0] || null)}
+                  />
+                </label>
+              </div>
+            ) : (
+              <>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-slate-700">Paste Text Content</label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Paste lecture notes, articles, markdown content, or any text-based material. RAG will embed and index this content.
+                  </p>
+                  <textarea
+                    value={form.sourceText}
+                    onChange={(event) => updateField("sourceText", event.target.value)}
+                    className={`${fieldClass} min-h-24 resize-none`}
+                    placeholder="# Chapter Title&#10;&#10;Paste your lecture notes, article content, or study material here in markdown or plain text format..."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-slate-700">External Resource URL</label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Link to external textbooks, websites, or resources. Provide one URL per line.
+                  </p>
+                  <textarea
+                    value={form.externalUrl}
+                    onChange={(event) => updateField("externalUrl", event.target.value)}
+                    className={`${fieldClass} min-h-16 resize-none font-mono text-xs`}
+                    placeholder="https://example.com/textbook-chapter&#10;https://example.com/reference-guide"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-slate-700">Image URLs (one per line)</label>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Provide URLs to images, diagrams, or visual materials. These will be indexed and searchable in RAG.
+                  </p>
+                  <textarea
+                    value={form.imageUrls}
+                    onChange={(event) => updateField("imageUrls", event.target.value)}
+                    className={`${fieldClass} min-h-20 resize-none font-mono text-xs`}
+                    placeholder="https://example.com/image1.jpg&#10;https://example.com/diagram.png&#10;https://example.com/chart.svg"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {message ? (
@@ -362,12 +463,23 @@ const FacultyMaterials = function () {
                   No materials published for this course yet.
                 </div>
               ) : (
-                selectedMaterials.map((material) => (
-                  <MaterialCard
-                    key={material.id}
-                    material={material}
-                    badgeClass={materialTypeStyles[material.type] || "bg-slate-100 text-slate-700"}
-                  />
+                groupedMaterials.map((group) => (
+                  <div key={group.id} className="space-y-3">
+                    <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                      <p className="text-sm font-semibold text-slate-900">{group.label}</p>
+                      <span className="text-xs font-medium text-slate-500">
+                        {group.items.length} material{group.items.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {group.items.map((material) => (
+                      <MaterialCard
+                        key={material.id}
+                        material={material}
+                        badgeClass={materialTypeStyles[material.type] || "bg-slate-100 text-slate-700"}
+                      />
+                    ))}
+                  </div>
                 ))
               )}
             </div>

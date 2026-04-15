@@ -1,3 +1,4 @@
 from .notifications import send_schedule_notification, sync_email_inbox
+from .rag import ingest_documents
 
-__all__ = ["send_schedule_notification", "sync_email_inbox"]
+__all__ = ["ingest_documents", "send_schedule_notification", "sync_email_inbox"]

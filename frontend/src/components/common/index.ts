@@ -10,6 +10,7 @@ import Search, { type SearchProps, type SearchField, type SearchConfig } from '.
 import EmployeeSalaryPortal from './EmployeeSalaryPortal';
 import UserAvatar from './UserAvatar';
 import SalarySlipPanel from './SalarySlipPanel';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 export {
   Button,
@@ -28,7 +29,8 @@ export {
   Search,
   EmployeeSalaryPortal,
   SalarySlipPanel,
-  UserAvatar
+  UserAvatar,
+  MarkdownRenderer
 };
 
 // Re-export types

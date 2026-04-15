@@ -17,11 +17,15 @@ class MaterialCreateRequest(StrictModel):
     class_name: str | None = Field(default=None, alias="className")
     section: str | None = None
     document_id: int | None = Field(default=None, alias="documentId")
+    source_text: str | None = Field(default=None, alias="sourceText")
+    external_url: str | None = Field(default=None, alias="externalUrl")
+    image_urls: list[str] | None = Field(default=None, alias="imageUrls")
 
 
 class AISettingsWriteRequest(StrictModel):
-    provider: Literal["grounded-rag", "openai-compatible-cloud", "openai-compatible-local", "gemini"] = "gemini"
-    model: str = "grounded-rag-v1"
+    provider: Literal["grounded-rag", "ollama", "openai-compatible-cloud", "openai-compatible-local", "gemini"] = "ollama"
+    mode: Literal["local", "api-key"] = "local"
+    model: str = "llama3.2"
     base_url: str | None = Field(default=None, alias="baseUrl")
     api_key: str | None = Field(default=None, alias="apiKey")
     clear_api_key: bool = Field(default=False, alias="clearApiKey")

@@ -6,6 +6,7 @@ from ...common.responses import success_response
 from ...extensions import db, limiter
 from ...models import FacultySubjectAssignment, Student, Subject
 from ...rag.student_chat import answer_subject_question
+from ...rag.multimodal import build_runtime_history, clear_thread, load_or_create_thread, persist_exchange
 from ...schemas import CourseEnrollmentRequest, CoursePaymentRequest, StudentSubjectChatRequest, parse_json
 from ...services.ai_settings import get_ai_rate_limit, get_ai_settings
 from ...services.materials import get_materials_for_generation, list_subject_materials
@@ -123,26 +124,114 @@ def chat_about_subject(subject_id: int):
 
     payload = parse_json(StudentSubjectChatRequest, request.get_json())
     materials = get_materials_for_generation(subject_id)
+    selected_material_ids = {value.strip() for value in payload.material_ids if value and value.strip()}
+    if selected_material_ids:
+        materials = [
+            material
+            for material in materials
+            if str(material.get("id") or "").strip() in selected_material_ids
+        ]
     history = [
         {"role": item.role.strip().lower(), "content": item.content.strip()}
         for item in payload.history
         if item.role.strip() and item.content.strip()
     ]
+    thread, persisted_messages = load_or_create_thread(
+        student_id=student.id,
+        subject_id=subject_id,
+        subject_name=subject.name,
+    )
+    runtime_history = build_runtime_history(request_history=history, persisted_messages=persisted_messages)
     result = answer_subject_question(
+        subject_id=subject_id,
         subject_name=subject.name,
         question=payload.question.strip(),
+        week=(payload.week or "").strip() or None,
         materials=materials,
-        history=history,
+        history=runtime_history,
         ai_settings=get_ai_settings(include_secret=True),
     )
+    thread_id = str(thread.get("_id") or "")
+    if thread_id:
+        persist_exchange(
+            thread_id=thread_id,
+            user_question=payload.question.strip(),
+            assistant_answer=result.get("answer") or "",
+            week=(payload.week or "").strip() or None,
+            citations=result.get("citations"),
+            referenced_images=result.get("referencedImages"),
+        )
     return success_response(
         {
             "subjectId": str(subject_id),
             "subjectName": subject.name,
             "question": payload.question.strip(),
+            "week": (payload.week or "").strip() or None,
             **result,
         }
     )
+
+
+@students_bp.get("/me/subjects/<int:subject_id>/chat/history")
+@roles_required("student")
+def get_subject_chat_history(subject_id: int):
+    student = get_current_student()
+    subjects = get_student_subjects(student.id)
+    if not any(int(subject["id"]) == subject_id for subject in subjects):
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject is not available for the current student.")
+
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+
+    thread, persisted_messages = load_or_create_thread(
+        student_id=student.id,
+        subject_id=subject_id,
+        subject_name=subject.name,
+    )
+    return success_response(
+        {
+            "threadId": str(thread.get("_id") or ""),
+            "subjectId": str(subject_id),
+            "subjectName": subject.name,
+            "summary": thread.get("summary") or "",
+            "messages": [
+                {
+                    "id": str(message.get("_id") or ""),
+                    "role": message.get("role"),
+                    "content": message.get("content"),
+                    "week": message.get("week"),
+                    "citations": message.get("citations") or [],
+                    "referencedImages": message.get("referencedImages") or [],
+                    "createdAt": message.get("createdAt"),
+                }
+                for message in persisted_messages
+            ],
+        }
+    )
+
+
+@students_bp.delete("/me/subjects/<int:subject_id>/chat/history")
+@roles_required("student")
+def delete_subject_chat_history(subject_id: int):
+    student = get_current_student()
+    subjects = get_student_subjects(student.id)
+    if not any(int(subject["id"]) == subject_id for subject in subjects):
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject is not available for the current student.")
+
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        raise ApiError(404, "SUBJECT_NOT_FOUND", "Subject was not found.")
+
+    thread, _ = load_or_create_thread(
+        student_id=student.id,
+        subject_id=subject_id,
+        subject_name=subject.name,
+    )
+    thread_id = str(thread.get("_id") or "")
+    if thread_id:
+        clear_thread(thread_id=thread_id)
+    return success_response({"success": True})
 
 
 @students_bp.get("/me/performance")

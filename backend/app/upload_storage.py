@@ -39,7 +39,7 @@ DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[-\w.+/]+);base64,(?P<data>.+)$",
 def init_upload_storage(app) -> None:
     upload_root = Path(app.config["UPLOAD_ROOT"])
     upload_root.mkdir(parents=True, exist_ok=True)
-    for directory_name in ("profile-pictures", "documents"):
+    for directory_name in ("profile-pictures", "documents", "images"):
         (upload_root / directory_name).mkdir(parents=True, exist_ok=True)
 
 
@@ -163,7 +163,7 @@ def _write_bytes(
 ) -> dict:
     sanitized_category = secure_filename(category) or "uploads"
     sanitized_segments = [segment for segment in (_sanitize_path_segment(item) for item in (path_segments or [])) if segment]
-    stored_name = f"{uuid4().hex}.{extension}"
+    stored_name = _build_stored_filename(filename=filename, extension=extension)
     relative_prefix = "/".join([sanitized_category, *sanitized_segments]) if sanitized_segments else sanitized_category
     relative_path = f"{relative_prefix}/{stored_name}"
     absolute_path = _upload_root() / relative_path
@@ -182,3 +182,10 @@ def _write_bytes(
 def _sanitize_path_segment(value: str | None) -> str:
     normalized = secure_filename((value or "").strip().replace("/", "-"))
     return normalized or ""
+
+
+def _build_stored_filename(*, filename: str, extension: str) -> str:
+    stem = Path(filename).stem
+    sanitized_stem = secure_filename(stem) or "file"
+    truncated_stem = sanitized_stem[:80].rstrip("._-") or "file"
+    return f"{truncated_stem}-{uuid4().hex[:12]}.{extension}"

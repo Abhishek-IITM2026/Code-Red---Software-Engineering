@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   FiArrowLeft,
@@ -13,15 +13,21 @@ import {
   FiDownload,
   FiFileText,
   FiLoader,
+  FiMic,
   FiMessageSquare,
   FiPlayCircle,
   FiSend,
+  FiTrash2,
+  FiVolume2,
 } from "react-icons/fi";
-import { Button } from "../../../components/common";
+import { Button, MarkdownRenderer } from "../../../components/common";
 import {
   useAskSubjectChatbotMutation,
+  useClearSubjectChatHistoryMutation,
   useGetSubjectContentQuery,
+  useGetSubjectChatHistoryQuery,
   useGetSubjectsQuery,
+  type SubjectChatImageReference,
   type SubjectWeeklyContent,
 } from "../api/studentApi";
 import { API_BASE_URL } from "../../../services/api/config";
@@ -31,6 +37,16 @@ import {
   type SubjectChapter,
   type SubjectMaterial,
 } from "../data/subjectContent";
+import {
+  appendTranscript,
+  getPreferredSpeechVoice,
+  getSpeechRecognitionConstructor,
+  getSpeechRecognitionErrorMessage,
+  hasSpeechRecognitionSupport,
+  hasSpeechSynthesisSupport,
+  type SpeechRecognitionLike,
+  type SpeechWindowLike,
+} from "../utils/speech";
 
 type WeekContentItem = {
   id: string;
@@ -51,6 +67,14 @@ type WeekGroup = {
 };
 
 type SidebarCategory = "contents" | "materials" | "assessments";
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  citations?: Array<{ materialId: string; materialTitle: string; snippet: string }>;
+  confidence?: "high" | "medium" | "low";
+  followUps?: string[];
+  referencedImages?: SubjectChatImageReference[];
+};
 
 const materialTypeStyles: Record<SubjectMaterial["type"], string> = {
   notes: "bg-sky-100 text-sky-700",
@@ -134,11 +158,11 @@ const resolveMaterialDownloadUrl = (documentUrl?: string | null, storagePath?: s
   return undefined;
 };
 
-const triggerMaterialDownload = (url: string, fileName?: string, title?: string) => {
+const triggerMaterialDownload = (url: string) => {
   const link = document.createElement("a");
   link.href = url;
-  link.download = fileName?.trim() || title?.trim() || "study-material";
-  link.rel = "noreferrer";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -215,6 +239,11 @@ const buildSubjectChapters = (subjectLabel: string, weeklyContent?: SubjectWeekl
       ],
     }));
 };
+
+const buildDefaultAssistantMessage = (subjectLabel: string): ChatMessage => ({
+  role: "assistant",
+  content: `Ask me anything about ${subjectLabel}. I’ll answer from the uploaded study materials and show which sources I used.`,
+});
 
 const SubjectDetails = () => {
   const navigate = useNavigate();
@@ -362,30 +391,22 @@ const SubjectDetails = () => {
   const [selectedWeekId, setSelectedWeekId] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<SidebarCategory>("contents");
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string; citations?: Array<{ materialId: string; materialTitle: string; snippet: string }>; confidence?: "high" | "medium" | "low"; followUps?: string[] }>>([
-    {
-      role: "assistant",
-      content: `Ask me anything about ${matchedSubject?.name || decodedSubjectName || "this subject"}. I’ll answer from the uploaded study materials and show which sources I used.`,
-    },
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    buildDefaultAssistantMessage(matchedSubject?.name || decodedSubjectName || "this subject"),
   ]);
   const [chatError, setChatError] = useState("");
+  const [speechError, setSpeechError] = useState("");
   const [materialError, setMaterialError] = useState("");
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([]);
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [activePlaybackIndex, setActivePlaybackIndex] = useState<number | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const [askSubjectChatbot, { isLoading: isChatting }] = useAskSubjectChatbotMutation();
-
-  if (!subject) {
-    return (
-      <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/student/subjects")} icon={<FiArrowLeft />}>
-          Back to Subjects
-        </Button>
-        <div className="rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
-          <FiBookOpen className="mx-auto h-12 w-12 text-slate-400" />
-          <p className="mt-4 text-slate-500">This subject could not be found.</p>
-        </div>
-      </div>
-    );
-  }
+  const { data: chatHistory } = useGetSubjectChatHistoryQuery(matchedSubjectId, {
+    skip: !matchedSubjectId,
+  });
+  const [clearSubjectChatHistory, { isLoading: isClearingHistory }] = useClearSubjectChatHistoryMutation();
 
   const selectedWeek = weekGroups.find((week) => week.id === selectedWeekId) ?? weekGroups[0];
   const effectiveSelectedWeekId = selectedWeek?.id || "";
@@ -399,7 +420,75 @@ const SubjectDetails = () => {
         ? "materials"
         : selectedCategory
     : selectedCategory;
-  const pendingAssignments = subject.assignments.filter((assignment) => assignment.status === "pending").length;
+  const pendingAssignments = subject?.assignments.filter((assignment) => assignment.status === "pending").length || 0;
+  const speechWindow = (typeof window !== "undefined" ? window : undefined) as SpeechWindowLike | undefined;
+  const recognitionSupported = hasSpeechRecognitionSupport(speechWindow);
+  const speechSynthesisSupported = hasSpeechSynthesisSupport(speechWindow);
+  const selectedWeekMaterials = selectedWeek?.materials || [];
+  const selectedWeekMaterialIds = selectedWeekMaterials.map((material) => material.id);
+  const hasMaterialSelection = selectedWeekMaterials.length > 0;
+
+  useEffect(() => {
+    const nextSubjectLabel = matchedSubject?.name || decodedSubjectName || "this subject";
+    const historyMessages =
+      chatHistory?.messages?.map<ChatMessage>((message) => ({
+        role: message.role,
+        content: message.content,
+        citations: message.citations,
+        referencedImages: message.referencedImages,
+      })) || [];
+    setChatMessages(historyMessages.length > 0 ? historyMessages : [buildDefaultAssistantMessage(nextSubjectLabel)]);
+  }, [chatHistory, matchedSubject?.name, decodedSubjectName, matchedSubjectId]);
+
+  useEffect(() => {
+    const nextIds = selectedWeekMaterialIds;
+    setSelectedMaterialIds((current) => {
+      if (nextIds.length === 0) return [];
+      const retained = current.filter((id) => nextIds.includes(id));
+      return retained.length > 0 ? retained : [...nextIds];
+    });
+  }, [effectiveSelectedWeekId, selectedWeekMaterialIds.join("|")]);
+
+  useEffect(() => {
+    const Recognition = getSpeechRecognitionConstructor(speechWindow);
+    if (!Recognition) {
+      recognitionRef.current = null;
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript += event.results[index][0]?.transcript || "";
+      }
+      setChatInput((current) => appendTranscript(current, transcript));
+      setSpeechError("");
+    };
+    recognition.onerror = (event) => {
+      setSpeechError(getSpeechRecognitionErrorMessage(event));
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, [speechWindow]);
+
+  useEffect(() => {
+    return () => {
+      if (speechWindow?.speechSynthesis) {
+        speechWindow.speechSynthesis.cancel();
+      }
+    };
+  }, [speechWindow]);
 
   const openWeekCategory = (weekId: string, category: SidebarCategory) => {
     if (category === "materials") {
@@ -416,12 +505,98 @@ const SubjectDetails = () => {
       return;
     }
     setMaterialError("");
-    triggerMaterialDownload(material.downloadUrl, material.fileName, material.title);
+    triggerMaterialDownload(material.downloadUrl);
+  };
+
+  const handleToggleListening = () => {
+    if (!recognitionRef.current) {
+      setSpeechError("Voice input is not supported in this browser.");
+      return;
+    }
+    setSpeechError("");
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch {
+      setIsListening(false);
+      setSpeechError("Could not start microphone capture. Check browser permissions and try again.");
+    }
+  };
+
+  const handleSpeakMessage = (message: ChatMessage, index: number) => {
+    if (!speechWindow?.speechSynthesis || typeof window === "undefined" || typeof window.SpeechSynthesisUtterance === "undefined") {
+      setSpeechError("Text-to-speech is not supported in this browser.");
+      return;
+    }
+    if (activePlaybackIndex === index) {
+      speechWindow.speechSynthesis.cancel();
+      setActivePlaybackIndex(null);
+      return;
+    }
+    const utterance = new window.SpeechSynthesisUtterance(message.content);
+    const preferredVoice = getPreferredSpeechVoice(speechWindow, "en-US");
+    if (preferredVoice && "voice" in utterance) {
+      utterance.voice = preferredVoice as SpeechSynthesisVoice;
+    }
+    utterance.lang = preferredVoice?.lang || "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.onend = () => setActivePlaybackIndex(null);
+    utterance.onerror = () => {
+      setActivePlaybackIndex(null);
+      setSpeechError("Unable to play the assistant response.");
+    };
+    setSpeechError("");
+    speechWindow.speechSynthesis.cancel();
+    if (speechWindow.speechSynthesis.paused && typeof speechWindow.speechSynthesis.resume === "function") {
+      speechWindow.speechSynthesis.resume();
+    }
+    setActivePlaybackIndex(index);
+    window.setTimeout(() => {
+      try {
+        speechWindow.speechSynthesis?.speak(utterance);
+      } catch {
+        setActivePlaybackIndex(null);
+        setSpeechError("Unable to start text-to-speech in this browser.");
+      }
+    }, 0);
+  };
+
+  const handleClearHistory = async () => {
+    if (!matchedSubject?.id) return;
+    try {
+      await clearSubjectChatHistory(matchedSubject.id).unwrap();
+      const nextSubjectLabel = matchedSubject.name || decodedSubjectName || "this subject";
+      setChatMessages([buildDefaultAssistantMessage(nextSubjectLabel)]);
+      setChatError("");
+      setSpeechError("");
+    } catch (error) {
+      const errorPayload =
+        error && typeof error === "object" && "data" in error
+          ? (error as { data?: { error?: { message?: string }; message?: string } }).data
+          : undefined;
+      setChatError(errorPayload?.error?.message || errorPayload?.message || "Unable to clear conversation history.");
+    }
+  };
+
+  const toggleSelectedMaterial = (materialId: string) => {
+    setSelectedMaterialIds((current) =>
+      current.includes(materialId) ? current.filter((id) => id !== materialId) : [...current, materialId],
+    );
   };
 
   const handleAskQuestion = async (questionOverride?: string) => {
     const nextQuestion = (questionOverride ?? chatInput).trim();
     if (!nextQuestion || !matchedSubject?.id || isChatting) return;
+    if (hasMaterialSelection && selectedMaterialIds.length === 0) {
+      setChatError("Select at least one study material from this week before asking the assistant.");
+      return;
+    }
 
     setChatError("");
     const nextUserMessage = { role: "user" as const, content: nextQuestion };
@@ -438,6 +613,8 @@ const SubjectDetails = () => {
         subjectId: matchedSubject.id,
         question: nextQuestion,
         history: nextHistory,
+        week: selectedWeek?.label,
+        materialIds: selectedMaterialIds,
       }).unwrap();
 
       setChatMessages((current) => [
@@ -448,6 +625,7 @@ const SubjectDetails = () => {
           citations: response.citations,
           confidence: response.confidence,
           followUps: response.followUpQuestions,
+          referencedImages: response.referencedImages,
         },
       ]);
     } catch (error: unknown) {
@@ -463,6 +641,20 @@ const SubjectDetails = () => {
       setChatMessages((current) => current.slice(0, -1));
     }
   };
+
+  if (!subject) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => navigate("/student/subjects")} icon={<FiArrowLeft />}>
+          Back to Subjects
+        </Button>
+        <div className="rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
+          <FiBookOpen className="mx-auto h-12 w-12 text-slate-400" />
+          <p className="mt-4 text-slate-500">This subject could not be found.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -643,6 +835,7 @@ const SubjectDetails = () => {
                   <h2 className="mt-4 text-2xl font-semibold text-[var(--text)]">Ask anything in {subject.name}</h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
                     The assistant uses uploaded materials when available, and also supports broader subject Q&A.
+                    {selectedWeek ? ` Current week focus: ${selectedWeek.label}.` : ""}
                   </p>
                 </div>
 
@@ -651,29 +844,111 @@ const SubjectDetails = () => {
                   <p className="mt-2 text-sm font-semibold text-slate-900">
                     {matchedSubject ? `${matchedSubject.code} • ${matchedSubject.name}` : "Matching API subject not found yet"}
                   </p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {recognitionSupported ? "Voice input ready" : "Voice input unavailable"} • {speechSynthesisSupported ? "speech playback ready" : "speech playback unavailable"}
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+	              <div className="mt-6 space-y-4">
+                {selectedWeek && (
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Study Material Scope
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Select which {selectedWeek.label} materials the assistant should use for this question.
+                        </p>
+                      </div>
+                      {hasMaterialSelection ? (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMaterialIds([...selectedWeekMaterialIds])}
+                            className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                          >
+                            Select all
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMaterialIds([])}
+                            className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {hasMaterialSelection ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {selectedWeekMaterials.map((material) => {
+                          const isSelected = selectedMaterialIds.includes(material.id);
+                          return (
+                            <button
+                              key={material.id}
+                              type="button"
+                              onClick={() => toggleSelectedMaterial(material.id)}
+                              className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                                isSelected
+                                  ? "bg-[var(--primary)] text-white"
+                                  : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                              }`}
+                            >
+                              {material.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm text-slate-500">
+                        No uploaded study materials are available in {selectedWeek.label} yet. The assistant will use general subject context.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+	                <div className="max-h-[28rem] space-y-3 overflow-y-auto rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
                   {chatMessages.map((message, index) => (
                     <div
                       key={`${message.role}-${index}`}
                       className={`rounded-3xl px-4 py-4 ${
-                        message.role === "user" ? "ml-auto max-w-2xl bg-[var(--primary)] text-white" : "max-w-3xl bg-white text-slate-900 ring-1 ring-slate-200"
+                        message.role === "user"
+                          ? "ml-auto max-w-2xl bg-[var(--primary)] text-white"
+                          : "max-w-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 text-slate-900 shadow-sm"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
-                          {message.role === "user" ? "You" : "AI Tutor"}
-                        </p>
-                        {message.role === "assistant" && message.confidence && (
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                            {message.confidence} confidence
-                          </span>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+                            {message.role === "user" ? "You" : "AI Tutor"}
+                          </p>
+                          {message.role === "assistant" && message.confidence && (
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                              {message.confidence} confidence
+                            </span>
+                          )}
+                        </div>
+                        {message.role === "assistant" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSpeakMessage(message, index)}
+                            className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition hover:bg-slate-200"
+                          >
+                            <FiVolume2 className="h-3.5 w-3.5" />
+                            {activePlaybackIndex === index ? "Stop audio" : "Play audio"}
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="mt-3 text-sm leading-6">
+                        {message.role === "assistant" ? (
+                          <MarkdownRenderer content={message.content} className="text-sm" />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{message.content}</p>
                         )}
                       </div>
-                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{message.content}</p>
 
                       {message.citations && message.citations.length > 0 && (
                         <div className="mt-4 space-y-2">
@@ -683,6 +958,33 @@ const SubjectDetails = () => {
                               <p className="mt-1 leading-6">{citation.snippet}</p>
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {message.referencedImages && message.referencedImages.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Referenced Images
+                          </p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {message.referencedImages.map((image, imageIndex) => (
+                              <div key={`${image.url || imageIndex}-${imageIndex}`} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                {image.url ? (
+                                  <img
+                                    src={image.url}
+                                    alt={image.sourceFile || "Referenced study image"}
+                                    className="h-36 w-full rounded-xl object-cover"
+                                  />
+                                ) : null}
+                                <p className="mt-2 text-sm font-semibold text-slate-900">
+                                  {image.sourceFile || "Study image"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {image.week || "General"}{image.page ? ` • Page ${image.page}` : ""}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -720,8 +1022,15 @@ const SubjectDetails = () => {
                   </div>
                 )}
 
+                {speechError && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {speechError}
+                  </div>
+                )}
+
                 <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap gap-2">
                     {[
                       `Explain the main ideas in ${subject.name}.`,
                       `Give me a revision summary for ${subject.name}.`,
@@ -738,6 +1047,16 @@ const SubjectDetails = () => {
                         {prompt}
                       </button>
                     ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleClearHistory()}
+                      disabled={!matchedSubject || isClearingHistory}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FiTrash2 className="h-3.5 w-3.5" />
+                      {isClearingHistory ? "Clearing..." : "Clear history"}
+                    </button>
                   </div>
 
                   <div className="mt-4 flex flex-col gap-3 md:flex-row">
@@ -747,15 +1066,26 @@ const SubjectDetails = () => {
                       placeholder={`Ask any question about ${subject.name}...`}
                       className="min-h-[110px] flex-1 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleAskQuestion()}
-                      disabled={!chatInput.trim() || !matchedSubject || isChatting}
-                      className="inline-flex items-center justify-center gap-2 rounded-3xl bg-[var(--primary)] px-5 py-4 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 md:w-48"
-                    >
-                      {isChatting ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiSend className="h-4 w-4" />}
-                      Ask Assistant
-                    </button>
+                    <div className="flex gap-3 md:w-64 md:flex-col">
+                      <button
+                        type="button"
+                        onClick={handleToggleListening}
+                        disabled={!recognitionSupported}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-4 font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FiMic className={`h-4 w-4 ${isListening ? "text-rose-600" : ""}`} />
+                        {isListening ? "Stop Mic" : "Use Mic"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAskQuestion()}
+                        disabled={!chatInput.trim() || !matchedSubject || isChatting}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-3xl bg-[var(--primary)] px-5 py-4 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isChatting ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiSend className="h-4 w-4" />}
+                        Ask Assistant
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

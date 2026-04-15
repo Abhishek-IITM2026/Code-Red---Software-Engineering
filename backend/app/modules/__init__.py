@@ -12,6 +12,7 @@ from ..features.marks.routes import marks_bp
 from ..features.notifications.routes import notifications_bp
 from ..features.parent.routes import parent_bp
 from ..features.payroll.routes import payroll_bp
+from ..features.rag.routes import rag_bp
 from ..features.schedule.routes import schedule_bp
 from ..features.students.routes import students_bp
 from ..features.uploads.routes import uploads_bp
@@ -34,5 +35,6 @@ MODULE_BLUEPRINTS = (
     ("parent", parent_bp, "parent"),
     ("assessments", assessments_bp, ""),
     ("notifications", notifications_bp, "notifications"),
+    ("rag", rag_bp, ""),
     ("uploads", uploads_bp, "uploads"),
 )

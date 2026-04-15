@@ -429,9 +429,12 @@ export const facultyApi = createApi({
         unit?: string;
         week?: string;
         file?: File | null;
+        sourceText?: string;
+        externalUrl?: string;
+        imageUrls?: string[];
       }
     >({
-      query: ({ subjectId, title, type, className, section, unit, week, file }) => {
+      query: ({ subjectId, title, type, className, section, unit, week, file, sourceText, externalUrl, imageUrls }) => {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('type', type);
@@ -440,6 +443,9 @@ export const facultyApi = createApi({
         if (unit) formData.append('unit', unit);
         if (week) formData.append('week', week);
         if (file) formData.append('file', file);
+        if (sourceText) formData.append('sourceText', sourceText);
+        if (externalUrl) formData.append('externalUrl', externalUrl);
+        if (imageUrls && imageUrls.length > 0) formData.append('imageUrls', JSON.stringify(imageUrls));
         return {
           url: `/faculty/subjects/${subjectId}/materials`,
           method: 'POST',

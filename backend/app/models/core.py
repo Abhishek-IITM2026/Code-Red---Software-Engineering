@@ -651,6 +651,7 @@ class Assessment(db.Model):
     description = db.Column(db.Text)
     class_id = db.Column(db.Integer, db.ForeignKey("classes.id"), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+    week = db.Column(db.String(50))
     due_date = db.Column(db.String(30))
     total_marks = db.Column(db.Integer, nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -671,6 +672,7 @@ class Assessment(db.Model):
             "classId": str(self.class_id),
             "subjectId": str(self.subject_id),
             "courseId": str(self.subject_id),
+            "week": self.week,
             "questions": self.questions_json if questions is None else questions,
             "totalMarks": self.total_marks,
             "createdBy": str(self.created_by),
@@ -687,6 +689,7 @@ class Assignment(db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    week = db.Column(db.String(50))
     due_date = db.Column(db.String(30), nullable=False)
     total_marks = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="open")
@@ -700,6 +703,7 @@ class Assignment(db.Model):
             "courseId": str(self.subject_id),
             "title": self.title,
             "description": self.description,
+            "week": self.week,
             "dueDate": self.due_date,
             "totalMarks": self.total_marks,
             "status": self.status,

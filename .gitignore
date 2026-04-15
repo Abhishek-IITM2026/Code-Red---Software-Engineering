@@ -12,6 +12,10 @@ backend/.env.*.local
 backend/benv/
 backend/.benv/
 
+backend/instance/*
+backend/instance/**
+
+
 app.db
 
 .pytest_cache/

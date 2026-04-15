@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { FiAlertTriangle, FiClock } from 'react-icons/fi';
 import {
   useGetClassesQuery,
   useGetSectionsQuery,
   useGetAllFacultyQuery,
+  useGetAvailableSlotsQuery,
 } from '../../../services/api/dataApi';
-import type { ClassSchedule } from '../../../services/api/dataApi';
+import type { ClassSchedule, AvailableSlotsResponse } from '../../../services/api/dataApi';
 import { WEEKDAYS } from '../types/schedule';
 
 interface ScheduleFormProps {
@@ -12,6 +14,7 @@ interface ScheduleFormProps {
   onSave: (schedule: ClassSchedule) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  error?: { message?: string; conflictSchedule?: ClassSchedule } | null;
 }
 
 const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -57,8 +60,15 @@ const emptyForm = {
   roomNumber: '',
 };
 
-const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, onCancel, isSubmitting = false }) => {
+const ScheduleForm: React.FC<ScheduleFormProps> = ({ 
+  editingSchedule, 
+  onSave, 
+  onCancel, 
+  isSubmitting = false,
+  error = null,
+}) => {
   const [formData, setFormData] = useState(emptyForm);
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
 
   const { data: apiClasses = [] } = useGetClassesQuery();
   const classes = apiClasses.length > 0 ? apiClasses : DEMO_CLASSES;
@@ -70,6 +80,22 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
 
   const { data: apiFaculty = [] } = useGetAllFacultyQuery();
   const faculty = apiFaculty.length > 0 ? apiFaculty : DEMO_FACULTY;
+
+  // Fetch available slots when class, faculty, and day are selected
+  const shouldFetchSlots = formData.classId && formData.facultyId && formData.dayOfWeek;
+  const { data: slotsData } = useGetAvailableSlotsQuery(
+    { 
+      classId: formData.classId, 
+      facultyId: formData.facultyId, 
+      dayOfWeek: formData.dayOfWeek 
+    },
+    { 
+      skip: !shouldFetchSlots || !!editingSchedule,
+    }
+  );
+
+  const availableSlots = slotsData?.availableSlots || [];
+  const occupiedSlots = slotsData?.occupiedSlots || [];
 
   useEffect(() => {
     if (editingSchedule) {
@@ -83,11 +109,35 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
         facultyId: editingSchedule.facultyId,
         roomNumber: editingSchedule.roomNumber || '',
       });
+      setSelectedSlot('');
       return;
     }
 
     setFormData(emptyForm);
+    setSelectedSlot('');
   }, [editingSchedule]);
+
+  // Clear time when slot is selected from dropdown
+  const handleSlotSelect = (slotValue: string) => {
+    setSelectedSlot(slotValue);
+    if (slotValue) {
+      const [start, end] = slotValue.split(' - ');
+      setFormData(prev => ({
+        ...prev,
+        startTime: start,
+        endTime: end,
+      }));
+    }
+  };
+
+  // Clear slot selection when time is manually changed
+  const handleTimeChange = (field: 'startTime' | 'endTime', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+    setSelectedSlot('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +182,30 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Conflict Error Display */}
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+          <div className="flex gap-3">
+            <FiAlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-red-700">Schedule Conflict Detected</p>
+              <p className="mt-1 text-sm text-red-600">{error.message || 'This time slot conflicts with an existing schedule.'}</p>
+              {error.conflictSchedule && (
+                <div className="mt-2 p-2 bg-red-100 rounded-lg">
+                  <p className="text-xs text-red-700">
+                    <strong>Conflicting Schedule:</strong> {error.conflictSchedule.subject} for {error.conflictSchedule.className}
+                    <br />
+                    Time: {error.conflictSchedule.timeSlot.startTime} - {error.conflictSchedule.timeSlot.endTime}
+                    <br />
+                    Faculty: {error.conflictSchedule.facultyName}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelClass}>Class</label>
@@ -202,28 +276,6 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
         </div>
 
         <div>
-          <label className={labelClass}>Start Time</label>
-          <input
-            type="time"
-            className={inputClass}
-            value={formData.startTime}
-            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>End Time</label>
-          <input
-            type="time"
-            className={inputClass}
-            value={formData.endTime}
-            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-            required
-          />
-        </div>
-
-        <div>
           <label className={labelClass}>Assign Faculty</label>
           <select
             className={inputClass}
@@ -250,6 +302,84 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ editingSchedule, onSave, on
             placeholder="e.g., Room 101"
           />
         </div>
+      </div>
+
+      {/* Time Slot Selection */}
+      <div className="border-t border-slate-200 pt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <FiClock className="h-4 w-4 text-slate-500" />
+          <label className="text-sm font-medium text-slate-700">Time Slot</label>
+        </div>
+
+        {/* Quick Slot Selection - Show available slots */}
+        {shouldFetchSlots && !editingSchedule && (
+          <div className="mb-4">
+            <label className={labelClass}>Select Available Slot</label>
+            {availableSlots.length > 0 ? (
+              <select
+                className={inputClass}
+                value={selectedSlot}
+                onChange={(e) => handleSlotSelect(e.target.value)}
+              >
+                <option value="">-- Choose a time slot --</option>
+                {availableSlots.map((slot, idx) => (
+                  <option key={idx} value={slot.label}>
+                    {slot.label} (Available)
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-700">
+                  All time slots are occupied for this day/class/faculty combination.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Or enter manually */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className={labelClass}>Start Time {selectedSlot && '(Auto-selected)'}</label>
+            <input
+              type="time"
+              className={inputClass}
+              value={formData.startTime}
+              onChange={(e) => handleTimeChange('startTime', e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>End Time {selectedSlot && '(Auto-selected)'}</label>
+            <input
+              type="time"
+              className={inputClass}
+              value={formData.endTime}
+              onChange={(e) => handleTimeChange('endTime', e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        {/* Occupied Slots Display */}
+        {shouldFetchSlots && occupiedSlots.length > 0 && (
+          <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <p className="text-sm font-medium text-slate-700 mb-2">
+              <FiClock className="inline h-4 w-4 mr-1" />
+              Existing Schedules for This Day:
+            </p>
+            <div className="space-y-1">
+              {occupiedSlots.map((slot, idx) => (
+                <div key={idx} className="text-xs text-slate-600 p-1 bg-white rounded">
+                  <span className="font-medium">{slot.startTime} - {slot.endTime}</span>
+                  {slot.subject && <span className="ml-2">({slot.subject})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">

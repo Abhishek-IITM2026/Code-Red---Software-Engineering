@@ -3,7 +3,7 @@ import { FiCpu, FiKey, FiRefreshCw, FiShield, FiSliders } from "react-icons/fi";
 import {
   useGetAISettingsQuery,
   useUpdateAISettingsMutation,
-  type AISettings,
+  type AISettings as AIRuntimeSettings,
   type AISettingsWritePayload,
 } from "../api/adminApi";
 
@@ -11,9 +11,10 @@ const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
 
 const defaultForm: AISettingsWritePayload = {
-  provider: "gemini",
-  model: "gemini-1.5-flash",
-  baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+  provider: "ollama",
+  mode: "local",
+  model: "llama3.2",
+  baseUrl: "http://localhost:11434",
   apiKey: "",
   clearApiKey: false,
   temperature: 0.2,
@@ -25,16 +26,18 @@ const defaultForm: AISettingsWritePayload = {
 };
 
 const providerLabels: Record<AISettingsWritePayload["provider"], string> = {
+  ollama: "Ollama",
   gemini: "Google Gemini",
   "grounded-rag": "Grounded RAG",
   "openai-compatible-cloud": "OpenAI-Compatible Cloud",
   "openai-compatible-local": "OpenAI-Compatible Local",
 };
 
-const buildFormFromSettings = (settings?: AISettings): AISettingsWritePayload => {
+const buildFormFromSettings = (settings?: AIRuntimeSettings): AISettingsWritePayload => {
   if (!settings) return defaultForm;
   return {
     provider: settings.provider,
+    mode: settings.mode,
     model: settings.model,
     baseUrl: settings.baseUrl || "",
     apiKey: "",
@@ -48,7 +51,7 @@ const buildFormFromSettings = (settings?: AISettings): AISettingsWritePayload =>
   };
 };
 
-const AISettings = function () {
+const AISettingsPage = function () {
   const { data, isLoading, isFetching } = useGetAISettingsQuery();
   const [updateAISettings, { isLoading: isSaving }] = useUpdateAISettingsMutation();
   const [form, setForm] = useState<AISettingsWritePayload>(defaultForm);
@@ -104,7 +107,7 @@ const AISettings = function () {
             </p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">AI Settings</h1>
             <p className="mt-3 max-w-3xl text-[var(--text)]/75">
-              Control the active question-generation provider, model, API credentials, and request throttles used by the faculty assessment flow.
+              Control the active provider, model, API credentials, and request throttles used by both student chat and faculty assessment generation.
             </p>
           </div>
 
@@ -150,12 +153,29 @@ const AISettings = function () {
             <div>
               <p className="text-lg font-semibold text-slate-900">Provider and Runtime</p>
               <p className="text-sm text-slate-500">
-                Choose Gemini, grounded local generation, or connect an OpenAI-compatible cloud/local endpoint.
+                Choose a local runtime or API-key-backed provider for shared RAG answer generation and assessment workflows.
               </p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Runtime Mode</label>
+              <select
+                value={activeForm.mode}
+                onChange={(event) =>
+                  mutateForm((current) => ({
+                    ...current,
+                    mode: event.target.value as AISettingsWritePayload["mode"],
+                  }))
+                }
+                className={fieldClass}
+              >
+                <option value="local">Local Runtime</option>
+                <option value="api-key">API Key Runtime</option>
+              </select>
+            </div>
+
             <div>
               <label className="text-sm font-medium text-slate-700">Provider</label>
               <select
@@ -168,6 +188,7 @@ const AISettings = function () {
                 }
                 className={fieldClass}
               >
+                <option value="ollama">Ollama</option>
                 <option value="gemini">Google Gemini</option>
                 <option value="grounded-rag">Grounded RAG</option>
                 <option value="openai-compatible-cloud">OpenAI-Compatible Cloud</option>
@@ -181,7 +202,7 @@ const AISettings = function () {
                 value={activeForm.model}
                 onChange={(event) => mutateForm((current) => ({ ...current, model: event.target.value }))}
                 className={fieldClass}
-                placeholder="Example: gemini-1.5-flash or gpt-4.1-mini"
+                placeholder="Example: llama3.2, gemini-1.5-flash, or gpt-4.1-mini"
               />
             </div>
 
@@ -191,7 +212,7 @@ const AISettings = function () {
                 value={activeForm.baseUrl || ""}
                 onChange={(event) => mutateForm((current) => ({ ...current, baseUrl: event.target.value }))}
                 className={fieldClass}
-                placeholder="Example: https://generativelanguage.googleapis.com/v1beta or http://localhost:11434/v1"
+                placeholder="Example: http://localhost:11434 or https://generativelanguage.googleapis.com/v1beta"
               />
             </div>
 
@@ -347,4 +368,4 @@ const AISettings = function () {
   );
 };
 
-export default AISettings;
+export default AISettingsPage;

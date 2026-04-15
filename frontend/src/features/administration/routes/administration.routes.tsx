@@ -183,7 +183,8 @@ const administrationRoutes: AdminRouteConfig[] = [
     path: "/administration/schedule",
     element: <ScheduleManagement />,
     icon: FiCalendar,
-    description: "Manage class lecture schedules"
+    description: "Manage class lecture schedules",
+    requiredAuthorities: ["scheduleCreation"],
   },
   {
     name: "My Profile",
