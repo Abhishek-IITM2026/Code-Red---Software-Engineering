@@ -210,7 +210,7 @@ Current modules:
 - `jobs`: job-status endpoints
 - `leave`: leave request, review, cancel, stats
 - `parent`: parent profile and child dashboards
-- `assessments`: assessment CRUD, publish, AI question endpoints, submissions, assignments
+- `assessments`: assessment CRUD, publish, AI question endpoints, submissions, assignments, weekly grouped student views, due date validation
 - `notifications`: email status/send/sync and schedule notifications
 - `rag`: admin-only ingestion endpoint
 - `uploads`: file-related endpoints
@@ -229,6 +229,11 @@ Two notable implementation details:
 - some route prefixes are embedded in the feature route itself, for example leave routes define `/leave` inside a blueprint mounted without a route prefix
 - schedule create/update routes now reject overlapping active entries for the same class or same faculty on the same day
 - schedule conflict detection endpoint: `GET /api/v1/schedule/available-slots?classId=&facultyId=&dayOfWeek=` returns available and occupied time slots to help prevent conflicts before schedule creation
+- assessment question generation and modification now have proper error handling with specific error codes
+- assessments now support due date validation: students cannot submit after due date passes
+- `GET /api/v1/assessments/weekly` returns assessments grouped by week for student subject view
+- `GET /api/v1/assessments/<id>/answers` reveals correct answers after due date has passed
+- `POST /api/v1/assessments/<id>/submit` blocks submissions after due date with `ASSESSMENT_EXPIRED` error
 
 ### Backend tests
 
@@ -430,21 +435,47 @@ Schedule-related types and hooks in `frontend/src/services/api/dataApi.ts`:
 - `useGetAvailableSlotsQuery`: fetches available/occupied slots for schedule conflict prevention
 - Conflict errors are detected by `err.status === 409` or `err.data.code === 'SCHEDULE_CONFLICT'`
 
+Dashboard types in `frontend/src/features/administration/api/adminApi.ts`:
+- `UpcomingEvent`: `{ id, title, className, section, startDate }` for upcoming courses/events display
+
+### Assessment API
+
+Assessment-related types and hooks in `frontend/src/features/faculty/api/assessmentApi.ts`:
+
+- `GeneratedAssessment`: assessment with questions, total marks, due date, published status
+- `WeeklyAssessmentGroup`: `{ week, assessments[], count }` for grouped assessment view
+- `AssessmentSubmission`: student submission with score, answers, evaluation
+- `AIRuntimeSettings`: AI provider configuration for question generation
+- `useGetWeeklyAssessmentsQuery`: fetches assessments grouped by week for student view
+- `useGetAssessmentAnswersQuery`: fetches correct answers after due date passes
+- `useSubmitAssessmentMutation`: submits student assessment, blocks after due date
+- `useGenerateQuestionsMutation`: AI-powered question generation with multimodal RAG
+- `useModifyQuestionsMutation`: AI-powered question modification
+
+Student assessment states:
+- `isExpired`: true when due date has passed
+- `submitted`: true when student has submitted
+- `submissionStatus`: submission status string
+- `score`: achieved score if submitted
+
+Due date errors:
+- `err.status === 403` with `err.data.code === 'ASSESSMENT_EXPIRED'` for expired submissions
+- `err.data.code === 'ASSESSMENT_NOT_EXPIRED'` for accessing answers before due date
+
 ### Frontend feature map
 
 Feature areas under `frontend/src/features/`:
 
 - `Home`: public marketing/home routes and layout
 - `auth`: login, register, profile, OTP modal, password reset/change, auth API/types/store
-- `student`: dashboard, attendance, marks, materials, assignments, subjects, leave, schedule, upcoming course enrollment/payment
+- `student`: dashboard, attendance, marks, assessments, materials, assignments, subjects, leave, schedule, upcoming course enrollment/payment
 - `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
 - `parent`: dashboard, attendance, performance, fees, communication, timetable, child selector, live course/fee invoice views
 - `administration`: dashboard, authority management, course management, AI settings, records, promotions, finance, reports, inventory, schedule
-- `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
-- schedule creation UI in administration and faculty portals now shows available/occupied time slots and displays conflict error messages when overlapping schedules are detected
 - `leave`: leave portal plus RTK Query/localStorage utilities
 - `notifications`: notification API helpers
 - `courses`: academic course API/local storage helpers
+- schedule creation UI in administration and faculty portals now shows available/occupied time slots and displays conflict error messages when overlapping schedules are detected
 
 ### Notable frontend implementation details
 
@@ -458,6 +489,10 @@ Feature areas under `frontend/src/features/`:
 - Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`.
 - Administration AI settings now cover the shared student/faculty runtime, including provider labels for `grounded-rag`, `ollama`, `gemini`, `openai-compatible-cloud`, and `openai-compatible-local`, plus `mode: local | api-key`.
 - Student subject chat is integrated into `frontend/src/features/student/pages/SubjectDetails.tsx`, loads/saves backend chat history, passes an optional selected week, renders referenced images, and uses browser-native speech recognition and speech synthesis when available.
+- Student assessments are now available at `/student/assessments`, showing published assessments grouped by week with submission status and due date tracking
+- Student can view correct answers after due date passes, and are blocked from submitting after due date
+- Assessment builder in faculty portal supports AI-powered generation with multimodal RAG, question modification, manual editing, and publish workflow
+- Faculty assessment generation endpoints have proper error handling with specific error codes (`QUESTION_GENERATION_ERROR`, `QUESTION_MODIFICATION_ERROR`)
 - Authority management is hybrid:
   - backend data comes through API hooks
   - localStorage is used for immediate persistence and UI sync

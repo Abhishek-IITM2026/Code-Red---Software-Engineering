@@ -3,13 +3,21 @@ import type { RootState } from '../../../app/store';
 import { payrollApi } from './payrollApi';
 
 // Types
+export interface UpcomingEvent {
+  id: string;
+  title: string;
+  className: string;
+  section: string;
+  startDate: string;
+}
+
 export interface DashboardStats {
   totalStudents: number;
   totalFaculty: number;
   totalStaff: number;
   attendanceRate: number;
   pendingApprovals: number;
-  upcomingEvents: unknown[];
+  upcomingEvents: UpcomingEvent[];
 }
 
 export type StudentWritePayload = Omit<

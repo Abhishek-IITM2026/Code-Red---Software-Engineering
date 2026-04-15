@@ -505,7 +505,7 @@ const SubjectDetails = () => {
       return;
     }
     setMaterialError("");
-    triggerMaterialDownload(material.downloadUrl, material.fileName, material.title);
+    triggerMaterialDownload(material.downloadUrl);
   };
 
   const handleToggleListening = () => {

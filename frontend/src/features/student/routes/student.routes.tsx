@@ -2,6 +2,7 @@ import StudentDashboard from "../pages/StudentDashboard";
 import StudentLeave from "../pages/StudentLeave";
 import UpcomingCourses from "../pages/UpcomingCourses";
 import ViewSchedule from "../pages/ViewSchedule";
+import StudentAssessments from "../pages/StudentAssessments";
 import { FiCheckCircle, FiFileText, FiCalendar, FiBook, FiGrid, FiAward, FiUser, FiClock } from "react-icons/fi";
 import StudentAttendance from "../pages/StudentAttendance";
 import StudentMarks from "../pages/StudentMarks";
@@ -39,6 +40,13 @@ const studentRoutes: RouteConfig[] = [
     element: <StudentMarks />,
     icon: FiAward,
     description: "Check your exam marks"
+  },
+  {
+    name: "Assessments",
+    path: "/student/assessments",
+    element: <StudentAssessments />,
+    icon: FiFileText,
+    description: "View and attempt assessments"
   },
   {
     name: "Subjects",

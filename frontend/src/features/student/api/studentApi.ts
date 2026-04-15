@@ -21,6 +21,8 @@ export interface Subject {
   code: string;
   teacherId: string;
   credits: number;
+  progressLabel?: string;
+  progress?: number;
 }
 
 export interface SubjectContentMaterial {

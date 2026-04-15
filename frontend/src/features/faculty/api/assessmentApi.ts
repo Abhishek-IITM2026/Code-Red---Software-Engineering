@@ -2,6 +2,9 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../../app/store';
 import type { ClassInfo, Material, Question, Subject } from '../context/AssessmentBuilderContext';
 
+// Re-export types for use in other modules
+export type { ClassInfo, Material, Question, Subject };
+
 export interface GeneratedAssessment {
   id: string;
   title: string;
@@ -16,12 +19,23 @@ export interface GeneratedAssessment {
   dueDate: string;
   published: boolean;
   questionsDocumentId?: string;
+  // Student-specific fields
+  isExpired?: boolean;
+  submitted?: boolean;
+  submissionStatus?: string;
+  score?: number;
 }
 
 export interface AssessmentFilters {
   classId?: string;
   subjectId?: string;
   published?: boolean;
+}
+
+export interface WeeklyAssessmentGroup {
+  week: string;
+  assessments: GeneratedAssessment[];
+  count: number;
 }
 
 export interface AssessmentSubmissionAnswer {
@@ -162,6 +176,19 @@ export const assessmentApi = createApi({
       providesTags: ['Assessments'],
     }),
 
+    // Get assessments grouped by week - for student subject view
+    getWeeklyAssessments: builder.query<WeeklyAssessmentGroup[], AssessmentFilters | void>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        if (filters?.classId) params.append('classId', filters.classId);
+        if (filters?.subjectId) params.append('subjectId', filters.subjectId);
+        if (filters?.published !== undefined) params.append('published', String(filters.published));
+        const query = params.toString();
+        return `/assessments/weekly${query ? `?${query}` : ''}`;
+      },
+      providesTags: ['Assessments'],
+    }),
+
     getAssessment: builder.query<GeneratedAssessment, string>({
       query: (id) => `/assessments/${id}`,
       providesTags: (_result, _err, id) => [{ type: 'Assessments', id }],
@@ -207,6 +234,15 @@ export const assessmentApi = createApi({
       providesTags: ['AssessmentSubmissions'],
     }),
 
+    // Get correct answers after due date
+    getAssessmentAnswers: builder.query<
+      { assessment: GeneratedAssessment; submission: AssessmentSubmission | null; answered: boolean },
+      string
+    >({
+      query: (assessmentId) => `/assessments/${assessmentId}/answers`,
+      providesTags: ['Assessments'],
+    }),
+
     getAssessmentSubmissions: builder.query<AssessmentSubmission[], string>({
       query: (assessmentId) => `/assessments/${assessmentId}/submissions`,
       providesTags: ['AssessmentSubmissions'],
@@ -224,11 +260,13 @@ export const {
   useSaveAssessmentMutation,
   usePublishAssessmentMutation,
   useGetAssessmentsQuery,
+  useGetWeeklyAssessmentsQuery,
   useGetAssessmentQuery,
   useDeleteAssessmentMutation,
   useUpdateAssessmentMutation,
   useSubmitAssessmentMutation,
   useGetMyAssessmentSubmissionQuery,
+  useGetAssessmentAnswersQuery,
   useGetAssessmentSubmissionsQuery,
 } = assessmentApi;
 
