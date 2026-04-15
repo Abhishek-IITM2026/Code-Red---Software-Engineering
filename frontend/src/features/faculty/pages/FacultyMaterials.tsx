@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiBookOpen,
@@ -14,6 +14,7 @@ import {
   useUploadMaterialMutation,
   type StudyMaterial,
 } from "../api/facultyApi";
+import { groupMaterialsByWeek } from "../utils/materialWeekGroups";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
@@ -79,21 +80,17 @@ const FacultyMaterials = function () {
     return options.sort((left, right) => left.name.localeCompare(right.name));
   }, [classOverview]);
 
-  useEffect(() => {
-    if (!form.subjectId && subjectOptions[0]) {
-      setForm((current) => ({ ...current, subjectId: subjectOptions[0].id }));
-    }
-  }, [form.subjectId, subjectOptions]);
-
-  const selectedSubject = subjectOptions.find((subject) => subject.id === form.subjectId) || null;
+  const activeSubjectId = form.subjectId || subjectOptions[0]?.id || "";
+  const selectedSubject = subjectOptions.find((subject) => subject.id === activeSubjectId) || null;
   const {
     data: selectedMaterials = [],
     isFetching: isMaterialsFetching,
-  } = useListMaterialsQuery(form.subjectId, {
-    skip: !form.subjectId,
+  } = useListMaterialsQuery(activeSubjectId, {
+    skip: !activeSubjectId,
   });
 
   const ragReadyCount = selectedMaterials.filter((material) => material.ragContextAvailable).length;
+  const groupedMaterials = useMemo(() => groupMaterialsByWeek(selectedMaterials), [selectedMaterials]);
 
   const updateField = <K extends keyof MaterialForm>(key: K, value: MaterialForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -101,7 +98,7 @@ const FacultyMaterials = function () {
 
   const handleUpload = async () => {
     setMessage("");
-    if (!form.subjectId || !form.title.trim()) {
+    if (!activeSubjectId || !form.title.trim()) {
       setMessage("Select a course and add a title before publishing the material.");
       return;
     }
@@ -127,7 +124,7 @@ const FacultyMaterials = function () {
         .filter((url) => url.length > 0);
 
       await uploadMaterial({
-        subjectId: form.subjectId,
+        subjectId: activeSubjectId,
         title: form.title.trim(),
         type: form.type,
         className: selectedSubject?.className,
@@ -226,7 +223,7 @@ const FacultyMaterials = function () {
             <div>
               <label className="text-sm font-medium text-slate-700">Course</label>
               <select
-                value={form.subjectId}
+                value={activeSubjectId}
                 onChange={(event) => updateField("subjectId", event.target.value)}
                 className={fieldClass}
                 disabled={subjectOptions.length === 0}
@@ -466,12 +463,23 @@ const FacultyMaterials = function () {
                   No materials published for this course yet.
                 </div>
               ) : (
-                selectedMaterials.map((material) => (
-                  <MaterialCard
-                    key={material.id}
-                    material={material}
-                    badgeClass={materialTypeStyles[material.type] || "bg-slate-100 text-slate-700"}
-                  />
+                groupedMaterials.map((group) => (
+                  <div key={group.id} className="space-y-3">
+                    <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                      <p className="text-sm font-semibold text-slate-900">{group.label}</p>
+                      <span className="text-xs font-medium text-slate-500">
+                        {group.items.length} material{group.items.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {group.items.map((material) => (
+                      <MaterialCard
+                        key={material.id}
+                        material={material}
+                        badgeClass={materialTypeStyles[material.type] || "bg-slate-100 text-slate-700"}
+                      />
+                    ))}
+                  </div>
                 ))
               )}
             </div>

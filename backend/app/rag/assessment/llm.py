@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from flask import current_app
+
 from ..llm_clients import (
     EXTERNAL_PROVIDER_ERRORS,
     SUPPORTED_EXTERNAL_PROVIDERS,
@@ -87,31 +89,58 @@ def try_generate_llm_grounded_questions(
             temperature=float(settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(settings.get("maxTokens", 1200) or 1200),
         )
-    except EXTERNAL_PROVIDER_ERRORS:
+    except EXTERNAL_PROVIDER_ERRORS as exc:
+        current_app.logger.warning(
+            "Assessment LLM question generation provider request failed",
+            extra={
+                "provider": provider,
+                "model": model,
+                "subject": subject_name,
+                "questionCount": question_count,
+            },
+        )
+        current_app.logger.debug("Assessment LLM provider exception: %s", exc)
         return None
 
     raw_content = extract_text_content(provider, response_payload)
     if not raw_content:
+        current_app.logger.warning(
+            "Assessment LLM question generation returned no text content",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
         return None
 
     parsed_questions = _parse_json_questions(raw_content)
     if not parsed_questions:
+        current_app.logger.warning(
+            "Assessment LLM question generation returned unparseable JSON",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
         return None
 
-    return _normalize_question_payloads(
-        parsed_questions,
-        marks_plan=marks_plan,
-        question_type_plan=question_type_plan,
-        difficulty_level=difficulty_level,
-        ranked_chunks=ranked_chunks,
-    )
+    try:
+        return _normalize_question_payloads(
+            parsed_questions,
+            marks_plan=marks_plan,
+            question_type_plan=question_type_plan,
+            difficulty_level=difficulty_level,
+            ranked_chunks=ranked_chunks,
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Assessment LLM question generation normalization failed",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
+        return None
 
 
 def try_modify_llm_questions(
     *,
     questions: list[dict[str, Any]],
     modification_prompt: str,
-    ai_settings: dict[str, Any] | None,
+    subject_name: str | None = None,
+    retrieved_chunks: list[dict[str, Any]] | None = None,
+    ai_settings: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]] | None:
     settings = ai_settings or {}
     provider, base_url, model, api_key, _mode = resolve_external_runtime(settings)
@@ -122,6 +151,7 @@ def try_modify_llm_questions(
 
     prompt_payload = {
         "modificationPrompt": modification_prompt,
+        "subject": subject_name,
         "questions": [
             {
                 "id": str(question.get("id") or ""),
@@ -139,8 +169,21 @@ def try_modify_llm_questions(
             for question in questions
         ],
     }
+    # Include relevant material chunks so the LLM can ground modifications in the actual content
+    if retrieved_chunks:
+        prompt_payload["context"] = [
+            {
+                "materialId": chunk.get("materialId"),
+                "materialTitle": chunk.get("materialTitle"),
+                "week": chunk.get("week"),
+                "imageUrls": chunk.get("imageUrls") or [],
+                "text": chunk.get("text"),
+            }
+            for chunk in retrieved_chunks
+        ]
     prompt = (
         "Modify the assessment questions based on the provided instruction. "
+        "When material context is provided, use it to ensure modifications are consistent with the study content. "
         "Preserve the question count unless the instruction explicitly asks to add or remove questions. "
         "Keep marks reasonable and ensure questionType is one of mcq|short|long|trueFalse. "
         "Return valid JSON only using this schema: "
@@ -165,18 +208,38 @@ def try_modify_llm_questions(
             temperature=float(settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(settings.get("maxTokens", 1200) or 1200),
         )
-    except EXTERNAL_PROVIDER_ERRORS:
+    except EXTERNAL_PROVIDER_ERRORS as exc:
+        current_app.logger.warning(
+            "Assessment LLM modification provider request failed",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
+        current_app.logger.debug("Assessment LLM modification provider exception: %s", exc)
         return None
 
     raw_content = extract_text_content(provider, response_payload)
     if not raw_content:
+        current_app.logger.warning(
+            "Assessment LLM modification returned no text content",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
         return None
 
     parsed_questions = _parse_json_questions(raw_content)
     if not parsed_questions:
+        current_app.logger.warning(
+            "Assessment LLM modification returned unparseable JSON",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
         return None
 
-    return _normalize_modified_questions(parsed_questions, questions)
+    try:
+        return _normalize_modified_questions(parsed_questions, questions)
+    except Exception:
+        current_app.logger.exception(
+            "Assessment LLM modification normalization failed",
+            extra={"provider": provider, "model": model, "subject": subject_name},
+        )
+        return None
 
 def _parse_json_questions(raw_content: str) -> list[dict[str, Any]] | None:
     cleaned = raw_content.strip()

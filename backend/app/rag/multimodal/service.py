@@ -17,7 +17,14 @@ from ...upload_storage import build_public_file_url
 from .discovery import DiscoveredSource, discover_sources
 from .embeddings import embed_image_query, embed_image_records, embed_query_text, embed_texts
 from .parser import parse_source
-from .runtime import multimodal_dependency_status, normalize_text, normalize_week_label, split_text
+from .runtime import (
+    compute_sha256,
+    multimodal_dependency_status,
+    normalize_text,
+    normalize_week_label,
+    parse_week_number,
+    split_text,
+)
 from .vector_store import get_vector_backend
 
 
@@ -287,18 +294,249 @@ def ensure_material_sources_ready(
 ) -> dict[str, Any]:
     refreshed: list[dict[str, Any]] = []
     for material in materials or []:
-        absolute_source_path = _resolve_material_source_path(material)
-        if absolute_source_path is None:
-            continue
-        result = ingest_sources(source_path=str(absolute_source_path), triggered_by=triggered_by)
+        result = ingest_material_direct(material, triggered_by=triggered_by)
         refreshed.append(
             {
                 "materialId": str(material.get("id") or ""),
-                "sourcePath": str(absolute_source_path),
+                "sourcePath": result.get("sourcePath", ""),
                 "result": result,
             }
         )
     return {"refreshed": refreshed}
+
+
+def ingest_material_direct(
+    material: dict[str, Any],
+    *,
+    triggered_by: str = "auto-material-refresh",
+) -> dict[str, Any]:
+    """
+    Ingest a single faculty-uploaded material by its stored file path.
+
+    Unlike ingest_sources() which scans a directory tree expecting
+    <class>/<subject>/<week>/ structure, this function handles files stored
+    directly under uploads/documents/<week>/<uuid>.ext by parsing the file
+    and building a synthetic DiscoveredSource with correct metadata derived
+    from the Material record (subject, week, class from DB).
+    """
+    material_id = material.get("id")
+    upload_root = Path(current_app.config["UPLOAD_ROOT"]).resolve()
+
+    # Resolve the on-disk file path
+    absolute_source_path = _resolve_material_source_path(material)
+    if absolute_source_path is None or not absolute_source_path.exists():
+        return {
+            "status": "error",
+            "message": f"File not found for material {material_id}: {material.get('storagePath')}",
+            "sourcePath": "",
+            "materialId": str(material_id or ""),
+        }
+
+    # Look up the MaterialSource record to get metadata (subject, week, className)
+    material_repo = MaterialSourceRepository()
+    document_url = normalize_text(material.get("documentUrl"))
+    storage_path_str = normalize_text(material.get("storagePath"))
+
+    source_record = (
+        material_repo.get_by_material(int(material_id)) if material_id else None
+    ) or material_repo.get_by_storage_path(storage_path_str)
+
+    # Build metadata from MaterialSource or fall back to Material fields
+    subject_name = (
+        source_record.get("subject")
+        if source_record and source_record.get("subject")
+        else material.get("subject", "")
+    )
+    week_label = (
+        source_record.get("week")
+        if source_record and source_record.get("week")
+        else material.get("week", "")
+    )
+    class_name = (
+        source_record.get("className")
+        if source_record and source_record.get("className")
+        else material.get("className", "Unknown")
+    )
+
+    normalized_subject = normalize_text(subject_name) or "unknown-subject"
+    normalized_week = normalize_week_label(week_label) or normalize_week_label("Week 1") or "Week 1"
+    normalized_class = normalize_text(class_name) or "unknown-class"
+
+    extension = absolute_source_path.suffix.lower()
+    file_name = absolute_source_path.name
+
+    # Build a source_key that matches the discovery convention so the vector
+    # index is keyed consistently: <class>/<subject>/<week>/<filename>
+    source_key = f"{normalized_class}/{normalized_subject}/{normalized_week}/{file_name}".replace(
+        "\\", "/"
+    )
+
+    # Derive relative path within upload root
+    try:
+        relative_path = str(absolute_source_path.relative_to(upload_root))
+    except ValueError:
+        relative_path = storage_path_str or file_name
+
+    discovered = DiscoveredSource(
+        source_key=source_key,
+        absolute_path=absolute_source_path.resolve(),
+        relative_path=relative_path,
+        class_name=normalized_class,
+        subject=normalized_subject,
+        week=normalized_week,
+        week_number=parse_week_number(normalized_week),
+        source_file=file_name,
+        extension=extension,
+        file_hash=compute_sha256(absolute_source_path),
+    )
+
+    # Check whether this file already has up-to-date chunks
+    document_repository = RAGDocumentRepository()
+    chunk_repository = RAGChunkRepository()
+    image_repository = RAGImageRepository()
+
+    existing_doc = document_repository.find_one_by_filters({"sourceKey": source_key})
+    if existing_doc and not _source_needs_refresh(
+        source=discovered,
+        existing_document=existing_doc,
+        chunk_repository=chunk_repository,
+        image_repository=image_repository,
+    ):
+        return {
+            "status": "skipped",
+            "message": "Material is already up to date in the index.",
+            "sourcePath": str(absolute_source_path),
+            "materialId": str(material_id or ""),
+            "sourceKey": source_key,
+        }
+
+    # Parse the file (PDF or TXT)
+    try:
+        parsed = parse_source(discovered)
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": f"Failed to parse file: {exc}",
+            "sourcePath": str(absolute_source_path),
+            "materialId": str(material_id or ""),
+            "sourceKey": source_key,
+        }
+
+    vector_backend = get_vector_backend()
+
+    # Upsert document record
+    document_url_path = build_public_file_url(relative_path)
+    document_payload = {
+        "sourceKey": source_key,
+        "relativePath": relative_path,
+        "storagePath": storage_path_str,
+        "documentUrl": document_url_path,
+        "className": discovered.class_name,
+        "subject": discovered.subject,
+        "week": discovered.week,
+        "weekNumber": discovered.week_number,
+        "sourceFile": discovered.source_file,
+        "fileHash": discovered.file_hash,
+        "pageCount": parsed.get("pageCount", 0),
+        "pageToImages": parsed.get("pageToImages") or {},
+        "contentText": parsed.get("contentText") or "",
+        "indexedAt": datetime.utcnow().isoformat(),
+    }
+    document_id = document_repository.upsert_document(source_key, document_payload)
+
+    # Sync extracted content back to MaterialSource
+    if source_record and "materialId" in source_record:
+        material_repo.upsert(
+            material_id=int(source_record["materialId"]),
+            payload={"contentText": parsed.get("contentText") or ""},
+        )
+
+    # Clear old chunks / images for this source
+    vector_backend.delete_source(source_key)
+    chunk_repository.delete_by_filters({"sourceKey": source_key})
+    image_repository.delete_by_filters({"sourceKey": source_key})
+
+    # Build chunk payloads
+    chunk_payloads = _build_chunk_payloads(
+        source=discovered,
+        parsed=parsed,
+        document_id=document_id,
+        document_url=document_url_path,
+    )
+    image_payloads = _build_image_payloads(
+        source=discovered,
+        parsed=parsed,
+        document_id=document_id,
+        document_url=document_url_path,
+    )
+
+    if not chunk_payloads and not image_payloads:
+        return {
+            "status": "error",
+            "message": "No extractable text or images were found in this document.",
+            "sourcePath": str(absolute_source_path),
+            "materialId": str(material_id or ""),
+            "sourceKey": source_key,
+        }
+
+    # Embed and upsert text chunks
+    text_embeddings = embed_texts([item["text"] for item in chunk_payloads]) if chunk_payloads else []
+    if chunk_payloads and text_embeddings:
+        vector_backend.upsert_text_entries(
+            [
+                {
+                    "vectorId": f"text::{item['chunkKey']}",
+                    "embedding": embedding,
+                    "document": item["text"],
+                    "metadata": {
+                        "mongo_id": item["mongoId"],
+                        "chunk_key": item["chunkKey"],
+                        "source_key": source_key,
+                        "class_name": discovered.class_name,
+                        "subject": discovered.subject,
+                        "week": discovered.week,
+                        "source_file": discovered.source_file,
+                        "page": int(item["page"]),
+                    },
+                }
+                for item, embedding in zip(chunk_payloads, text_embeddings)
+            ]
+        )
+
+    # Embed and upsert image entries
+    image_embeddings = embed_image_records(image_payloads) if image_payloads else []
+    if image_payloads and image_embeddings:
+        vector_backend.upsert_image_entries(
+            [
+                {
+                    "vectorId": f"image::{item['imageKey']}",
+                    "embedding": embedding,
+                    "document": item["textSurrogate"],
+                    "metadata": {
+                        "mongo_id": item["mongoId"],
+                        "image_key": item["imageKey"],
+                        "source_key": source_key,
+                        "class_name": discovered.class_name,
+                        "subject": discovered.subject,
+                        "week": discovered.week,
+                        "source_file": discovered.source_file,
+                        "page": int(item["page"]),
+                    },
+                }
+                for item, embedding in zip(image_payloads, image_embeddings)
+            ]
+        )
+
+    return {
+        "status": "success",
+        "message": f"Indexed {len(chunk_payloads)} text chunks and {len(image_payloads)} images.",
+        "sourcePath": str(absolute_source_path),
+        "materialId": str(material_id or ""),
+        "sourceKey": source_key,
+        "chunksProcessed": len(chunk_payloads),
+        "imagesProcessed": len(image_payloads),
+        "triggeredBy": triggered_by,
+    }
 
 
 def derive_material_scope(materials: list[dict[str, Any]] | None) -> dict[str, set[str]]:

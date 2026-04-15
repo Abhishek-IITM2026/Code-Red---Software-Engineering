@@ -52,11 +52,11 @@ const StepGenerate: React.FC = () => {
       setGenerationStatus('success');
     } catch (err) {
       console.error('Failed to generate questions:', err);
-      const apiMessage =
+      const errorPayload =
         typeof err === 'object' && err && 'data' in err
-          ? (err as { data?: { error?: { message?: string } } }).data?.error?.message
+          ? (err as { data?: { error?: { message?: string; details?: { reason?: string } } } }).data?.error
           : null;
-      setError(apiMessage || 'Failed to generate questions. Please try again.');
+      setError(errorPayload?.message || errorPayload?.details?.reason || 'Failed to generate questions. Please try again.');
       setGenerationStatus('idle');
     }
   };

@@ -101,6 +101,7 @@ If role names or access rules change, also update:
 - `frontend/src/app/routes.tsx`
 - `frontend/src/features/administration/utils/authorityAccess.ts`
 - any role-based UI menus/pages
+- `frontend/src/features/administration/routes/administration.routes.tsx` for sidebar-level authority gating
 
 ### Persistence model
 
@@ -169,6 +170,7 @@ Current behavior:
 - faculty study-material files are stored under `backend/uploads/documents/<class>/<subject>/<week>/...` when uploaded as files
 - extracted PDF images for multimodal RAG are stored under `backend/uploads/images/<subject>/<week>/...`
 - profile pictures can be uploaded as multipart files or base64 data URLs
+- stored filenames now keep a sanitized version of the original file stem and append a short unique suffix, instead of using only UUID filenames
 - public URLs are served from `/uploads/<path>`
 
 ### Background jobs, email, and infra fallbacks
@@ -199,8 +201,8 @@ Current modules:
 - `academics`: classes and sections helpers
 - `attendance`: attendance write/list/stats flows
 - `marks`: marks views
-- `schedule`: schedule CRUD and self-service schedule views
-- `faculty`: faculty classes, subjects, materials, performance, upcoming courses
+"- `schedule`: schedule CRUD and self-service schedule views
+- `faculty`: faculty classes, subjects, materials, performance, upcoming courses"
 - `inventory`: stock and request management
 - `authority`: authority assignment endpoints
 - `administration`: dashboard, student/staff CRUD, courses, promotions, finance, reports
@@ -216,13 +218,17 @@ Current modules:
 Two notable implementation details:
 
 - assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/` plus the shared multimodal retrieval layer in `backend/app/rag/multimodal/`
-- student subject pages now expose a multimodal RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials, can return cited snippets plus referenced images, and persists conversation history in Mongo
+- faculty question generation now treats provider-response, retrieval, and normalization failures as logged fallback conditions where possible, instead of letting unexpected provider/RAG exceptions surface as generic internal errors
+- student subject pages now expose a multimodal RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials, can return cited snippets plus referenced images, persists conversation history in Mongo, and is expected to return polished Markdown for rich frontend rendering
 - student chat history endpoints now exist at `GET /api/v1/students/me/subjects/<subject_id>/chat/history` and `DELETE /api/v1/students/me/subjects/<subject_id>/chat/history`
 - administration owns shared student/faculty AI runtime configuration through `backend/app/features/administration/routes.py`
 - admin-only ingestion is available at `POST /api/v1/ingest` and legacy `POST /api/ingest`
 - assessment AI routes under `backend/app/features/assessments/routes.py` now read dynamic per-route limits from the stored AI settings instead of a hard-coded limiter string
-- generated question payloads can include `imageUrls`, `contextSnippet`, source material references, and now accept optional `week` plus `questionStyle`
+- generated question payloads can include `imageUrls`, `contextSnippet`, source material references, and now accept optional `week` plus `questionStyle`; follow-up refinement is handled by `POST /api/v1/ai/modify-questions`
+- faculty material UIs now group uploaded materials by normalized week labels such as `Week 1`, with a fallback `General` bucket for items without week metadata
 - some route prefixes are embedded in the feature route itself, for example leave routes define `/leave` inside a blueprint mounted without a route prefix
+- schedule create/update routes now reject overlapping active entries for the same class or same faculty on the same day
+- schedule conflict detection endpoint: `GET /api/v1/schedule/available-slots?classId=&facultyId=&dayOfWeek=` returns available and occupied time slots to help prevent conflicts before schedule creation
 
 ### Backend tests
 
@@ -408,11 +414,21 @@ Important current reality:
   - `frontend/.env` currently sets `VITE_API_URL=http://localhost:3500/api`
 
 If API base behavior changes, update:
-
 - `frontend/.env`
 - `frontend/src/services/api/config.ts`
 - each hard-coded fallback base in API slices
 - this file
+
+### Schedule API
+
+Schedule-related types and hooks in `frontend/src/services/api/dataApi.ts`:
+
+- `TimeSlotOption`: `{ startTime, endTime, label }` for time slot display
+- `OccupiedSlot`: extends `TimeSlotOption` with `{ classId, facultyId, subject }`
+- `AvailableSlotsRequest`: `{ classId, facultyId, dayOfWeek }`
+- `AvailableSlotsResponse`: `{ availableSlots, occupiedSlots, dayOfWeek, classId, facultyId }`
+- `useGetAvailableSlotsQuery`: fetches available/occupied slots for schedule conflict prevention
+- Conflict errors are detected by `err.status === 409` or `err.data.code === 'SCHEDULE_CONFLICT'`
 
 ### Frontend feature map
 
@@ -424,6 +440,8 @@ Feature areas under `frontend/src/features/`:
 - `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
 - `parent`: dashboard, attendance, performance, fees, communication, timetable, child selector, live course/fee invoice views
 - `administration`: dashboard, authority management, course management, AI settings, records, promotions, finance, reports, inventory, schedule
+- `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
+- schedule creation UI in administration and faculty portals now shows available/occupied time slots and displays conflict error messages when overlapping schedules are detected
 - `leave`: leave portal plus RTK Query/localStorage utilities
 - `notifications`: notification API helpers
 - `courses`: academic course API/local storage helpers

@@ -81,6 +81,39 @@ class TestScheduleCreate:
         )
         assert response.status_code == 422
 
+    def test_create_schedule_rejects_overlapping_class_schedule(self, client, admin_auth_header):
+        first_response = client.post(
+            BASE,
+            json={
+                "classId": "1",
+                "facultyId": "1",
+                "subjectId": "1",
+                "dayOfWeek": 2,
+                "startTime": "09:00",
+                "endTime": "10:00",
+                "roomNumber": "Room 101",
+            },
+            headers=admin_auth_header,
+        )
+        assert first_response.status_code in (200, 201), first_response.get_json()
+
+        overlapping_response = client.post(
+            BASE,
+            json={
+                "classId": "1",
+                "facultyId": "1",
+                "subjectId": "1",
+                "dayOfWeek": 2,
+                "startTime": "09:30",
+                "endTime": "10:30",
+                "roomNumber": "Room 102",
+            },
+            headers=admin_auth_header,
+        )
+        assert overlapping_response.status_code == 409
+        payload = overlapping_response.get_json()
+        assert payload["error"]["code"] == "SCHEDULE_CONFLICT"
+
 
 class TestScheduleUpdate:
     """Tests for PUT /schedule/{scheduleId}"""

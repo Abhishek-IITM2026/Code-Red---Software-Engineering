@@ -3,7 +3,7 @@ import { FiCpu, FiKey, FiRefreshCw, FiShield, FiSliders } from "react-icons/fi";
 import {
   useGetAISettingsQuery,
   useUpdateAISettingsMutation,
-  type AISettings,
+  type AISettings as AIRuntimeSettings,
   type AISettingsWritePayload,
 } from "../api/adminApi";
 
@@ -33,7 +33,7 @@ const providerLabels: Record<AISettingsWritePayload["provider"], string> = {
   "openai-compatible-local": "OpenAI-Compatible Local",
 };
 
-const buildFormFromSettings = (settings?: AISettings): AISettingsWritePayload => {
+const buildFormFromSettings = (settings?: AIRuntimeSettings): AISettingsWritePayload => {
   if (!settings) return defaultForm;
   return {
     provider: settings.provider,
@@ -51,7 +51,7 @@ const buildFormFromSettings = (settings?: AISettings): AISettingsWritePayload =>
   };
 };
 
-const AISettings = function () {
+const AISettingsPage = function () {
   const { data, isLoading, isFetching } = useGetAISettingsQuery();
   const [updateAISettings, { isLoading: isSaving }] = useUpdateAISettingsMutation();
   const [form, setForm] = useState<AISettingsWritePayload>(defaultForm);
@@ -368,4 +368,4 @@ const AISettings = function () {
   );
 };
 
-export default AISettings;
+export default AISettingsPage;

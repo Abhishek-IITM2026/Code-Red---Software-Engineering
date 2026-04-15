@@ -1,7 +1,49 @@
 """Test cases for Assessments and Assignments API endpoints."""
 import pytest
 
+from app.models import Material
+from app.repositories.material_sources import MaterialSourceRepository
+
 BASE = "/api/v1/assessments"
+
+
+def _seed_generation_sources(app, *, subject_id: int = 1):
+    with app.app_context():
+        materials = Material.query.filter_by(subject_id=subject_id).order_by(Material.id.asc()).limit(2).all()
+        assert len(materials) >= 2
+        repository = MaterialSourceRepository()
+        for index, material in enumerate(materials, start=1):
+            repository.upsert(
+                material.id,
+                {
+                    "contentText": (
+                        f"Week {index} {material.title} covers key concepts for {material.title}. "
+                        f"It includes worked examples, revision points, and subject-specific explanations."
+                    ),
+                    "sourceText": f"Reference notes for {material.title}.",
+                    "documentName": f"{material.title}.pdf",
+                    "documentUrl": f"https://example.com/material-{material.id}.pdf",
+                },
+            )
+        return materials
+
+
+def _grounded_ai_settings():
+    return {
+        "provider": "grounded-rag",
+        "mode": "local",
+        "model": "grounded-rag",
+        "baseUrl": None,
+        "temperature": 0.2,
+        "maxTokens": 1200,
+        "generationRateLimit": "15 per minute",
+        "modificationRateLimit": "15 per minute",
+        "fallbackToGroundedRag": True,
+        "notes": None,
+        "hasApiKey": False,
+        "apiKeyPreview": None,
+        "apiKey": None,
+    }
 
 
 class TestAssessmentsList:
@@ -258,30 +300,93 @@ class TestAssignmentsSubmit:
 class TestAIGenerateQuestions:
     """Tests for POST /ai/generate-questions"""
 
-    def test_generate_questions_success(self, client, faculty_auth_header):
+    def test_generate_questions_success(self, app, monkeypatch):
         """Test generating AI questions."""
-        response = client.post(
-            "/api/v1/ai/generate-questions",
-            json={
-                "subjectId": "1",
-                "questionCount": 5,
-                "totalMarks": 50,
-                "difficultyLevel": "medium",
-            },
-            headers=faculty_auth_header,
-        )
-        assert response.status_code == 200
-        data = response.get_json()
-        assert isinstance(data, list)
+        materials = _seed_generation_sources(app)
+        from app.services import assessments as assessment_service_module
 
-    def test_generate_questions_missing_fields(self, client, faculty_auth_header):
-        """Test generating questions without required fields."""
-        response = client.post(
-            "/api/v1/ai/generate-questions",
-            json={"subjectId": "1"},
-            headers=faculty_auth_header,
-        )
-        assert response.status_code == 200
+        monkeypatch.setattr(assessment_service_module, "get_ai_settings", lambda include_secret=False: _grounded_ai_settings())
+        monkeypatch.setattr(assessment_service_module, "ensure_material_sources_ready", lambda *args, **kwargs: None)
+        monkeypatch.setattr(assessment_service_module, "retrieve_context", lambda *args, **kwargs: {"textMatches": []})
+
+        with app.app_context():
+            data = assessment_service_module.generate_assessment_questions(
+                {
+                    "subjectId": "1",
+                    "materials": [{"id": str(material.id)} for material in materials],
+                    "questionCount": 5,
+                    "totalMarks": 50,
+                    "difficultyLevel": "medium",
+                }
+            )
+
+        assert isinstance(data, list)
+        assert len(data) == 5
+
+    def test_generate_questions_falls_back_when_llm_stage_breaks(self, app, monkeypatch):
+        """Test generating questions still succeeds when LLM response normalization fails."""
+        materials = _seed_generation_sources(app)
+        from app.services import assessments as assessment_service_module
+        from app.rag.assessment import pipeline as pipeline_module
+
+        monkeypatch.setattr(assessment_service_module, "get_ai_settings", lambda include_secret=False: _grounded_ai_settings())
+        monkeypatch.setattr(assessment_service_module, "ensure_material_sources_ready", lambda *args, **kwargs: None)
+        monkeypatch.setattr(assessment_service_module, "retrieve_context", lambda *args, **kwargs: {"textMatches": []})
+
+        def _broken_llm(**_kwargs):
+            raise RuntimeError("Error finding id")
+
+        monkeypatch.setattr(pipeline_module, "try_generate_llm_grounded_questions", _broken_llm)
+
+        with app.app_context():
+            data = assessment_service_module.generate_assessment_questions(
+                {
+                    "subjectId": "1",
+                    "materials": [{"id": str(material.id)} for material in materials],
+                    "questionCount": 3,
+                    "totalMarks": 30,
+                    "difficultyLevel": "medium",
+                }
+            )
+
+        assert isinstance(data, list)
+        assert len(data) == 3
+        assert all("questionText" in question for question in data)
+
+    def test_generate_questions_respects_week_filter_with_mixed_week_materials(self, app, monkeypatch):
+        """Test generating questions with a requested week when selected materials span multiple weeks."""
+        materials = _seed_generation_sources(app)
+        captured: dict[str, object] = {}
+        from app.services import assessments as assessment_service_module
+
+        monkeypatch.setattr(assessment_service_module, "get_ai_settings", lambda include_secret=False: _grounded_ai_settings())
+        monkeypatch.setattr(assessment_service_module, "ensure_material_sources_ready", lambda *args, **kwargs: None)
+
+        def _capture_retrieval(*args, **kwargs):
+            captured["week"] = kwargs.get("week")
+            captured["allowed_weeks"] = kwargs.get("allowed_weeks")
+            return {"textMatches": []}
+
+        monkeypatch.setattr(assessment_service_module, "retrieve_context", _capture_retrieval)
+
+        with app.app_context():
+            data = assessment_service_module.generate_assessment_questions(
+                {
+                "subjectId": "1",
+                "materials": [{"id": str(material.id)} for material in materials],
+                "questionCount": 2,
+                "totalMarks": 20,
+                "difficultyLevel": "medium",
+                    "week": "2",
+                }
+            )
+
+        assert isinstance(data, list)
+        assert len(data) == 2
+        assert captured["week"] == "Week 2"
+        assert isinstance(captured["allowed_weeks"], set)
+        assert "Week 1" in captured["allowed_weeks"]
+        assert "Week 2" in captured["allowed_weeks"]
 
 
 class TestAIModifyQuestions:

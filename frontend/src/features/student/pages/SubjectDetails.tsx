@@ -20,7 +20,7 @@ import {
   FiTrash2,
   FiVolume2,
 } from "react-icons/fi";
-import { Button } from "../../../components/common";
+import { Button, MarkdownRenderer } from "../../../components/common";
 import {
   useAskSubjectChatbotMutation,
   useClearSubjectChatHistoryMutation,
@@ -158,11 +158,11 @@ const resolveMaterialDownloadUrl = (documentUrl?: string | null, storagePath?: s
   return undefined;
 };
 
-const triggerMaterialDownload = (url: string, fileName?: string, title?: string) => {
+const triggerMaterialDownload = (url: string) => {
   const link = document.createElement("a");
   link.href = url;
-  link.download = fileName?.trim() || title?.trim() || "study-material";
-  link.rel = "noreferrer";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -420,7 +420,7 @@ const SubjectDetails = () => {
         ? "materials"
         : selectedCategory
     : selectedCategory;
-  const pendingAssignments = subject.assignments.filter((assignment) => assignment.status === "pending").length;
+  const pendingAssignments = subject?.assignments.filter((assignment) => assignment.status === "pending").length || 0;
   const speechWindow = (typeof window !== "undefined" ? window : undefined) as SpeechWindowLike | undefined;
   const recognitionSupported = hasSpeechRecognitionSupport(speechWindow);
   const speechSynthesisSupported = hasSpeechSynthesisSupport(speechWindow);
@@ -915,7 +915,9 @@ const SubjectDetails = () => {
                     <div
                       key={`${message.role}-${index}`}
                       className={`rounded-3xl px-4 py-4 ${
-                        message.role === "user" ? "ml-auto max-w-2xl bg-[var(--primary)] text-white" : "max-w-3xl bg-white text-slate-900 ring-1 ring-slate-200"
+                        message.role === "user"
+                          ? "ml-auto max-w-2xl bg-[var(--primary)] text-white"
+                          : "max-w-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 text-slate-900 shadow-sm"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -940,7 +942,13 @@ const SubjectDetails = () => {
                           </button>
                         ) : null}
                       </div>
-                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                      <div className="mt-3 text-sm leading-6">
+                        {message.role === "assistant" ? (
+                          <MarkdownRenderer content={message.content} className="text-sm" />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        )}
+                      </div>
 
                       {message.citations && message.citations.length > 0 && (
                         <div className="mt-4 space-y-2">

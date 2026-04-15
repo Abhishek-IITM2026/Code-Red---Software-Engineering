@@ -32,6 +32,10 @@ class QuestionPayload(StrictModel):
 class ModifyQuestionsRequest(StrictModel):
     modification_prompt: str = Field(alias="modificationPrompt")
     questions: list[QuestionPayload]
+    subject_id: int | None = Field(default=None, alias="subjectId")
+    subject_name: str | None = Field(default=None, alias="subjectName")
+    week: str | None = None
+    materials: list[dict] = Field(default_factory=list)
 
 
 class AssessmentCreateRequest(StrictModel):

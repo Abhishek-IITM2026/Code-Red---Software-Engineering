@@ -11,6 +11,7 @@ from ..rag.llm_clients import (
     post_external_chat_completion,
     resolve_external_runtime,
 )
+from ..repositories import MaterialSourceRepository
 from .multimodal import (
     build_deadline_guard_response,
     derive_material_scope,
@@ -114,19 +115,35 @@ def answer_subject_question(
         )
 
     # FINAL FALLBACK: If vector search failed (low quality matches),
-    # try to search for the question keywords in the raw extracted text of the materials.
+    # try to get the raw extracted text from MaterialSource for each material.
     from ..repositories.rag import RAGDocumentRepository
     doc_repo = RAGDocumentRepository()
+    material_source_repo = MaterialSourceRepository()
 
-    all_found_text = []
+    all_found_text: list[str] = []
     for mat in materials:
-        # We need the sourceKey to query RAGDocument.
-        # The sourceKey is the storagePath in the multimodal system.
         storage_path = mat.get("storagePath")
+        material_id = mat.get("id")
+        found_text = None
+
+        # 1. Try the document repository (extracted raw text)
         if storage_path:
-            text = doc_repo.get_all_text_for_material(storage_path)
-            if text:
-                all_found_text.append(text)
+            found_text = doc_repo.get_all_text_for_material(storage_path)
+
+        # 2. If nothing, try the MaterialSource record (contentText set during ingestion)
+        if not found_text and material_id:
+            source = material_source_repo.get_by_material(int(material_id))
+            if source:
+                found_text = source.get("contentText")
+
+        # 3. If still nothing, try matching by storage path in MaterialSource
+        if not found_text and storage_path:
+            source = material_source_repo.get_by_storage_path(storage_path)
+            if source:
+                found_text = source.get("contentText")
+
+        if found_text and found_text.strip():
+            all_found_text.append(found_text.strip())
 
     if all_found_text:
         combined_text = " ".join(all_found_text)
@@ -303,6 +320,10 @@ def _try_generate_llm_answer(
         "Answer the student's subject question as a careful academic tutor. "
         "Mention the subject and week when they are known. "
         "Use the supplied context when relevant. "
+        "Format the answer as polished Markdown suitable for a modern study app. "
+        "Prefer a short heading, then concise sections such as Key Idea, Explanation, Steps, Example, and Quick Revision when relevant. "
+        "Use bullet points and numbered steps where they improve readability. "
+        "Do not use markdown tables unless the comparison is genuinely clearer that way. "
         "If images are useful, mention them briefly using their references. "
         "Return valid JSON only with this schema: "
         '{"answer":"...","citations":[{"materialId":"1","materialTitle":"Week 1 Notes","snippet":"..."}],'
@@ -320,7 +341,7 @@ def _try_generate_llm_answer(
             model=model,
             prompt=prompt,
             system_prompt=(
-                "You are a careful academic tutor. Return concise JSON that matches the required schema."
+                "You are a careful academic tutor. Return concise JSON that matches the required schema, and make the answer field polished Markdown."
             ),
             temperature=float(ai_settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(ai_settings.get("maxTokens", 900) or 900),
@@ -383,14 +404,14 @@ def _build_multimodal_fallback_answer(
     primary = text_matches[0]
     related = " ".join(item.get("text") or "" for item in text_matches[1:3])
     answer_parts = [
-        f"For your question about {question.strip().rstrip('?')}, here is the closest grounded explanation from {subject_name}"
-        f"{f' for {week}' if week else ''}:",
+        f"### {subject_name}{f' • {week}' if week else ''}",
+        f"**Question focus:** {question.strip().rstrip('?')}",
         summarize_text(primary.get("text") or "", max_words=70),
     ]
     if related:
-        answer_parts.append(f"Related context: {summarize_text(related, max_words=40)}")
+        answer_parts.append(f"**Related context:** {summarize_text(related, max_words=40)}")
     if image_matches:
-        answer_parts.append("Relevant figure references are included below when they support the explanation.")
+        answer_parts.append("**Visual support:** Relevant figure references are included below when they support the explanation.")
     return {
         "answer": " ".join(part for part in answer_parts if part).strip(),
         "citations": _normalize_citations(None, retrieval),
@@ -548,7 +569,15 @@ def _build_grounded_fallback_answer(
         followups.append(f"How would you approach a question about this in an exam?")
     
     return {
-        "answer": " ".join(answer_parts).strip(),
+        "answer": "\n\n".join(
+            part
+            for part in [
+                f"### {subject_name}",
+                f"**Answer:** {answer_parts[0]}" if answer_parts else "",
+                f"**Extra context:** {answer_parts[1]}" if len(answer_parts) > 1 else "",
+            ]
+            if part
+        ).strip(),
         "citations": citations,
         "followUpQuestions": followups[:2],
         "confidence": "medium",

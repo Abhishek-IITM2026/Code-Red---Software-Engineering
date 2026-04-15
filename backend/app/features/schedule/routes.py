@@ -1,5 +1,6 @@
-from flask import Blueprint, request, g
+from datetime import datetime
 
+from flask import Blueprint, request, g
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
@@ -66,6 +67,61 @@ def _has_schedule_creation_authority():
     return False
 
 
+def _normalize_schedule_time(value: str, *, field_name: str) -> str:
+    normalized = (value or "").strip()
+    try:
+        parsed = datetime.strptime(normalized, "%H:%M")
+    except ValueError as exc:
+        raise ApiError(422, "INVALID_TIME_FORMAT", f"{field_name} must use HH:MM 24-hour format.") from exc
+    return parsed.strftime("%H:%M")
+
+
+def _validate_schedule_conflicts(
+    *,
+    class_id: int,
+    faculty_id: int,
+    day_of_week: int,
+    start_time: str,
+    end_time: str,
+    schedule_id: int | None = None,
+) -> tuple[str, str]:
+    normalized_start = _normalize_schedule_time(start_time, field_name="startTime")
+    normalized_end = _normalize_schedule_time(end_time, field_name="endTime")
+
+    if normalized_start >= normalized_end:
+        raise ApiError(422, "INVALID_TIME_RANGE", "Schedule end time must be later than the start time.")
+
+    conflict_query = Schedule.query.filter(
+        Schedule.day_of_week == day_of_week,
+        Schedule.start_time < normalized_end,
+        Schedule.end_time > normalized_start,
+        Schedule.is_active.is_(True),
+        (Schedule.class_id == class_id) | (Schedule.faculty_id == faculty_id),
+    )
+
+    if schedule_id is not None:
+        conflict_query = conflict_query.filter(Schedule.id != schedule_id)
+
+    conflict = conflict_query.order_by(Schedule.start_time.asc(), Schedule.id.asc()).first()
+    if conflict is not None:
+        if conflict.class_id == class_id and conflict.faculty_id == faculty_id:
+            conflict_scope = "class and faculty"
+        elif conflict.class_id == class_id:
+            conflict_scope = "class"
+        else:
+            conflict_scope = "faculty"
+        raise ApiError(
+            409,
+            "SCHEDULE_CONFLICT",
+            f"This time overlaps with an existing {conflict_scope} schedule.",
+            {
+                "conflictSchedule": conflict.to_dict(),
+            },
+        )
+
+    return normalized_start, normalized_end
+
+
 @schedule_bp.get("")
 @roles_required("student", "faculty", "parent", "administration")
 def list_schedule():
@@ -129,13 +185,21 @@ def create_schedule():
             raise ApiError(404, "FACULTY_NOT_FOUND", "Selected faculty was not found.")
         faculty_id = resolved_faculty_id
 
+    start_time, end_time = _validate_schedule_conflicts(
+        class_id=payload.class_id,
+        faculty_id=faculty_id,
+        day_of_week=payload.day_of_week,
+        start_time=payload.time_slot.start_time if payload.time_slot else (payload.start_time or "09:00"),
+        end_time=payload.time_slot.end_time if payload.time_slot else (payload.end_time or "10:00"),
+    )
+
     schedule = Schedule(
         class_id=payload.class_id,
         subject_id=payload.subject_id,
         faculty_id=faculty_id,
         day_of_week=payload.day_of_week,
-        start_time=payload.time_slot.start_time if payload.time_slot else (payload.start_time or "09:00"),
-        end_time=payload.time_slot.end_time if payload.time_slot else (payload.end_time or "10:00"),
+        start_time=start_time,
+        end_time=end_time,
         room_number=payload.room_number,
         academic_year="2025-2026",
     )
@@ -166,12 +230,21 @@ def update_schedule(schedule_id: int):
         if resolved_faculty_id is None:
             raise ApiError(404, "FACULTY_NOT_FOUND", "Selected faculty was not found.")
         schedule.faculty_id = resolved_faculty_id
+
+    start_time, end_time = _validate_schedule_conflicts(
+        class_id=payload.class_id,
+        faculty_id=schedule.faculty_id,
+        day_of_week=payload.day_of_week,
+        start_time=payload.time_slot.start_time if payload.time_slot else (payload.start_time or schedule.start_time),
+        end_time=payload.time_slot.end_time if payload.time_slot else (payload.end_time or schedule.end_time),
+        schedule_id=schedule.id,
+    )
     schedule.day_of_week = payload.day_of_week
     schedule.class_id = payload.class_id
     schedule.subject_id = payload.subject_id
     schedule.room_number = payload.room_number or schedule.room_number
-    schedule.start_time = payload.time_slot.start_time if payload.time_slot else (payload.start_time or schedule.start_time)
-    schedule.end_time = payload.time_slot.end_time if payload.time_slot else (payload.end_time or schedule.end_time)
+    schedule.start_time = start_time
+    schedule.end_time = end_time
     db.session.commit()
     return success_response(schedule.to_dict())
 
@@ -205,3 +278,81 @@ def my_schedule():
         else Schedule.query.filter_by(id=-1)
     )
     return success_response([item.to_dict() for item in query.all()])
+
+
+@schedule_bp.get("/available-slots")
+@roles_required("faculty", "teacher", "administration")
+def get_available_slots():
+    """
+    Get available time slots for a specific day, class, and faculty.
+    Returns all time slots that don't conflict with existing schedules.
+    """
+    class_id = request.args.get("classId", type=int)
+    faculty_id = request.args.get("facultyId", type=int)
+    day_of_week = request.args.get("dayOfWeek", type=int)
+
+    if class_id is None or faculty_id is None or day_of_week is None:
+        raise ApiError(400, "MISSING_PARAMETERS", "classId, facultyId, and dayOfWeek are required.")
+
+    # Resolve faculty ID
+    resolved_faculty_id = _resolve_faculty_id(faculty_id)
+    if resolved_faculty_id is None:
+        raise ApiError(404, "FACULTY_NOT_FOUND", "Selected faculty was not found.")
+
+    # Get all schedules for this class OR faculty on this day
+    existing_schedules = Schedule.query.filter(
+        Schedule.day_of_week == day_of_week,
+        Schedule.is_active.is_(True),
+        (Schedule.class_id == class_id) | (Schedule.faculty_id == resolved_faculty_id),
+    ).order_by(Schedule.start_time.asc()).all()
+
+    # Define standard time slots (8 AM to 5 PM, 1-hour slots)
+    standard_slots = [
+        ("08:00", "09:00"),
+        ("09:00", "10:00"),
+        ("10:00", "11:00"),
+        ("11:00", "12:00"),
+        ("12:00", "13:00"),
+        ("13:00", "14:00"),
+        ("14:00", "15:00"),
+        ("15:00", "16:00"),
+        ("16:00", "17:00"),
+    ]
+
+    # Find available slots (not overlapping with any existing schedule)
+    available_slots = []
+    for start, end in standard_slots:
+        is_available = True
+        for schedule in existing_schedules:
+            # Check if this slot overlaps with existing schedule
+            if schedule.start_time < end and schedule.end_time > start:
+                is_available = False
+                break
+        
+        if is_available:
+            available_slots.append({
+                "startTime": start,
+                "endTime": end,
+                "label": f"{start} - {end}",
+            })
+
+    # Also include existing schedules in the response for reference
+    occupied_slots = [
+        {
+            "startTime": s.start_time,
+            "endTime": s.end_time,
+            "label": f"{s.start_time} - {s.end_time}",
+            "classId": s.class_id,
+            "facultyId": s.faculty_id,
+            "subject": s.subject.name if s.subject else None,
+        }
+        for s in existing_schedules
+    ]
+
+    return success_response({
+        "availableSlots": available_slots,
+        "occupiedSlots": occupied_slots,
+        "dayOfWeek": day_of_week,
+        "classId": class_id,
+        "facultyId": resolved_faculty_id,
+    })

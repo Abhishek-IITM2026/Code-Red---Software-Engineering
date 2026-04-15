@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from flask import current_app
+
 from ...api.errors import ApiError
 from .llm import try_generate_llm_grounded_questions
 from .retrieval import (
@@ -36,17 +38,28 @@ def generate_grounded_questions(
             "Selected study materials do not contain usable text or image context for question generation.",
         )
 
-    llm_questions = try_generate_llm_grounded_questions(
-        subject_name=subject_name,
-        chunks=chunks,
-        question_count=question_count,
-        total_marks=total_marks,
-        difficulty_level=difficulty_level,
-        question_types=question_types,
-        custom_prompt=custom_prompt,
-        question_style=question_style,
-        ai_settings=ai_settings,
-    )
+    try:
+        llm_questions = try_generate_llm_grounded_questions(
+            subject_name=subject_name,
+            chunks=chunks,
+            question_count=question_count,
+            total_marks=total_marks,
+            difficulty_level=difficulty_level,
+            question_types=question_types,
+            custom_prompt=custom_prompt,
+            question_style=question_style,
+            ai_settings=ai_settings,
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Assessment question generation LLM stage failed unexpectedly",
+            extra={
+                "subject": subject_name,
+                "questionCount": question_count,
+                "provider": str((ai_settings or {}).get("provider") or "grounded-rag"),
+            },
+        )
+        llm_questions = None
     if llm_questions:
         return llm_questions
     provider = str((ai_settings or {}).get("provider") or "grounded-rag").strip().lower()

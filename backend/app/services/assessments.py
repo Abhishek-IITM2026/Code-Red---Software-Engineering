@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from flask import current_app
+
 from ..api.errors import ApiError
 from ..extensions import db
 from ..models import Assessment, AssessmentSubmission, Subject
 from ..rag.assessment import generate_grounded_questions
 from ..rag.assessment.llm import try_modify_llm_questions
 from ..rag.llm_clients import SUPPORTED_EXTERNAL_PROVIDERS
-from ..rag.multimodal import build_question_context, derive_material_scope, retrieve_context
+from ..rag.multimodal import build_question_context, derive_material_scope, ensure_material_sources_ready, retrieve_context
 from ..rag.multimodal.runtime import normalize_week_label
 from ..repositories import AssessmentQuestionRepository, AssessmentSubmissionRepository
 from .ai_settings import get_ai_settings
@@ -134,47 +136,131 @@ def generate_assessment_questions(payload: dict[str, Any]) -> list[dict[str, Any
     material_scope = derive_material_scope(materials)
     requested_week = str(payload.get("week") or "").strip() or None
     normalized_week = normalize_week_label(requested_week) if requested_week else None
-    retrieval = retrieve_context(
-        query=" ".join(
-            item
-            for item in [
-                subject.name,
-                payload.get("questionStyle"),
-                payload.get("customPrompt"),
-            ]
-            if item
-        ),
-        subject=subject.name,
-        week=normalized_week,
-        allowed_source_files=material_scope["sourceFiles"] or None,
-        allowed_weeks=material_scope["weeks"] or None,
-        top_k_text=max(effective_question_count, 4),
-    )
-    retrieved_chunks = build_question_context(payload.get("customPrompt") or subject.name, retrieval.get("textMatches") or [])
+    ai_settings = get_ai_settings(include_secret=True)
+    material_ids = [str(item.get("id")) for item in materials if item.get("id") is not None]
 
-    return generate_grounded_questions(
-        subject_name=subject.name,
-        materials=materials,
-        question_count=effective_question_count,
-        total_marks=max(1, int(payload.get("totalMarks", 1))),
-        difficulty_level=payload.get("difficultyLevel", "medium"),
-        question_types=question_types,
-        custom_prompt=payload.get("customPrompt"),
-        question_style=payload.get("questionStyle"),
-        retrieved_chunks=retrieved_chunks or None,
-        ai_settings=get_ai_settings(include_secret=True),
-    )
+    # Ensure selected materials are indexed in the vector store before retrieval.
+    # Without this, retrieve_context() hits an empty index and falls back to
+    # hardcoded template questions instead of using the faculty-uploaded content.
+    try:
+        ensure_material_sources_ready(materials, triggered_by="assessment-generation")
+    except Exception:
+        current_app.logger.exception(
+            "Assessment generation failed while preparing material sources",
+            extra={
+                "subject": subject.name,
+                "week": normalized_week,
+                "materialIds": material_ids,
+                "provider": str(ai_settings.get("provider") or "grounded-rag"),
+                "stage": "ensure-material-sources",
+            },
+        )
+
+    retrieval = {}
+    retrieved_chunks: list[dict[str, Any]] | None = None
+    try:
+        retrieval = retrieve_context(
+            query=" ".join(
+                item
+                for item in [
+                    subject.name,
+                    payload.get("questionStyle"),
+                    payload.get("customPrompt"),
+                ]
+                if item
+            ),
+            subject=subject.name,
+            week=normalized_week,
+            allowed_source_files=material_scope["sourceFiles"] or None,
+            allowed_weeks=material_scope["weeks"] or None,
+            top_k_text=max(effective_question_count, 4),
+        )
+        retrieved_chunks = build_question_context(payload.get("customPrompt") or subject.name, retrieval.get("textMatches") or [])
+    except Exception:
+        current_app.logger.exception(
+            "Assessment generation retrieval failed",
+            extra={
+                "subject": subject.name,
+                "week": normalized_week,
+                "materialIds": material_ids,
+                "provider": str(ai_settings.get("provider") or "grounded-rag"),
+                "stage": "retrieve-context",
+            },
+        )
+
+    try:
+        return generate_grounded_questions(
+            subject_name=subject.name,
+            materials=materials,
+            question_count=effective_question_count,
+            total_marks=max(1, int(payload.get("totalMarks", 1))),
+            difficulty_level=payload.get("difficultyLevel", "medium"),
+            question_types=question_types,
+            custom_prompt=payload.get("customPrompt"),
+            question_style=payload.get("questionStyle"),
+            retrieved_chunks=retrieved_chunks or None,
+            ai_settings=ai_settings,
+        )
+    except ApiError:
+        raise
+    except Exception as exc:
+        current_app.logger.exception(
+            "Assessment generation failed during question assembly",
+            extra={
+                "subject": subject.name,
+                "week": normalized_week,
+                "materialIds": material_ids,
+                "provider": str(ai_settings.get("provider") or "grounded-rag"),
+                "retrievedTextMatches": len(retrieval.get("textMatches") or []),
+                "stage": "assemble-questions",
+            },
+        )
+        raise ApiError(
+            503,
+            "QUESTION_GENERATION_FAILED",
+            "Question generation could not be completed with the selected materials right now.",
+            {
+                "reason": str(exc),
+            },
+        ) from exc
 
 
 def modify_assessment_questions(
     *,
     questions: list[dict[str, Any]],
     modification_prompt: str,
+    subject_id: int | None = None,
+    subject_name: str | None = None,
+    week: str | None = None,
+    materials: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     ai_settings = get_ai_settings(include_secret=True)
+
+    # Build retrieval context from materials so modifications are grounded in content
+    retrieved_chunks: list[dict[str, Any]] | None = None
+    if materials and subject_name:
+        material_scope = derive_material_scope(materials)
+        normalized_week = normalize_week_label(week) if week else None
+        ensure_material_sources_ready(materials, triggered_by="assessment-modification")
+        retrieval = retrieve_context(
+            query=subject_name,
+            subject=subject_name,
+            week=normalized_week,
+            allowed_source_files=material_scope["sourceFiles"] or None,
+            allowed_weeks=material_scope["weeks"] or None,
+            top_k_text=4,
+        )
+        retrieved_chunks = (
+            build_question_context(subject_name, retrieval.get("textMatches") or [])
+            if retrieval.get("textMatches")
+            else None
+        )
+
     updated = try_modify_llm_questions(
         questions=questions,
         modification_prompt=modification_prompt,
+        subject_name=subject_name,
+        retrieved_chunks=retrieved_chunks,
         ai_settings=ai_settings,
     )
     if updated:

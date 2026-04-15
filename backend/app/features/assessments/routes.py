@@ -6,7 +6,7 @@ from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db, limiter
-from ...models import Assessment, AssessmentSubmission, Assignment, AssignmentSubmission
+from ...models import Assessment, AssessmentSubmission, Assignment, AssignmentSubmission, Subject
 from ...schemas import (
     AssessmentCreateRequest,
     AssessmentListQuery,
@@ -67,9 +67,30 @@ def generate_questions():
 def modify_questions():
     payload = parse_json(ModifyQuestionsRequest, request.get_json())
     questions = [question.model_dump(by_alias=True) for question in payload.questions]
+
+    # Resolve subject name for context grounding when subject_id is provided
+    subject_name = payload.subject_name
+    materials = list(payload.materials or [])
+    if payload.subject_id:
+        subject = db.session.get(Subject, payload.subject_id)
+        if subject:
+            subject_name = subject.name
+            from ...services.materials import get_materials_for_generation
+            materials = get_materials_for_generation(
+                subject_id=payload.subject_id,
+                selected_materials=materials,
+            )
+    elif not subject_name:
+        # Fallback if no subject_id and no subject_name provided
+        subject_name = "General Subject"
+
     updated = modify_assessment_questions(
         questions=questions,
         modification_prompt=payload.modification_prompt.strip(),
+        subject_id=payload.subject_id,
+        subject_name=subject_name,
+        week=payload.week,
+        materials=materials if materials else None,
     )
     return success_response(updated)
 

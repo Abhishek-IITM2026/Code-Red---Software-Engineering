@@ -151,6 +151,33 @@ export interface ScheduleRequest {
   roomNumber?: string;
 }
 
+// Available Slots Types
+export interface TimeSlotOption {
+  startTime: string;
+  endTime: string;
+  label: string;
+}
+
+export interface OccupiedSlot extends TimeSlotOption {
+  classId: number;
+  facultyId: number;
+  subject: string | null;
+}
+
+export interface AvailableSlotsRequest {
+  classId: string;
+  facultyId: string;
+  dayOfWeek: number;
+}
+
+export interface AvailableSlotsResponse {
+  availableSlots: TimeSlotOption[];
+  occupiedSlots: OccupiedSlot[];
+  dayOfWeek: number;
+  classId: number;
+  facultyId: number;
+}
+
 // Create the API slice
 export const dataApi = createApi({
   reducerPath: 'dataApi',
@@ -249,6 +276,12 @@ export const dataApi = createApi({
       providesTags: ['Schedule'],
     }),
 
+    getAvailableSlots: builder.query<AvailableSlotsResponse, AvailableSlotsRequest>({
+      query: ({ classId, facultyId, dayOfWeek }) => 
+        `/schedule/available-slots?classId=${classId}&facultyId=${facultyId}&dayOfWeek=${dayOfWeek}`,
+      providesTags: ['Schedule'],
+    }),
+
     createSchedule: builder.mutation<ClassSchedule, ScheduleRequest>({
       query: (scheduleData) => ({
         url: '/schedule',
@@ -330,6 +363,7 @@ export const {
   useGetScheduleByClassQuery,
   useGetScheduleByFacultyQuery,
   useGetMyScheduleQuery,
+  useGetAvailableSlotsQuery,
   useCreateScheduleMutation,
   useUpdateScheduleMutation,
   useDeleteScheduleMutation,
