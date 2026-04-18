@@ -116,6 +116,10 @@ export interface AISettings {
   modificationRateLimit: string;
   fallbackToGroundedRag: boolean;
   notes?: string | null;
+  assessmentSystemPrompt?: string;
+  assessmentModifySystemPrompt?: string;
+  studentChatSystemPrompt?: string;
+  assessmentUserPromptTemplate?: string;
   hasApiKey: boolean;
   apiKeyPreview?: string | null;
   updatedAt?: string | null;
@@ -134,6 +138,10 @@ export type AISettingsWritePayload = {
   modificationRateLimit: string;
   fallbackToGroundedRag: boolean;
   notes?: string | null;
+  assessmentSystemPrompt?: string;
+  assessmentModifySystemPrompt?: string;
+  studentChatSystemPrompt?: string;
+  assessmentUserPromptTemplate?: string;
 };
 
 export interface PromotionData {

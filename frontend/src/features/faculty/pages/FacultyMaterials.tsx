@@ -398,7 +398,7 @@ const FacultyMaterials = function () {
             <button
               type="button"
               onClick={() => void handleUpload()}
-              disabled={isUploading || !form.subjectId}
+              disabled={isUploading || !activeSubjectId}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUploading ? <FiRefreshCw className="h-4 w-4 animate-spin" /> : <FiUploadCloud className="h-4 w-4" />}

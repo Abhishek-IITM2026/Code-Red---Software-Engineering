@@ -76,24 +76,34 @@ class ChromaVectorBackend:
     def search_text(self, *, embedding: list[float], where: dict[str, Any] | None, top_k: int) -> list[dict[str, Any]]:
         if self.count_text() == 0:
             return []
-        result = self.text_collection.query(
-            query_embeddings=[embedding],
-            n_results=max(top_k, 1),
-            where=where or None,
-            include=["documents", "metadatas", "distances"],
-        )
-        return _coerce_chroma_matches(result)
+        try:
+            result = self.text_collection.query(
+                query_embeddings=[embedding],
+                n_results=max(top_k, 1),
+                where=where or None,
+                include=["documents", "metadatas", "distances"],
+            )
+            return _coerce_chroma_matches(result)
+        except Exception:
+            return []
 
     def search_images(self, *, embedding: list[float], where: dict[str, Any] | None, top_k: int) -> list[dict[str, Any]]:
-        if int(self.image_collection.count()) == 0:
+        try:
+            if int(self.image_collection.count()) == 0:
+                return []
+        except Exception:
             return []
-        result = self.image_collection.query(
-            query_embeddings=[embedding],
-            n_results=max(top_k, 1),
-            where=where or None,
-            include=["documents", "metadatas", "distances"],
-        )
-        return _coerce_chroma_matches(result)
+        
+        try:
+            result = self.image_collection.query(
+                query_embeddings=[embedding],
+                n_results=max(top_k, 1),
+                where=where or None,
+                include=["documents", "metadatas", "distances"],
+            )
+            return _coerce_chroma_matches(result)
+        except Exception:
+            return []
 
 
 class JsonVectorBackend:

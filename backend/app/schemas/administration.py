@@ -35,6 +35,10 @@ class AISettingsWriteRequest(StrictModel):
     modification_rate_limit: str = Field(default="15 per minute", alias="modificationRateLimit")
     fallback_to_grounded_rag: bool = Field(default=True, alias="fallbackToGroundedRag")
     notes: str | None = None
+    assessment_system_prompt: str | None = Field(default=None, alias="assessmentSystemPrompt")
+    assessment_modify_system_prompt: str | None = Field(default=None, alias="assessmentModifySystemPrompt")
+    student_chat_system_prompt: str | None = Field(default=None, alias="studentChatSystemPrompt")
+    assessment_user_prompt_template: str | None = Field(default=None, alias="assessmentUserPromptTemplate")
 
     @field_validator("model")
     @classmethod

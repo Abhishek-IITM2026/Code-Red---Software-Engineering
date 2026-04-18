@@ -248,6 +248,23 @@ Two notable implementation details:
 - schedule conflict detection endpoint: `GET /api/v1/schedule/available-slots?classId=&facultyId=&dayOfWeek=` returns available and occupied time slots to help prevent conflicts before schedule creation
 - assessment question generation and modification now have proper error handling with specific error codes
 - assessments now support due date validation: students cannot submit after due date passes
+- administration now owns AI settings for system prompts and generation behavior:
+  - `assessmentSystemPrompt`: specialized prompt ensuring pedagogically sound, high-quality assessment questions grounded strictly in course context
+  - `assessmentModifySystemPrompt`: specialized prompt for editing/refining assessment questions while preserving pedagogical intent
+  - `studentChatSystemPrompt`: empathetic tutor prompt for grounded student Q&A with citations and follow-ups
+  - `assessmentUserPromptTemplate`: template for constructing user prompts with `{subject}`, `{difficulty}`, `{questionCount}`, `{totalMarks}` placeholders
+  - all system prompts have sensible defaults and fallbacks; when customized via `PUT /api/v1/administration/ai-settings`, they guide the LLM to generate higher-quality content
+  - prompt configuration is stored in MongoDB document store under `rag-runtime` scope
+- **Professional rate limiting for LLM operations** with improved UI/UX:
+  - `generationRateLimit`: controls frequency of assessment question generation (default "15 per minute")
+  - `modificationRateLimit`: controls frequency of assessment question modification (default "15 per minute")
+  - both support flexible time windows: second, minute, hour, or day
+  - frontend provides separate numeric input for requests + dropdown for time window instead of free-text entry
+  - preset buttons for common configurations: Light (5/min), Standard (15/min), Production (30/min), Hourly (100/hr)
+  - backend provides `parse_rate_limit()` and `get_ai_rate_limit_info()` utilities for consistent parsing
+  - rate limits used directly by Flask-Limiter decorators on question generation/modification endpoints
+  - helper text explains best practices for local vs cloud LLM providers
+- multimodal RAG search now gracefully handles ChromaDB errors (e.g., rust binding failures) by falling back to text-only results and logging warnings instead of crashing
 - `GET /api/v1/assessments/weekly` returns assessments grouped by week for student subject view
 - `GET /api/v1/assessments/<id>/answers` reveals correct answers after due date has passed
 - `POST /api/v1/assessments/<id>/submit` blocks submissions after due date with `ASSESSMENT_EXPIRED` error
@@ -503,7 +520,20 @@ Feature areas under `frontend/src/features/`:
 - Parent and faculty upcoming-course pages now expect the richer unified course payload: status, fee/installment metadata, and optional enrollment state for parent dashboards.
 - Faculty assessment generation now expects richer material payloads, can preview question images/context snippets, can see the active AI runtime summary, and can jump directly into manual question authoring from the generate step.
 - Faculty assessment generation now also supports optional `week` targeting and `questionStyle` values `technical`, `nonTechnical`, and `mixed`.
-- Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`.
+- Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`, including:
+  - Provider/model/base-URL configuration for local (Ollama) or cloud (Gemini, OpenAI-compatible) LLM providers
+  - Temperature and max-tokens tuning for generation behavior
+  - **Professional rate-limit configuration** with:
+    - Separate numeric inputs for request count and time-window selection (dropdown)
+    - Quick preset buttons for common configurations (Light, Standard, Production, Hourly)
+    - Real-time preview of formatted rate limit (e.g., "15 per minute")
+    - Helper guidelines explaining best practices for different provider types
+  - **System prompts configuration**:
+    - Assessment generation system prompt: specialized for creating high-quality, pedagogically sound exam questions grounded in course context
+    - Assessment modification system prompt: specialized for editing/refining assessment questions while preserving pedagogical intent and difficulty
+    - Student chat system prompt: empathetic tutor prompt for grounded Q&A with citations and follow-up topic suggestions
+    - Assessment user prompt template: template for constructing user prompts with subject, difficulty, question count, and total marks placeholders
+  - AISettingsWritePayload interface supports all fields with camelCase aliases for backend sync
 - Salary slip PDF download is available in administration and faculty salary slip pages through `GET /api/v1/payroll/salary-slips/<id>/download` and `GET /api/v1/payroll/me/salary-slips/<id>/download`, powered by ReportLab PDF generation.
 - Administration now also has a procurement page at `/administration/procurement` for vendor entry and inventory procurement recording, gated by the `procurementManagement` authority in the route config and frontend authority utilities.
 - Administration also has a finance-operations page at `/administration/finance-operations` that lists unified financial transactions, exports CSV/PDF ledger reports, and reviews salary-account change requests.
@@ -594,6 +624,19 @@ Update all affected items:
 - faculty assessment builder API/types
 - student assessment/submission consumers
 - document-store notes in this file
+
+### If you change AI settings or system prompts
+
+Update all affected items:
+
+- `backend/app/services/ai_settings.py` (DEFAULT_AI_SETTINGS dictionary with all prompt defaults, `parse_rate_limit()`, `get_ai_rate_limit_info()`, `get_ai_rate_limit()`)
+- `backend/app/schemas/administration.py` (AISettingsWriteRequest Pydantic model with camelCase aliases and RATE_LIMIT_PATTERN validation)
+- `backend/app/rag/assessment/llm.py` (fallback prompts in try_generate_llm_grounded_questions and try_modify_llm_questions)
+- `backend/app/rag/student_chat.py` (fallback prompt in _try_generate_llm_answer)
+- `backend/app/features/assessments/routes.py` (GET/PUT endpoints for ai-settings, rate limit decorators using `get_ai_rate_limit()`)
+- `frontend/src/features/administration/api/adminApi.ts` (AISettings and AISettingsWritePayload types)
+- `frontend/src/features/administration/pages/AISettings.tsx` (admin configuration UI with `RateLimitControl` component, `parseRateLimit()`, `formatRateLimit()`, and RATE_LIMIT_PRESETS)
+- this file
 
 ### If you change uploads or profile pictures
 

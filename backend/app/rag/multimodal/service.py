@@ -225,11 +225,17 @@ def retrieve_context(
         where=where,
         top_k=max(resolved_top_k_text * 3, resolved_top_k_text),
     )
-    image_matches = backend.search_images(
-        embedding=embed_image_query(query),
-        where=where,
-        top_k=max(resolved_top_k_images * 3, resolved_top_k_images),
-    )
+    
+    # Gracefully handle image search failures (e.g., ChromaDB query errors)
+    image_matches = []
+    try:
+        image_matches = backend.search_images(
+            embedding=embed_image_query(query),
+            where=where,
+            top_k=max(resolved_top_k_images * 3, resolved_top_k_images),
+        )
+    except Exception as e:
+        current_app.logger.warning(f"Image search failed, continuing with text-only results: {e}")
 
     hydrated_text = _filter_and_hydrate_text_matches(
         matches=text_matches,

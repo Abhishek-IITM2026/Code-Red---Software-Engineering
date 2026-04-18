@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FiCpu, FiKey, FiRefreshCw, FiShield, FiSliders } from "react-icons/fi";
+import { FiCpu, FiKey, FiRefreshCw, FiShield, FiSliders, FiAlertCircle } from "react-icons/fi";
 import {
   useGetAISettingsQuery,
   useUpdateAISettingsMutation,
@@ -9,6 +9,27 @@ import {
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20";
+
+// Rate limit parsing and formatting utilities
+const parseRateLimit = (rateLimitStr: string): { requests: number; timeWindow: string } => {
+  const match = rateLimitStr.match(/(\d+)\s+per\s+(second|minute|hour|day)/i);
+  if (match) {
+    return { requests: parseInt(match[1], 10), timeWindow: match[2].toLowerCase() };
+  }
+  return { requests: 15, timeWindow: "minute" };
+};
+
+const formatRateLimit = (requests: number, timeWindow: string): string => {
+  return `${Math.max(1, Math.round(requests))} per ${timeWindow}`;
+};
+
+// Preset configurations for different LLM usage patterns
+const RATE_LIMIT_PRESETS = [
+  { label: "Light (5/min)", requests: 5, timeWindow: "minute", description: "Conservative usage" },
+  { label: "Standard (15/min)", requests: 15, timeWindow: "minute", description: "Recommended" },
+  { label: "Production (30/min)", requests: 30, timeWindow: "minute", description: "High throughput" },
+  { label: "Hourly (100/hr)", requests: 100, timeWindow: "hour", description: "Batch operations" },
+];
 
 const defaultForm: AISettingsWritePayload = {
   provider: "ollama",
@@ -23,6 +44,10 @@ const defaultForm: AISettingsWritePayload = {
   modificationRateLimit: "15 per minute",
   fallbackToGroundedRag: true,
   notes: "",
+  assessmentSystemPrompt: "You are a careful academic assessment generator. Use only the provided context and return machine-readable JSON.",
+  assessmentModifySystemPrompt: "You are a careful academic assessment editor. Return only strict JSON matching the requested schema.",
+  studentChatSystemPrompt: "You are a careful academic tutor. Return concise JSON that matches the required schema, and make the answer field polished Markdown.",
+  assessmentUserPromptTemplate: "Generate assessment questions for {subject} at {difficulty} level with {questionCount} questions totaling {totalMarks} marks.",
 };
 
 const providerLabels: Record<AISettingsWritePayload["provider"], string> = {
@@ -48,7 +73,95 @@ const buildFormFromSettings = (settings?: AIRuntimeSettings): AISettingsWritePay
     modificationRateLimit: settings.modificationRateLimit,
     fallbackToGroundedRag: settings.fallbackToGroundedRag,
     notes: settings.notes || "",
+    assessmentSystemPrompt: settings.assessmentSystemPrompt || defaultForm.assessmentSystemPrompt,
+    assessmentModifySystemPrompt: settings.assessmentModifySystemPrompt || defaultForm.assessmentModifySystemPrompt,
+    studentChatSystemPrompt: settings.studentChatSystemPrompt || defaultForm.studentChatSystemPrompt,
+    assessmentUserPromptTemplate: settings.assessmentUserPromptTemplate || defaultForm.assessmentUserPromptTemplate,
   };
+};
+
+// Component for professional rate limit configuration
+const RateLimitControl = ({
+  label,
+  value,
+  onChangeRequests,
+  onChangeTimeWindow,
+  onApplyPreset,
+  description,
+}: {
+  label: string;
+  value: string;
+  onChangeRequests: (requests: number) => void;
+  onChangeTimeWindow: (timeWindow: string) => void;
+  onApplyPreset: (requests: number, timeWindow: string) => void;
+  description: string;
+}) => {
+  const { requests, timeWindow } = parseRateLimit(value);
+  const timeWindows = ["second", "minute", "hour", "day"];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <p className="font-medium text-slate-900">{label}</p>
+          <p className="text-xs text-slate-600">{description}</p>
+        </div>
+        <div className="rounded-lg bg-white px-2 py-1 font-mono text-sm font-semibold text-[var(--primary)]">
+          {formatRateLimit(requests, timeWindow)}
+        </div>
+      </div>
+
+      {/* Request count and time window inputs */}
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-slate-700">Requests</label>
+          <input
+            type="number"
+            min="1"
+            max="500"
+            value={requests}
+            onChange={(e) => onChangeRequests(parseInt(e.target.value, 10) || 1)}
+            className={fieldClass}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-700">Time Window</label>
+          <select
+            value={timeWindow}
+            onChange={(e) => onChangeTimeWindow(e.target.value)}
+            className={fieldClass}
+          >
+            {timeWindows.map((tw) => (
+              <option key={tw} value={tw}>
+                per {tw}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Preset buttons */}
+      <div>
+        <p className="mb-2 text-xs font-semibold text-slate-600">Quick Presets</p>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {RATE_LIMIT_PRESETS.map((preset) => (
+            <button
+              key={`${preset.requests}-${preset.timeWindow}`}
+              onClick={() => onApplyPreset(preset.requests, preset.timeWindow)}
+              className={`rounded-lg px-2 py-2 text-xs font-medium transition ${
+                requests === preset.requests && timeWindow === preset.timeWindow
+                  ? "bg-[var(--primary)] text-white shadow-md"
+                  : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+              title={preset.description}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AISettingsPage = function () {
@@ -296,40 +409,150 @@ const AISettingsPage = function () {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">Generate Questions Limit</label>
-                <input
-                  value={activeForm.generationRateLimit}
-                  onChange={(event) =>
-                    mutateForm((current) => ({ ...current, generationRateLimit: event.target.value }))
-                  }
-                  className={fieldClass}
-                  placeholder="Example: 15 per minute"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Modify Questions Limit</label>
-                <input
-                  value={activeForm.modificationRateLimit}
-                  onChange={(event) =>
-                    mutateForm((current) => ({ ...current, modificationRateLimit: event.target.value }))
-                  }
-                  className={fieldClass}
-                  placeholder="Example: 15 per minute"
-                />
-              </div>
-              <label className="inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-              <input
-                type="checkbox"
-                checked={activeForm.fallbackToGroundedRag}
-                onChange={(event) =>
-                  mutateForm((current) => ({ ...current, fallbackToGroundedRag: event.target.checked }))
-                }
-                className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
+            <div className="mt-6 space-y-4">
+              <RateLimitControl
+                label="Assessment Generation Limit"
+                value={activeForm.generationRateLimit}
+                onChangeRequests={(requests) => {
+                  const { timeWindow } = parseRateLimit(activeForm.generationRateLimit);
+                  mutateForm((current) => ({
+                    ...current,
+                    generationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                onChangeTimeWindow={(timeWindow) => {
+                  const { requests } = parseRateLimit(activeForm.generationRateLimit);
+                  mutateForm((current) => ({
+                    ...current,
+                    generationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                onApplyPreset={(requests, timeWindow) => {
+                  mutateForm((current) => ({
+                    ...current,
+                    generationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                description="Controls the frequency at which faculty can request new assessment questions"
               />
+
+              <RateLimitControl
+                label="Assessment Modification Limit"
+                value={activeForm.modificationRateLimit}
+                onChangeRequests={(requests) => {
+                  const { timeWindow } = parseRateLimit(activeForm.modificationRateLimit);
+                  mutateForm((current) => ({
+                    ...current,
+                    modificationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                onChangeTimeWindow={(timeWindow) => {
+                  const { requests } = parseRateLimit(activeForm.modificationRateLimit);
+                  mutateForm((current) => ({
+                    ...current,
+                    modificationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                onApplyPreset={(requests, timeWindow) => {
+                  mutateForm((current) => ({
+                    ...current,
+                    modificationRateLimit: formatRateLimit(requests, timeWindow),
+                  }));
+                }}
+                description="Controls the frequency at which faculty can modify/refine assessment questions"
+              />
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex gap-3">
+                <FiAlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900">Rate Limiting Guidelines</p>
+                  <ul className="mt-1 space-y-1 text-xs text-amber-800">
+                    <li>• <strong>Local LLM (Ollama):</strong> Can handle higher limits (20-50/min)</li>
+                    <li>• <strong>Cloud API (Gemini/OpenAI):</strong> Check your API plan and adjust accordingly</li>
+                    <li>• <strong>Production:</strong> Start conservative and increase based on actual usage</li>
+                  </ul>
+                </div>
+              </div>
+
+              <label className="inline-flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={activeForm.fallbackToGroundedRag}
+                  onChange={(event) =>
+                    mutateForm((current) => ({ ...current, fallbackToGroundedRag: event.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-[var(--primary)] focus:ring-[var(--primary)]"
+                />
                 Fall back to grounded RAG if the external provider is unavailable
               </label>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-purple-100 p-3 text-purple-700">
+                <FiSliders className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">System Prompts</p>
+                <p className="text-sm text-slate-500">
+                  Configure LLM behavior for assessment generation and student chat responses.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Assessment Generation System Prompt</label>
+                <textarea
+                  value={activeForm.assessmentSystemPrompt || ""}
+                  onChange={(event) =>
+                    mutateForm((current) => ({ ...current, assessmentSystemPrompt: event.target.value }))
+                  }
+                  className={`${fieldClass} min-h-24 resize-y`}
+                  placeholder="Instructions for the LLM when generating assessment questions..."
+                />
+                <p className="mt-1 text-xs text-slate-500">Used when faculty generate new assessment questions</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">Assessment Modification System Prompt</label>
+                <textarea
+                  value={activeForm.assessmentModifySystemPrompt || ""}
+                  onChange={(event) =>
+                    mutateForm((current) => ({ ...current, assessmentModifySystemPrompt: event.target.value }))
+                  }
+                  className={`${fieldClass} min-h-24 resize-y`}
+                  placeholder="Instructions for the LLM when modifying assessment questions..."
+                />
+                <p className="mt-1 text-xs text-slate-500">Used when faculty modify generated assessment questions</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">Student Chat System Prompt</label>
+                <textarea
+                  value={activeForm.studentChatSystemPrompt || ""}
+                  onChange={(event) =>
+                    mutateForm((current) => ({ ...current, studentChatSystemPrompt: event.target.value }))
+                  }
+                  className={`${fieldClass} min-h-24 resize-y`}
+                  placeholder="Instructions for the LLM when answering student subject questions..."
+                />
+                <p className="mt-1 text-xs text-slate-500">Used when students ask questions in subject chat</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">Assessment User Prompt Template</label>
+                <textarea
+                  value={activeForm.assessmentUserPromptTemplate || ""}
+                  onChange={(event) =>
+                    mutateForm((current) => ({ ...current, assessmentUserPromptTemplate: event.target.value }))
+                  }
+                  className={`${fieldClass} min-h-24 resize-y`}
+                  placeholder="Template for faculty custom prompts: {subject}, {difficulty}, {questionCount}, {totalMarks}"
+                />
+                <p className="mt-1 text-xs text-slate-500">Template available to faculty when setting custom generation prompts. Use placeholders like {'{subject}'}, {'{difficulty}'}, etc.</p>
+              </div>
             </div>
           </div>
 

@@ -4,6 +4,7 @@ from ..models import (
     AdministrationStaff,
     ClassEnrollment,
     Faculty,
+    FacultySubjectAssignment,
     InstituteClass,
     Parent,
     Role,
@@ -99,9 +100,28 @@ def seed_test_db():
     parent = Parent(user_id=parent_user.id)
     db.session.add(parent)
 
-    # Create subject
-    subject = Subject(name="Mathematics", code="MATH-9", description="Math for Class 9")
-    db.session.add(subject)
+    # Create subjects for the class
+    subjects = [
+        Subject(name="Mathematics", code="MATH-9", description="Math for Class 9"),
+        Subject(name="Physics", code="PHY-9", description="Physics for Class 9"),
+        Subject(name="Chemistry", code="CHM-9", description="Chemistry for Class 9"),
+        Subject(name="Biology", code="BIO-9", description="Biology for Class 9"),
+        Subject(name="English", code="ENG-9", description="English for Class 9"),
+    ]
+    db.session.add_all(subjects)
+    db.session.flush()
+
+    # Create FacultySubjectAssignment for each subject
+    for subject in subjects:
+        assignment = FacultySubjectAssignment(
+            faculty_id=faculty.id,
+            subject_id=subject.id,
+            class_id=institute_class.id,
+            academic_year="2025-2026",
+        )
+        db.session.add(assignment)
+
+    db.session.flush()
 
     # Create upcoming course
     course = UpcomingCourse(

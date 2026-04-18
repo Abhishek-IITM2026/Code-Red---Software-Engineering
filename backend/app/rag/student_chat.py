@@ -333,6 +333,14 @@ def _try_generate_llm_answer(
         f"{json.dumps(prompt_payload, ensure_ascii=True)}"
     )
 
+    system_prompt = str(ai_settings.get("studentChatSystemPrompt") or "").strip() or (
+        "You are an empathetic, knowledgeable academic tutor dedicated to student learning. When answering: (1) provide accurate, well-explained answers "
+        "grounded strictly in the course materials provided, (2) break down complex concepts into digestible pieces using clear examples and analogies, "
+        "(3) encourage critical thinking by explaining the 'why' behind concepts, (4) acknowledge limitations in your knowledge and course context, "
+        "(5) suggest follow-up topics for deeper learning, (6) maintain an encouraging tone that builds student confidence, "
+        "(7) cite specific course materials and units when referencing content. Return valid JSON with a polished, well-formatted Markdown answer field that reads naturally."
+    )
+    
     try:
         response_payload = post_external_chat_completion(
             provider=provider,
@@ -340,9 +348,7 @@ def _try_generate_llm_answer(
             api_key=api_key,
             model=model,
             prompt=prompt,
-            system_prompt=(
-                "You are a careful academic tutor. Return concise JSON that matches the required schema, and make the answer field polished Markdown."
-            ),
+            system_prompt=system_prompt,
             temperature=float(ai_settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(ai_settings.get("maxTokens", 900) or 900),
         )

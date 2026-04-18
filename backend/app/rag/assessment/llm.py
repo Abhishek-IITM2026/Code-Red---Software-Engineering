@@ -75,6 +75,14 @@ def try_generate_llm_grounded_questions(
         f"{json.dumps(prompt_payload, ensure_ascii=True)}"
     )
 
+    system_prompt = str(settings.get("assessmentSystemPrompt") or "").strip() or (
+        "You are an expert academic assessment creator specializing in generating high-quality, pedagogically sound exam questions. "
+        "Your questions must: (1) be grounded strictly in the provided course context, (2) be clear, unambiguous, and free of typos, "
+        "(3) match the specified difficulty level with appropriate cognitive complexity, (4) test meaningful concepts rather than trivial recall, "
+        "(5) have correct answers with complete justification, and (6) maintain academic rigor. "
+        "Ensure options in multiple choice are plausible but clearly distinguishable. Return only valid JSON without markdown formatting or commentary."
+    )
+    
     try:
         response_payload = post_external_chat_completion(
             provider=provider,
@@ -82,10 +90,7 @@ def try_generate_llm_grounded_questions(
             api_key=api_key,
             model=model,
             prompt=prompt,
-            system_prompt=(
-                "You are a careful academic assessment generator. "
-                "Use only the provided context and return machine-readable JSON."
-            ),
+            system_prompt=system_prompt,
             temperature=float(settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(settings.get("maxTokens", 1200) or 1200),
         )
@@ -194,6 +199,14 @@ def try_modify_llm_questions(
         f"{json.dumps(prompt_payload, ensure_ascii=True)}"
     )
 
+    system_prompt = str(settings.get("assessmentModifySystemPrompt") or "").strip() or (
+        "You are an expert academic assessment editor. When modifying assessment questions: (1) preserve the pedagogical intent and difficulty level, "
+        "(2) maintain strict grounding in the provided course context, (3) ensure all changes improve clarity without reducing rigor, "
+        "(4) verify that correct answers remain accurate and complete, (5) check that question stems are grammatically correct and unambiguous, "
+        "(6) ensure options are appropriately calibrated to the difficulty level. "
+        "Return only valid JSON without markdown formatting or commentary."
+    )
+    
     try:
         response_payload = post_external_chat_completion(
             provider=provider,
@@ -201,10 +214,7 @@ def try_modify_llm_questions(
             api_key=api_key,
             model=model,
             prompt=prompt,
-            system_prompt=(
-                "You are a careful academic assessment editor. "
-                "Return only strict JSON matching the requested schema."
-            ),
+            system_prompt=system_prompt,
             temperature=float(settings.get("temperature", 0.2) or 0.2),
             max_tokens=int(settings.get("maxTokens", 1200) or 1200),
         )
