@@ -1,4 +1,4 @@
-import { FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiHash, FiPrinter, FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiDownload, FiHash, FiPrinter, FiTrendingUp, FiUser } from "react-icons/fi";
 import type { SalarySlip, SalaryYearSummary } from "../../features/administration/data/payrollData";
 import { formatCurrency } from "../../features/administration/data/payrollData";
 import Button from "./Button";
@@ -6,11 +6,18 @@ import Button from "./Button";
 interface SalarySlipPanelProps {
   slip: SalarySlip;
   yearSummary: SalaryYearSummary;
+  onDownloadPdf?: (slipId: string, staffName: string, monthLabel: string, year: string) => void;
 }
 
-const SalarySlipPanel = ({ slip, yearSummary }: SalarySlipPanelProps) => {
+const SalarySlipPanel = ({ slip, yearSummary, onDownloadPdf }: SalarySlipPanelProps) => {
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = () => {
+    if (onDownloadPdf && slip.id) {
+      onDownloadPdf(slip.id, slip.staffName, slip.monthLabel || slip.monthKey, slip.year);
+    }
   };
 
   return (
@@ -36,6 +43,15 @@ const SalarySlipPanel = ({ slip, yearSummary }: SalarySlipPanelProps) => {
               className="bg-white"
             >
               Print Slip
+            </Button>
+            <Button
+              variant="outline"
+              size="small"
+              onClick={handleDownloadPdf}
+              icon={<FiDownload className="h-4 w-4" />}
+              className="bg-white"
+            >
+              Download PDF
             </Button>
             <span
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${

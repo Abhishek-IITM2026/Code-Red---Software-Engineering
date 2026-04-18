@@ -958,7 +958,8 @@ class SalarySlip(db.Model):
     __tablename__ = "salary_slips"
 
     id = db.Column(db.Integer, primary_key=True)
-    staff_id = db.Column(db.String(50), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    staff_id = db.Column(db.String(50), nullable=False, index=True)  # Legacy field, kept for compatibility
     staff_name = db.Column(db.String(200), nullable=False)
     employee_code = db.Column(db.String(50), nullable=False)
     role = db.Column(db.String(100), nullable=False)
@@ -985,14 +986,54 @@ class SalarySlip(db.Model):
     total_deductions = db.Column(db.Float, nullable=False, default=0)
     net_salary = db.Column(db.Float, nullable=False, default=0)
 
+    user = db.relationship("User", backref=db.backref("salary_slips", lazy=True))
+
+    @property
+    def normalized_staff_id(self) -> str:
+        return str(self.user_id) if self.user_id is not None else self.staff_id
+
+    @property
+    def normalized_staff_name(self) -> str:
+        if self.user is not None:
+            full_name = f"{self.user.first_name} {self.user.last_name}".strip()
+            if full_name:
+                return full_name
+        return self.staff_name
+
+    @property
+    def normalized_employee_code(self) -> str:
+        admin_profile = getattr(self.user, "administration_profile", None) if self.user is not None else None
+        if admin_profile is not None and admin_profile.employee_code:
+            return admin_profile.employee_code
+        return self.employee_code
+
+    @property
+    def normalized_role(self) -> str:
+        admin_profile = getattr(self.user, "administration_profile", None) if self.user is not None else None
+        if admin_profile is not None and admin_profile.designation:
+            return admin_profile.designation
+        if self.user is not None and self.user.title:
+            return self.user.title
+        return self.role
+
+    @property
+    def normalized_department(self) -> str:
+        admin_profile = getattr(self.user, "administration_profile", None) if self.user is not None else None
+        if admin_profile is not None and admin_profile.department:
+            return admin_profile.department
+        if self.user is not None and self.user.faculty is not None and self.user.faculty.subject_specialization:
+            return self.user.faculty.subject_specialization
+        return self.department
+
     def to_dict(self):
         return {
             "id": str(self.id),
-            "staffId": self.staff_id,
-            "staffName": self.staff_name,
-            "employeeCode": self.employee_code,
-            "role": self.role,
-            "department": self.department,
+            "userId": str(self.user_id) if self.user_id else None,
+            "staffId": self.normalized_staff_id,
+            "staffName": self.normalized_staff_name,
+            "employeeCode": self.normalized_employee_code,
+            "role": self.normalized_role,
+            "department": self.normalized_department,
             "category": self.category,
             "bankAccount": self.bank_account,
             "year": self.year,

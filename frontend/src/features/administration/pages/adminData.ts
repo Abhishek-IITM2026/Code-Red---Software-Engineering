@@ -154,7 +154,7 @@ export const promotionStudents: PromotionCandidate[] = [
 
 export const staffRecords: StaffRecord[] = [
   {
-    id: "ST-201",
+    id: "FAC-001",
     employeeCode: "EMP-010",
     name: "Ananya Menon",
     category: "Teaching",
@@ -165,7 +165,7 @@ export const staffRecords: StaffRecord[] = [
     status: "Active",
   },
   {
-    id: "ST-202",
+    id: "FAC-002",
     employeeCode: "EMP-011",
     name: "Rahul Varma",
     category: "Teaching",
@@ -176,7 +176,7 @@ export const staffRecords: StaffRecord[] = [
     status: "Active",
   },
   {
-    id: "ST-203",
+    id: "STAFF-001",
     employeeCode: "EMP-022",
     name: "Sujatha Devi",
     category: "Non-Teaching",
@@ -187,7 +187,7 @@ export const staffRecords: StaffRecord[] = [
     status: "Active",
   },
   {
-    id: "ST-204",
+    id: "STAFF-002",
     employeeCode: "EMP-026",
     name: "Mahesh Kumar",
     category: "Non-Teaching",
@@ -201,7 +201,7 @@ export const staffRecords: StaffRecord[] = [
 
 export const staffFinancialRecords: StaffFinancialRecord[] = [
   {
-    staffId: "ST-201",
+    staffId: "FAC-001",
     staffName: "Ananya Menon",
     category: "Teaching",
     role: "Mathematics Teacher",
@@ -222,7 +222,7 @@ export const staffFinancialRecords: StaffFinancialRecord[] = [
     ],
   },
   {
-    staffId: "ST-202",
+    staffId: "FAC-002",
     staffName: "Rahul Varma",
     category: "Teaching",
     role: "Science Teacher",
@@ -243,7 +243,7 @@ export const staffFinancialRecords: StaffFinancialRecord[] = [
     ],
   },
   {
-    staffId: "ST-203",
+    staffId: "STAFF-001",
     staffName: "Sujatha Devi",
     category: "Non-Teaching",
     role: "Accountant",
@@ -264,7 +264,7 @@ export const staffFinancialRecords: StaffFinancialRecord[] = [
     ],
   },
   {
-    staffId: "ST-204",
+    staffId: "STAFF-002",
     staffName: "Mahesh Kumar",
     category: "Non-Teaching",
     role: "Lab Assistant",

@@ -155,10 +155,12 @@ def sync_schema_compatibility_if_needed() -> int:
     inspector = inspect(db.engine)
     tables = set(inspector.get_table_names())
     statements: list[str] = []
+    applied = 0
 
     expected_columns = {
         "assessments": {"week": "ALTER TABLE assessments ADD COLUMN week VARCHAR(50)"},
         "assignments": {"week": "ALTER TABLE assignments ADD COLUMN week VARCHAR(50)"},
+        "salary_slips": {"user_id": "ALTER TABLE salary_slips ADD COLUMN user_id INTEGER"},
     }
 
     for table_name, column_map in expected_columns.items():
@@ -171,10 +173,59 @@ def sync_schema_compatibility_if_needed() -> int:
 
     for statement in statements:
         db.session.execute(text(statement))
+        applied += 1
 
-    if statements:
+    if {"users", "administration_staff", "salary_slips"} <= tables:
+        admin_staff_columns = {column["name"] for column in inspector.get_columns("administration_staff")}
+        salary_slip_columns = {column["name"] for column in inspector.get_columns("salary_slips")}
+        if {"user_id", "employee_code"} <= admin_staff_columns and "user_id" in salary_slip_columns:
+            linked_salary_slips = db.session.execute(
+                text(
+                    """
+                    UPDATE salary_slips
+                    SET user_id = (
+                        SELECT a.user_id
+                        FROM administration_staff a
+                        WHERE a.employee_code = salary_slips.employee_code
+                        LIMIT 1
+                    )
+                    WHERE user_id IS NULL
+                      AND EXISTS (
+                        SELECT 1
+                        FROM administration_staff a
+                        WHERE a.employee_code = salary_slips.employee_code
+                    )
+                    """
+                )
+            )
+            applied += int(linked_salary_slips.rowcount or 0)
+        if {"user_id", "employee_code"} <= admin_staff_columns and {"user_id", "employee_code"} <= salary_slip_columns:
+            missing_staff_profiles = db.session.execute(
+                text(
+                    """
+                    INSERT INTO administration_staff (user_id, department, designation, employee_code, created_at, updated_at)
+                    SELECT
+                        s.user_id,
+                        COALESCE(MAX(NULLIF(s.department, '')), COALESCE(MAX(f.subject_specialization), 'General')),
+                        COALESCE(MAX(NULLIF(s.role, '')), COALESCE(MAX(u.title), 'Staff')),
+                        COALESCE(MAX(NULLIF(s.employee_code, '')), 'EMP-' || printf('%03d', s.user_id)),
+                        CURRENT_TIMESTAMP,
+                        CURRENT_TIMESTAMP
+                    FROM salary_slips s
+                    JOIN users u ON u.id = s.user_id
+                    LEFT JOIN faculties f ON f.user_id = u.id
+                    LEFT JOIN administration_staff a ON a.user_id = s.user_id
+                    WHERE s.user_id IS NOT NULL
+                      AND a.user_id IS NULL
+                    GROUP BY s.user_id
+                    """
+                )
+            )
+            applied += int(missing_staff_profiles.rowcount or 0)
+
+    if applied:
         db.session.commit()
-    return len(statements)
+    return applied
 
 
 def list_program_courses_for_class(

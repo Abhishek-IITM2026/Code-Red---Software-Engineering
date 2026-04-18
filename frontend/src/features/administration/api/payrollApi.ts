@@ -202,15 +202,54 @@ export const payrollApi = createApi({
       invalidatesTags: ['SalarySlips'],
     }),
 
-    downloadSalarySlip: builder.mutation<
-      { url: string },
-      { salarySlipId: string; format: 'pdf' | 'excel' }
-    >({
-      query: ({ salarySlipId, format }) => ({
-        url: `/payroll/salary-slips/${salarySlipId}/download`,
-        method: 'GET',
-        params: { format },
-      }),
+        // PDF Download - using raw fetch
+    downloadSalarySlip: builder.mutation<Blob, string>({
+      queryFn: async (salarySlipId, api) => {
+        try {
+          const state = api.getState() as RootState;
+          const token = state.auth.token;
+          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3500/api';
+          
+          const response = await fetch(`${baseUrl}/payroll/salary-slips/${salarySlipId}/download`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+            },
+          });
+          
+          if (!response.ok) {
+            return { error: { status: response.status, data: await response.json() } };
+          }
+          
+          const blob = await response.blob();
+          return { data: blob };
+        } catch (error) {
+          return { error: { status: 500, data: String(error) } };
+        }
+      },
+    }),
+    downloadMySalarySlip: builder.mutation<Blob, string>({
+      queryFn: async (salarySlipId, api) => {
+        try {
+          const state = api.getState() as RootState;
+          const token = state.auth.token;
+          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3500/api';
+          
+          const response = await fetch(`${baseUrl}/payroll/me/salary-slips/${salarySlipId}/download`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+            },
+          });
+          
+          if (!response.ok) {
+            return { error: { status: response.status, data: await response.json() } };
+          }
+          
+          const blob = await response.blob();
+          return { data: blob };
+        } catch (error) {
+          return { error: { status: 500, data: String(error) } };
+        }
+      },
     }),
 
     // Payroll Management
@@ -347,6 +386,7 @@ export const {
   useGetEmployeeSalarySlipsQuery,
   useGenerateSalarySlipsMutation,
   useDownloadSalarySlipMutation,
+  useDownloadMySalarySlipMutation,
   useListPayrollsQuery,
   useGetPayrollQuery,
   useCreatePayrollMutation,

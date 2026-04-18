@@ -107,12 +107,12 @@ const createTemplate = (
 });
 
 const demoPayrollMapping: Record<string, string> = {
-  "faculty@demo.com": "ST-201",
-  "admin@demo.com": "ST-203",
+  "faculty@demo.com": "FAC-001",
+  "admin@demo.com": "STAFF-001",
 };
 
 const salarySlipTemplates: Record<string, SalarySlipTemplate[]> = {
-  "ST-201": [
+  "FAC-001": [
     createTemplate("2026", "March", "03", 26, 2, 0, 8, 350, "Pending"),
     createTemplate("2026", "February", "02", 24, 0, 2, 4, 350, "Released"),
     createTemplate("2026", "January", "01", 26, 1, 0, 6, 350, "Released"),

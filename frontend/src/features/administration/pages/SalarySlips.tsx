@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiClock, FiCreditCard, FiFilter, FiSearch, FiTrendingUp, FiUsers } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiCreditCard, FiDownload, FiFilter, FiSearch, FiTrendingUp, FiUsers } from "react-icons/fi";
 import { Input, SalarySlipPanel } from "../../../components/common";
 import {
   calculateSalaryYearSummary,
@@ -7,9 +7,48 @@ import {
   salarySlips as mockSalarySlips,
   type SalarySlip,
 } from "../data/payrollData";
+import { useListSalarySlipsQuery, useDownloadSalarySlipMutation } from "../api/payrollApi";
+
+// Normalize API response to match local type
+const normalizeApiSlip = (apiSlip: any): SalarySlip => ({
+  id: apiSlip.id,
+  staffId: apiSlip.staffId || apiSlip.staff_id,
+  staffName: apiSlip.staffName || apiSlip.staff_name,
+  employeeCode: apiSlip.employeeCode || apiSlip.employee_code,
+  role: apiSlip.role,
+  department: apiSlip.department,
+  category: apiSlip.category || 'Teaching',
+  bankAccount: apiSlip.bankAccount || apiSlip.bank_account,
+  year: apiSlip.year,
+  monthKey: apiSlip.monthKey || apiSlip.month_key,
+  monthLabel: apiSlip.monthLabel || apiSlip.month_label,
+  workingDays: apiSlip.workingDays || apiSlip.working_days || 0,
+  payableDays: apiSlip.payableDays || apiSlip.payable_days || 0,
+  paidLeaveDays: apiSlip.paidLeaveDays || apiSlip.paid_leave_days || 0,
+  unpaidLeaveDays: apiSlip.unpaidLeaveDays || apiSlip.unpaid_leave_days || 0,
+  overtimeHours: apiSlip.overtimeHours || apiSlip.overtime_hours || 0,
+  overtimeRate: apiSlip.overtimeRate || apiSlip.overtime_rate || 0,
+  paymentMode: apiSlip.paymentMode || apiSlip.payment_mode || 'Bank Transfer',
+  generatedOn: apiSlip.generatedOn || apiSlip.generated_on,
+  payoutStatus: (apiSlip.payoutStatus || apiSlip.payout_status || 'Pending') as 'Released' | 'Pending',
+  baseSalary: apiSlip.baseSalary || apiSlip.base_salary || 0,
+  allowances: (apiSlip.allowances || []).map((a: any) => ({ label: a.name || a.label, amount: a.amount })),
+  overtimeAmount: apiSlip.overtimeAmount || apiSlip.overtime_amount || 0,
+  unpaidLeaveDeduction: apiSlip.unpaidLeaveDeduction || apiSlip.unpaid_leave_deduction || 0,
+  grossSalary: apiSlip.grossSalary || apiSlip.gross_salary || 0,
+  totalDeductions: apiSlip.totalDeductions || apiSlip.total_deductions || 0,
+  netSalary: apiSlip.netSalary || apiSlip.net_salary || 0,
+});
 
 const SalarySlips = function () {
-  const salarySlips = mockSalarySlips;
+  const { data: apiSalarySlips, isLoading: isLoadingApi, refetch: refetchSlips } = useListSalarySlipsQuery(undefined!);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  
+  // Use API data if available, otherwise fall back to mock data
+  const salarySlips: SalarySlip[] = (apiSalarySlips && (apiSalarySlips as any[]).length > 0) 
+    ? (apiSalarySlips as any[]).map(normalizeApiSlip) 
+    : mockSalarySlips;
+  const isLoading = isLoadingApi && !(apiSalarySlips && (apiSalarySlips as any[]).length > 0);
   const yearOptions = useMemo(
     () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
     [salarySlips],
@@ -32,7 +71,28 @@ const SalarySlips = function () {
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [detailYear, setDetailYear] = useState(selectedYear);
   const [detailMonth, setDetailMonth] = useState(selectedMonth);
+  const [downloadSalarySlip] = useDownloadSalarySlipMutation();
 
+  // PDF Download handler
+  const handleDownloadPdf = async (slipId: string, slipName: string, monthLabel: string, year: string) => {
+    setDownloadError(null);
+    try {
+      const result = await downloadSalarySlip(slipId).unwrap();
+      if (result) {
+        const url = window.URL.createObjectURL(result);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `SalarySlip_${slipName.replace(/\s+/g, '_')}_${monthLabel}_${year}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Failed to download salary slip:', err);
+      setDownloadError('Failed to download salary slip PDF. Please try again.');
+    }
+  };
   useEffect(() => {
     if (!selectedYear && yearOptions.length > 0) {
       setSelectedYear(yearOptions[0]);
@@ -397,7 +457,13 @@ const SalarySlips = function () {
           </div>
 
           {selectedSlip ? (
-            selectedSlipYearSummary ? <SalarySlipPanel slip={selectedSlip} yearSummary={selectedSlipYearSummary} /> : null
+            selectedSlipYearSummary ? (
+              <SalarySlipPanel 
+                slip={selectedSlip} 
+                yearSummary={selectedSlipYearSummary}
+                onDownloadPdf={handleDownloadPdf}
+              />
+            ) : null
           ) : (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 shadow-sm">
               No salary slip is available for the selected month and year.

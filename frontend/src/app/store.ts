@@ -7,6 +7,7 @@ import { facultyApi } from '../features/faculty/api/facultyApi';
 import { parentApi } from '../features/parent/api/parentApi';
 import { adminApi } from '../features/administration/api/adminApi';
 import { leaveApi } from '../features/leave/api/leaveApi';
+import { payrollApi } from '../features/administration/api/payrollApi';
 import themeReducer from '../theme/themeSlice';
 import authReducer from '../features/auth/store/authSlice';
 
@@ -22,6 +23,7 @@ export const store = configureStore({
     [parentApi.reducerPath]: parentApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
     [leaveApi.reducerPath]: leaveApi.reducer,
+    [payrollApi.reducerPath]: payrollApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -32,7 +34,8 @@ export const store = configureStore({
       facultyApi.middleware,
       parentApi.middleware,
       adminApi.middleware,
-      leaveApi.middleware
+      leaveApi.middleware,
+      payrollApi.middleware
     ),
 });
 

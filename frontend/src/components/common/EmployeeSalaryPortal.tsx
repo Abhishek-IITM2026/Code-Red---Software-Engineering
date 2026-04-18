@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiSearch, FiTrendingUp } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiClock, FiCreditCard, FiDownload, FiSearch, FiTrendingUp } from "react-icons/fi";
 import Input from "./Input";
 import {
   calculateSalaryYearSummary,
@@ -8,6 +8,7 @@ import {
 } from "../../features/administration/data/payrollData";
 import { salarySlips as mockSalarySlips } from "../../features/administration/data/payrollData";
 import SalarySlipPanel from "./SalarySlipPanel";
+import { useDownloadMySalarySlipMutation } from "../../features/administration/api/payrollApi";
 
 interface EmployeeSalaryPortalProps {
   heading: string;
@@ -21,10 +22,36 @@ const EmployeeSalaryPortal = ({
   heading,
   eyebrow,
   description,
-  staffId: _staffId,
+  staffId,
   emptyMessage,
 }: EmployeeSalaryPortalProps) => {
-  const salarySlips = mockSalarySlips;
+  // Filter salary slips for the current user
+  const salarySlips = staffId 
+    ? mockSalarySlips.filter((slip) => slip.staffId === staffId)
+    : mockSalarySlips;
+  const [downloadMySalarySlip] = useDownloadMySalarySlipMutation();
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // PDF Download handler
+  const handleDownloadPdf = async (slipId: string, staffName: string, monthLabel: string, year: string) => {
+    setDownloadError(null);
+    try {
+      const result = await downloadMySalarySlip(slipId).unwrap();
+      if (result) {
+        const url = window.URL.createObjectURL(result);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `SalarySlip_${staffName.replace(/\s+/g, '_')}_${monthLabel}_${year}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Failed to download salary slip:', err);
+      setDownloadError('Failed to download salary slip PDF. Please try again.');
+    }
+  };
   const availableYears = useMemo(
     () => Array.from(new Set(salarySlips.map((slip) => slip.year))).sort((a, b) => b.localeCompare(a)),
     [salarySlips],
@@ -315,7 +342,7 @@ const EmployeeSalaryPortal = ({
             </div>
           </div>
 
-          <SalarySlipPanel slip={selectedSlip} yearSummary={yearSummary} />
+          <SalarySlipPanel slip={selectedSlip} yearSummary={yearSummary} onDownloadPdf={handleDownloadPdf} />
         </section>
       )}
     </div>

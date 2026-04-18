@@ -1,6 +1,6 @@
 # Codebase Context
 
-Updated: 2026-04-10
+Updated: 2026-04-18
 
 This is the repo-level context file for coding agents and future maintainers. It is based on the current code, not older summary docs.
 
@@ -206,7 +206,7 @@ Current modules:
 - `inventory`: stock and request management
 - `authority`: authority assignment endpoints
 - `administration`: dashboard, student/staff CRUD, courses, promotions, finance, reports
-- `payroll`: payroll and salary-slip workflows
+- `payroll`: payroll and salary-slip workflows with PDF download for salary slips
 - `jobs`: job-status endpoints
 - `leave`: leave request, review, cancel, stats
 - `parent`: parent profile and child dashboards
@@ -218,6 +218,16 @@ Current modules:
 Two notable implementation details:
 
 - assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/` plus the shared multimodal retrieval layer in `backend/app/rag/multimodal/`
+- payroll salary-slip records are now normalized around related staff tables: `salary_slips.user_id` links to `users`, and employee metadata such as name, employee code, designation, and department should be resolved from `users` plus `administration_staff` instead of treating duplicated salary-slip columns as the source of truth
+
+### Payroll and staff normalization
+
+- `backend/app/models/core.py` keeps legacy salary-slip columns like `staff_id`, `staff_name`, `employee_code`, and `department` for compatibility, but API serialization now resolves those values from related `User` and `AdministrationStaff` records whenever `salary_slips.user_id` is present.
+- `backend/app/features/payroll/routes.py` accepts `staffId` as either a normalized user id or a legacy staff code, but payroll ownership and filtering should prefer `user_id`.
+- `backend/app/features/administration/routes.py` now reads salary history and syncs pending slips by staff relation (`user_id`) instead of by duplicated `employee_code` on the salary-slip row.
+- Seed data now creates an `AdministrationStaff` record for faculty users as well as non-teaching staff so payroll metadata has a normalized employee-code and department source for all staff categories.
+- `backend/app/services/courses.py::sync_schema_compatibility_if_needed()` also backfills missing `administration_staff` rows from existing salary slips in SQLite dev databases, which helps old local `app.db` files adapt without a manual reset.
+- That same SQLite compatibility sync is also responsible for adding `salary_slips.user_id` to older local databases and backfilling it from `administration_staff.employee_code` before payroll queries rely on the normalized relation.
 - faculty question generation now treats provider-response, retrieval, and normalization failures as logged fallback conditions where possible, instead of letting unexpected provider/RAG exceptions surface as generic internal errors
 - student subject pages now expose a multimodal RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials, can return cited snippets plus referenced images, persists conversation history in Mongo, and is expected to return polished Markdown for rich frontend rendering
 - student chat history endpoints now exist at `GET /api/v1/students/me/subjects/<subject_id>/chat/history` and `DELETE /api/v1/students/me/subjects/<subject_id>/chat/history`
@@ -487,6 +497,7 @@ Feature areas under `frontend/src/features/`:
 - Faculty assessment generation now expects richer material payloads, can preview question images/context snippets, can see the active AI runtime summary, and can jump directly into manual question authoring from the generate step.
 - Faculty assessment generation now also supports optional `week` targeting and `questionStyle` values `technical`, `nonTechnical`, and `mixed`.
 - Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`.
+- Salary slip PDF download is available in administration and faculty salary slip pages through `GET /api/v1/payroll/salary-slips/<id>/download` and `GET /api/v1/payroll/me/salary-slips/<id>/download`, powered by ReportLab PDF generation.
 - Administration AI settings now cover the shared student/faculty runtime, including provider labels for `grounded-rag`, `ollama`, `gemini`, `openai-compatible-cloud`, and `openai-compatible-local`, plus `mode: local | api-key`.
 - Student subject chat is integrated into `frontend/src/features/student/pages/SubjectDetails.tsx`, loads/saves backend chat history, passes an optional selected week, renders referenced images, and uses browser-native speech recognition and speech synthesis when available.
 - Student assessments are now available at `/student/assessments`, showing published assessments grouped by week with submission status and due date tracking

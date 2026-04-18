@@ -285,11 +285,19 @@ def _format_currency(amount: float | int | None) -> str:
 
 
 def _financial_history(employee_code: str):
-    slips = (
-        SalarySlip.query.filter_by(employee_code=employee_code)
-        .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
-        .all()
-    )
+    staff_profile = AdministrationStaff.query.filter_by(employee_code=employee_code).first()
+    if staff_profile is not None:
+        slips = (
+            SalarySlip.query.filter_by(user_id=staff_profile.user_id)
+            .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
+            .all()
+        )
+    else:
+        slips = (
+            SalarySlip.query.filter_by(employee_code=employee_code)
+            .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
+            .all()
+        )
     history = []
     for index, slip in enumerate(slips):
         previous_salary = slips[index + 1].gross_salary if index + 1 < len(slips) else slip.gross_salary
@@ -433,7 +441,7 @@ def _get_financial_staff_or_404(user_id: int):
 
 def _sync_payroll_slips_for_staff(staff: dict[str, str], profile: StaffFinancialProfile, earnings_breakdown_override=None):
     slips = (
-        SalarySlip.query.filter_by(employee_code=staff["employeeCode"])
+        SalarySlip.query.filter_by(user_id=int(staff["id"]))
         .order_by(SalarySlip.month_key.desc(), SalarySlip.id.desc())
         .all()
     )

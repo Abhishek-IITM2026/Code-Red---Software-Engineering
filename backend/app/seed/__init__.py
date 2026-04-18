@@ -265,6 +265,17 @@ def seed_database(force: bool = False):
             for index, user in enumerate(admin_staff_users)
         ]
     )
+    db.session.add_all(
+        [
+            AdministrationStaff(
+                user_id=user.id,
+                department=FACULTY_SPECIALIZATIONS[index],
+                designation=f"{FACULTY_SPECIALIZATIONS[index]} Teacher",
+                employee_code=f"EMP-{index + 10:03d}",
+            )
+            for index, user in enumerate(faculty_users)
+        ]
+    )
 
     faculties: list[Faculty] = []
     for index, user in enumerate(faculty_users):
@@ -745,6 +756,7 @@ def seed_database(force: bool = False):
     for index, user in enumerate(admin_staff_users):
         salary_rows.append(
             SalarySlip(
+                user_id=user.id,
                 staff_id=f"STAFF-{index + 1:03d}",
                 staff_name=f"{user.first_name} {user.last_name}",
                 employee_code=f"ADM-{index + 1:03d}",
@@ -780,6 +792,7 @@ def seed_database(force: bool = False):
     for index, user in enumerate(faculty_users):
         salary_rows.append(
             SalarySlip(
+                user_id=user.id,
                 staff_id=f"FAC-{index + 1:03d}",
                 staff_name=f"{user.first_name} {user.last_name}",
                 employee_code=f"EMP-{index + 10:03d}",
