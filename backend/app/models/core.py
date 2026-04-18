@@ -1073,3 +1073,288 @@ class StaffFinancialProfile(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     user = db.relationship("User", backref=db.backref("financial_profile", uselist=False))
+
+
+class StaffSalaryAccount(db.Model):
+    __tablename__ = "staff_salary_accounts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    account_holder_name = db.Column(db.String(200), nullable=False)
+    bank_name = db.Column(db.String(200), nullable=False)
+    account_number = db.Column(db.String(64), nullable=False)
+    ifsc_code = db.Column(db.String(20), nullable=False)
+    branch_name = db.Column(db.String(200))
+    account_type = db.Column(db.String(50), nullable=False, default="Savings")
+    upi_id = db.Column(db.String(100))
+    proof_document_url = db.Column(db.String(500))
+    proof_document_name = db.Column(db.String(255))
+    verification_status = db.Column(db.String(20), nullable=False, default="approved")
+    approved_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    approved_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("salary_account", uselist=False))
+    approver = db.relationship("User", foreign_keys=[approved_by])
+
+    def masked_account_number(self) -> str:
+        digits = self.account_number or ""
+        if len(digits) <= 4:
+            return digits
+        return f"{'*' * max(len(digits) - 4, 0)}{digits[-4:]}"
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "userId": str(self.user_id),
+            "staffId": str(self.user_id),
+            "accountHolderName": self.account_holder_name,
+            "bankName": self.bank_name,
+            "accountNumber": self.account_number,
+            "maskedAccountNumber": self.masked_account_number(),
+            "ifscCode": self.ifsc_code,
+            "branchName": self.branch_name,
+            "accountType": self.account_type,
+            "upiId": self.upi_id,
+            "proofDocumentUrl": self.proof_document_url,
+            "proofDocumentName": self.proof_document_name,
+            "verificationStatus": self.verification_status,
+            "approvedBy": (
+                f"{self.approver.first_name} {self.approver.last_name}".strip()
+                if self.approver is not None
+                else None
+            ),
+            "approvedAt": self.approved_at.isoformat() if self.approved_at else None,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
+class SalaryStructure(db.Model):
+    __tablename__ = "salary_structures"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    effective_from = db.Column(db.Date, nullable=False)
+    effective_to = db.Column(db.Date)
+    pay_frequency = db.Column(db.String(30), nullable=False, default="monthly")
+    currency = db.Column(db.String(10), nullable=False, default="INR")
+    base_salary = db.Column(db.Float, nullable=False, default=0)
+    allowances_json = db.Column(db.JSON, nullable=False, default=list)
+    deductions_json = db.Column(db.JSON, nullable=False, default=list)
+    overtime_rate_per_hour = db.Column(db.Float, nullable=False, default=0)
+    overtime_rate_per_day = db.Column(db.Float, nullable=False, default=0)
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default="active")
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    approved_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("salary_structures", lazy=True))
+    creator = db.relationship("User", foreign_keys=[created_by])
+    approver = db.relationship("User", foreign_keys=[approved_by])
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "userId": str(self.user_id),
+            "staffId": str(self.user_id),
+            "effectiveFrom": self.effective_from.isoformat() if self.effective_from else None,
+            "effectiveTo": self.effective_to.isoformat() if self.effective_to else None,
+            "payFrequency": self.pay_frequency,
+            "currency": self.currency,
+            "baseSalary": self.base_salary,
+            "allowances": self.allowances_json or [],
+            "deductions": self.deductions_json or [],
+            "overtimeRatePerHour": self.overtime_rate_per_hour,
+            "overtimeRatePerDay": self.overtime_rate_per_day,
+            "notes": self.notes,
+            "status": self.status,
+            "createdBy": (
+                f"{self.creator.first_name} {self.creator.last_name}".strip()
+                if self.creator is not None
+                else None
+            ),
+            "approvedBy": (
+                f"{self.approver.first_name} {self.approver.last_name}".strip()
+                if self.approver is not None
+                else None
+            ),
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
+class SalaryAccountChangeRequest(db.Model):
+    __tablename__ = "salary_account_change_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    requested_data_json = db.Column(db.JSON, nullable=False, default=dict)
+    proof_document_url = db.Column(db.String(500))
+    proof_document_name = db.Column(db.String(255))
+    proof_notes = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default="pending")
+    requested_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    reviewed_at = db.Column(db.DateTime)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    review_notes = db.Column(db.Text)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("salary_account_change_requests", lazy=True))
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "userId": str(self.user_id),
+            "staffId": str(self.user_id),
+            "requestedData": self.requested_data_json or {},
+            "proofDocumentUrl": self.proof_document_url,
+            "proofDocumentName": self.proof_document_name,
+            "proofNotes": self.proof_notes,
+            "status": self.status,
+            "requestedAt": self.requested_at.isoformat() if self.requested_at else None,
+            "reviewedAt": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "reviewedBy": (
+                f"{self.reviewer.first_name} {self.reviewer.last_name}".strip()
+                if self.reviewer is not None
+                else None
+            ),
+            "reviewNotes": self.review_notes,
+        }
+
+
+class FinancialTransaction(db.Model):
+    __tablename__ = "financial_transactions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_code = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    transaction_type = db.Column(db.String(50), nullable=False, index=True)
+    category = db.Column(db.String(100), nullable=False)
+    direction = db.Column(db.String(20), nullable=False, default="outflow")
+    amount = db.Column(db.Float, nullable=False, default=0)
+    currency = db.Column(db.String(10), nullable=False, default="INR")
+    payment_method = db.Column(db.String(50), nullable=False, default="bank_transfer")
+    status = db.Column(db.String(20), nullable=False, default="completed")
+    reference_type = db.Column(db.String(100))
+    reference_id = db.Column(db.String(100))
+    related_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    counterparty_name = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    metadata_json = db.Column(db.JSON, nullable=False, default=dict)
+    occurred_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    related_user = db.relationship("User", foreign_keys=[related_user_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "transactionCode": self.transaction_code,
+            "transactionType": self.transaction_type,
+            "category": self.category,
+            "direction": self.direction,
+            "amount": self.amount,
+            "currency": self.currency,
+            "paymentMethod": self.payment_method,
+            "status": self.status,
+            "referenceType": self.reference_type,
+            "referenceId": self.reference_id,
+            "relatedUserId": str(self.related_user_id) if self.related_user_id is not None else None,
+            "counterpartyName": self.counterparty_name,
+            "description": self.description,
+            "metadata": self.metadata_json or {},
+            "occurredAt": self.occurred_at.isoformat() if self.occurred_at else None,
+            "createdBy": (
+                f"{self.creator.first_name} {self.creator.last_name}".strip()
+                if self.creator is not None
+                else None
+            ),
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Vendor(db.Model):
+    __tablename__ = "vendors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    contact_person = db.Column(db.String(200))
+    email = db.Column(db.String(255))
+    phone = db.Column(db.String(50))
+    gst_number = db.Column(db.String(50))
+    address = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "name": self.name,
+            "contactPerson": self.contact_person,
+            "email": self.email,
+            "phone": self.phone,
+            "gstNumber": self.gst_number,
+            "address": self.address,
+            "notes": self.notes,
+            "isActive": self.is_active,
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }
+
+
+class InventoryProcurement(db.Model):
+    __tablename__ = "inventory_procurements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey("inventory_items.id"), nullable=False, index=True)
+    vendor_id = db.Column(db.Integer, db.ForeignKey("vendors.id"), nullable=False, index=True)
+    quantity = db.Column(db.Integer, nullable=False, default=0)
+    unit_price = db.Column(db.Float, nullable=False, default=0)
+    tax_amount = db.Column(db.Float, nullable=False, default=0)
+    shipping_cost = db.Column(db.Float, nullable=False, default=0)
+    total_amount = db.Column(db.Float, nullable=False, default=0)
+    invoice_number = db.Column(db.String(100))
+    purchase_date = db.Column(db.Date, nullable=False)
+    payment_status = db.Column(db.String(20), nullable=False, default="pending")
+    received_status = db.Column(db.String(20), nullable=False, default="received")
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    inventory_item = db.relationship("InventoryItem", backref=db.backref("procurements", lazy=True))
+    vendor = db.relationship("Vendor", backref=db.backref("procurements", lazy=True))
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "inventoryItemId": str(self.inventory_item_id),
+            "inventoryItemName": self.inventory_item.name if self.inventory_item is not None else None,
+            "vendorId": str(self.vendor_id),
+            "vendorName": self.vendor.name if self.vendor is not None else None,
+            "quantity": self.quantity,
+            "unitPrice": self.unit_price,
+            "taxAmount": self.tax_amount,
+            "shippingCost": self.shipping_cost,
+            "totalAmount": self.total_amount,
+            "invoiceNumber": self.invoice_number,
+            "purchaseDate": self.purchase_date.isoformat() if self.purchase_date else None,
+            "paymentStatus": self.payment_status,
+            "receivedStatus": self.received_status,
+            "notes": self.notes,
+            "createdBy": (
+                f"{self.creator.first_name} {self.creator.last_name}".strip()
+                if self.creator is not None
+                else None
+            ),
+            "createdAt": self.created_at.isoformat(),
+            "updatedAt": self.updated_at.isoformat(),
+        }

@@ -1,7 +1,7 @@
 import re
 from datetime import date, datetime, timedelta
 
-from flask import Blueprint, g, request
+from flask import Blueprint, Response, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
@@ -15,12 +15,17 @@ from ...models import (
     CoursePayment,
     Faculty,
     FacultySubjectAssignment,
+    FinancialTransaction,
+    InventoryProcurement,
     InstituteClass,
     Mark,
     Parent,
     Role,
     SalarySlip,
+    SalaryAccountChangeRequest,
+    SalaryStructure,
     StaffFinancialProfile,
+    StaffSalaryAccount,
     Student,
     Subject,
     User,
@@ -30,17 +35,24 @@ from ...models import (
 from ...schemas import (
     AISettingsWriteRequest,
     CourseWriteRequest,
+    FinancialTransactionListQuery,
     FinancialRecordCreateRequest,
     FinancialRecordWriteRequest,
     PromotionActionRequest,
+    SalaryAccountChangeReviewRequest,
+    SalaryPaymentRequest,
+    SalaryStructureWriteRequest,
+    StaffSalaryAccountWriteRequest,
     StaffStatusRequest,
     StaffWriteRequest,
     StudentApprovalRequest,
     StudentStatusRequest,
     StudentWriteRequest,
     parse_json,
+    parse_query,
 )
 from ...services.ai_settings import get_ai_settings, update_ai_settings
+from ...services.finance import create_financial_transaction, export_transactions_csv, export_transactions_pdf, export_transactions_xlsx
 from ...services.query import get_attendance_stats, get_performance_summary
 
 
@@ -266,6 +278,12 @@ def _parse_iso_date(value: str, field_name: str) -> date:
         raise ApiError(422, "VALIDATION_ERROR", f"{field_name} must be a valid ISO date.") from exc
 
 
+def _parse_optional_iso_date(value: str | None, field_name: str) -> date | None:
+    if value is None or not str(value).strip():
+        return None
+    return _parse_iso_date(value, field_name)
+
+
 def _parse_currency_amount(value: str | int | float, field_name: str) -> float:
     if isinstance(value, (int, float)):
         return float(value)
@@ -465,6 +483,50 @@ def _sync_payroll_slips_for_staff(staff: dict[str, str], profile: StaffFinancial
             slip.bank_account = bank_account
         slip.gross_salary = current_salary + slip.overtime_amount
         slip.net_salary = slip.gross_salary - slip.total_deductions
+
+
+def _get_salary_account_or_404(user_id: int):
+    account = StaffSalaryAccount.query.filter_by(user_id=user_id).first()
+    if account is None:
+        raise ApiError(404, "SALARY_ACCOUNT_NOT_FOUND", "Salary account was not found.")
+    return account
+
+
+def _upsert_salary_account(user: User, payload: StaffSalaryAccountWriteRequest, approved_by: int | None):
+    account = getattr(user, "salary_account", None)
+    if account is None:
+        account = StaffSalaryAccount(user_id=user.id)
+        db.session.add(account)
+    account.account_holder_name = payload.account_holder_name
+    account.bank_name = payload.bank_name
+    account.account_number = payload.account_number
+    account.ifsc_code = payload.ifsc_code
+    account.branch_name = payload.branch_name
+    account.account_type = payload.account_type
+    account.upi_id = payload.upi_id
+    account.proof_document_url = payload.proof_document_url
+    account.proof_document_name = payload.proof_document_name
+    account.verification_status = "approved"
+    account.approved_by = approved_by
+    account.approved_at = datetime.utcnow()
+    return account
+
+
+def _transaction_query(filters: FinancialTransactionListQuery):
+    query = FinancialTransaction.query
+    if filters.transaction_type:
+        query = query.filter_by(transaction_type=filters.transaction_type)
+    if filters.category:
+        query = query.filter_by(category=filters.category)
+    if filters.status:
+        query = query.filter_by(status=filters.status)
+    if filters.related_user_id and str(filters.related_user_id).isdigit():
+        query = query.filter_by(related_user_id=int(filters.related_user_id))
+    if filters.date_from:
+        query = query.filter(FinancialTransaction.occurred_at >= datetime.fromisoformat(filters.date_from))
+    if filters.date_to:
+        query = query.filter(FinancialTransaction.occurred_at <= datetime.fromisoformat(filters.date_to))
+    return query.order_by(FinancialTransaction.occurred_at.desc(), FinancialTransaction.id.desc())
 
 
 def _promotion_candidate(student: Student):
@@ -1234,3 +1296,186 @@ def update_financial_record(user_id: int):
     _sync_payroll_slips_for_staff(staff, profile)
     db.session.commit()
     return success_response(_financial_record_payload(staff))
+
+
+@administration_bp.get("/salary-accounts")
+@roles_required("administration")
+def list_salary_accounts():
+    return success_response(
+        [account.to_dict() for account in StaffSalaryAccount.query.order_by(StaffSalaryAccount.user_id.asc()).all()]
+    )
+
+
+@administration_bp.get("/salary-accounts/<int:user_id>")
+@roles_required("administration")
+def get_salary_account(user_id: int):
+    return success_response(_get_salary_account_or_404(user_id).to_dict())
+
+
+@administration_bp.put("/salary-accounts/<int:user_id>")
+@roles_required("administration")
+def upsert_salary_account(user_id: int):
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    payload = parse_json(StaffSalaryAccountWriteRequest, request.get_json())
+    account = _upsert_salary_account(user, payload, g.current_user.id)
+    db.session.commit()
+    return success_response(account.to_dict())
+
+
+@administration_bp.get("/salary-structures")
+@roles_required("administration")
+def list_salary_structures():
+    query = SalaryStructure.query
+    if request.args.get("staffId") and request.args["staffId"].isdigit():
+        query = query.filter_by(user_id=int(request.args["staffId"]))
+    return success_response([structure.to_dict() for structure in query.order_by(SalaryStructure.updated_at.desc()).all()])
+
+
+@administration_bp.put("/salary-structures/<int:user_id>")
+@roles_required("administration")
+def upsert_salary_structure(user_id: int):
+    user = db.session.get(User, user_id)
+    if user is None:
+        raise ApiError(404, "STAFF_NOT_FOUND", "Staff member was not found.")
+    payload = parse_json(SalaryStructureWriteRequest, request.get_json())
+    structure = (
+        SalaryStructure.query.filter_by(user_id=user_id, status="active")
+        .order_by(SalaryStructure.id.desc())
+        .first()
+    )
+    if structure is None:
+        structure = SalaryStructure(user_id=user_id, created_by=g.current_user.id)
+        db.session.add(structure)
+    structure.effective_from = _parse_iso_date(payload.effective_from, "effectiveFrom")
+    structure.effective_to = _parse_optional_iso_date(payload.effective_to, "effectiveTo")
+    structure.pay_frequency = payload.pay_frequency
+    structure.currency = payload.currency
+    structure.base_salary = payload.base_salary
+    structure.allowances_json = payload.allowances
+    structure.deductions_json = payload.deductions
+    structure.overtime_rate_per_hour = payload.overtime_rate_per_hour
+    structure.overtime_rate_per_day = payload.overtime_rate_per_day
+    structure.notes = payload.notes
+    structure.status = payload.status
+    structure.approved_by = g.current_user.id
+    db.session.commit()
+    return success_response(structure.to_dict())
+
+
+@administration_bp.get("/salary-account-change-requests")
+@roles_required("administration")
+def list_salary_account_change_requests():
+    query = SalaryAccountChangeRequest.query
+    if request.args.get("status"):
+        query = query.filter_by(status=request.args["status"])
+    return success_response([item.to_dict() for item in query.order_by(SalaryAccountChangeRequest.requested_at.desc()).all()])
+
+
+@administration_bp.patch("/salary-account-change-requests/<int:request_id>")
+@roles_required("administration")
+def review_salary_account_change_request(request_id: int):
+    change_request = db.session.get(SalaryAccountChangeRequest, request_id)
+    if change_request is None:
+        raise ApiError(404, "CHANGE_REQUEST_NOT_FOUND", "Salary account change request was not found.")
+    payload = parse_json(SalaryAccountChangeReviewRequest, request.get_json())
+    change_request.status = payload.status
+    change_request.review_notes = payload.review_notes
+    change_request.reviewed_by = g.current_user.id
+    change_request.reviewed_at = datetime.utcnow()
+    if payload.status == "approved":
+        user = db.session.get(User, change_request.user_id)
+        if user is not None:
+            account_payload = StaffSalaryAccountWriteRequest.model_validate(change_request.requested_data_json or {})
+            _upsert_salary_account(user, account_payload, g.current_user.id)
+    db.session.commit()
+    return success_response(change_request.to_dict())
+
+
+@administration_bp.post("/salary-slips/<string:slip_id>/pay")
+@roles_required("administration")
+def pay_salary_slip(slip_id: str):
+    from ..payroll.routes import _find_slip_by_id
+
+    slip = _find_slip_by_id(slip_id)
+    if slip is None:
+        raise ApiError(404, "SALARY_SLIP_NOT_FOUND", "Salary slip not found.")
+    payload = parse_json(SalaryPaymentRequest, request.get_json())
+    if slip.payout_status == "Released":
+        raise ApiError(409, "SALARY_ALREADY_PAID", "This salary slip is already marked as released.")
+    slip.payout_status = "Released"
+    slip.payment_mode = payload.payment_method
+    create_financial_transaction(
+        transaction_type="salary_payment",
+        category="payroll",
+        direction="outflow",
+        amount=slip.net_salary,
+        payment_method=payload.payment_method,
+        status="completed",
+        reference_type="salary_slip",
+        reference_id=str(slip.id),
+        related_user_id=slip.user_id,
+        counterparty_name=slip.normalized_staff_name,
+        description=payload.notes or f"Salary payment for {slip.month_label}",
+        metadata={
+            "referenceNumber": payload.reference_number,
+            "staffId": slip.normalized_staff_id,
+            "employeeCode": slip.normalized_employee_code,
+        },
+        created_by=g.current_user.id,
+    )
+    db.session.commit()
+    return success_response(slip.to_dict())
+
+
+@administration_bp.get("/transactions")
+@roles_required("administration")
+def list_financial_transactions():
+    filters = parse_query(FinancialTransactionListQuery, request.args.to_dict())
+    transactions = _transaction_query(filters).all()
+    return success_response([transaction.to_dict() for transaction in transactions])
+
+
+@administration_bp.get("/transactions/export")
+@roles_required("administration")
+def export_financial_transactions():
+    format_name = request.args.get("format", "csv").strip().lower()
+    filter_args = request.args.to_dict()
+    filter_args.pop("format", None)
+    filters = parse_query(FinancialTransactionListQuery, filter_args)
+    transactions = _transaction_query(filters).all()
+    if format_name == "xlsx":
+        content = export_transactions_xlsx(transactions)
+        return Response(
+            content,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="financial-transactions.xlsx"'},
+        )
+    if format_name == "pdf":
+        content = export_transactions_pdf(transactions)
+        return Response(
+            content,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="financial-transactions.pdf"'},
+        )
+    csv_content = export_transactions_csv(transactions)
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="financial-transactions.csv"'},
+    )
+
+
+@administration_bp.get("/procurement-summary")
+@roles_required("administration")
+def get_procurement_summary():
+    procurements = InventoryProcurement.query.order_by(InventoryProcurement.purchase_date.desc()).all()
+    total_expense = round(sum(float(item.total_amount or 0) for item in procurements), 2)
+    return success_response(
+        {
+            "count": len(procurements),
+            "totalExpense": total_expense,
+            "recent": [item.to_dict() for item in procurements[:10]],
+        }
+    )

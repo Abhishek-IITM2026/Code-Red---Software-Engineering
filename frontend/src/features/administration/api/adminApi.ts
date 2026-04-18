@@ -209,6 +209,42 @@ export interface ExamParticipationReport {
   totalMarks?: number;
 }
 
+export interface FinancialTransaction {
+  id: string;
+  transactionCode: string;
+  transactionType: string;
+  category: string;
+  direction: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  relatedUserId?: string | null;
+  counterpartyName?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
+  occurredAt?: string | null;
+  createdBy?: string | null;
+  createdAt?: string | null;
+}
+
+export interface SalaryAccountApprovalRequest {
+  id: string;
+  userId: string;
+  staffId: string;
+  requestedData: Record<string, string | null>;
+  proofDocumentUrl?: string | null;
+  proofDocumentName?: string | null;
+  proofNotes?: string | null;
+  status: string;
+  requestedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  reviewNotes?: string | null;
+}
+
 export const adminApi = createApi({
   reducerPath: 'adminApi',
   baseQuery: fetchBaseQuery({
@@ -230,6 +266,8 @@ export const adminApi = createApi({
     'AISettings',
     'Finance',
     'Reports',
+    'Transactions',
+    'SalaryAccountApprovals',
   ],
   endpoints: (builder) => ({
     // Dashboard
@@ -479,6 +517,57 @@ export const adminApi = createApi({
       },
     }),
 
+    listFinancialTransactions: builder.query<FinancialTransaction[], { transactionType?: string; status?: string; category?: string } | void>({
+      query: (params) => ({
+        url: '/administration/transactions',
+        params: params || undefined,
+      }),
+      providesTags: ['Transactions'],
+    }),
+
+    exportFinancialTransactions: builder.mutation<
+      Blob,
+      { format: 'csv' | 'pdf' | 'xlsx'; transactionType?: string; status?: string; category?: string }
+    >({
+      queryFn: async ({ format, ...params }, api) => {
+        try {
+          const state = api.getState() as RootState;
+          const token = state.auth.token;
+          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3500/api';
+          const search = new URLSearchParams({ format, ...Object.fromEntries(Object.entries(params).filter(([, value]) => value)) }).toString();
+          const response = await fetch(`${baseUrl}/administration/transactions/export?${search}`, {
+            headers: { Authorization: token ? `Bearer ${token}` : '' },
+          });
+          if (!response.ok) {
+            return { error: { status: response.status, data: await response.text() } };
+          }
+          return { data: await response.blob() };
+        } catch (error) {
+          return { error: { status: 500, data: String(error) } };
+        }
+      },
+    }),
+
+    listSalaryAccountApprovalRequests: builder.query<SalaryAccountApprovalRequest[], { status?: string } | void>({
+      query: (params) => ({
+        url: '/administration/salary-account-change-requests',
+        params: params || undefined,
+      }),
+      providesTags: ['SalaryAccountApprovals'],
+    }),
+
+    reviewSalaryAccountApprovalRequest: builder.mutation<
+      SalaryAccountApprovalRequest,
+      { id: string; status: 'approved' | 'rejected'; reviewNotes?: string }
+    >({
+      query: ({ id, ...data }) => ({
+        url: `/administration/salary-account-change-requests/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: ['SalaryAccountApprovals', 'Finance'],
+    }),
+
     // Reports
     getAttendanceReports: builder.query<AttendanceReport[], void>({
       query: () => '/administration/reports/attendance',
@@ -532,6 +621,10 @@ export const {
   useGetFinancialRecordQuery,
   useCreateFinancialRecordMutation,
   useUpdateFinancialRecordMutation,
+  useListFinancialTransactionsQuery,
+  useExportFinancialTransactionsMutation,
+  useListSalaryAccountApprovalRequestsQuery,
+  useReviewSalaryAccountApprovalRequestMutation,
   useGetAttendanceReportsQuery,
   useGetExamParticipationReportsQuery,
   useGenerateReportMutation,

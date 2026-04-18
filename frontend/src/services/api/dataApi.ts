@@ -120,7 +120,8 @@ export type AuthorityKey =
   | 'admissionApproval'
   | 'staffCreation'
   | 'studentPromotion'
-  | 'scheduleCreation';
+  | 'scheduleCreation'
+  | 'procurementManagement';
 
 export interface AuthorityAssignment {
   staffId: string;

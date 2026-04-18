@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { FiArrowRight, FiBarChart2, FiBook, FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText } from "react-icons/fi";
+import { FiArrowRight, FiBarChart2, FiBook, FiCalendar, FiCheckCircle, FiClock, FiDollarSign, FiFileText, FiShoppingCart } from "react-icons/fi";
 import { useGetFacultyClassOverviewQuery, useGetPerformanceStudentsQuery } from "../api/facultyApi";
 import { useGetAssessmentsQuery } from "../api/assessmentApi";
 
@@ -10,6 +10,7 @@ const quickActions = [
   { title: "Schedule", description: "Check your timetable and upcoming teaching sessions.", path: "/faculty/schedule", icon: FiCalendar },
   { title: "Apply Leave", description: "Submit leave requests and track admin approval from your portal.", path: "/faculty/leave", icon: FiClock },
   { title: "Salary Slip", description: "Review monthly salary based on leave, payable days, and overtime hours.", path: "/faculty/salary-slip", icon: FiDollarSign },
+  { title: "Request Materials", description: "Ask administration for inventory items and track approval status.", path: "/faculty/request-materials", icon: FiShoppingCart },
 ];
 
 const FacultyDashboard = function () {

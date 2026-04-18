@@ -8,7 +8,14 @@ import {
 } from "../../features/administration/data/payrollData";
 import { salarySlips as mockSalarySlips } from "../../features/administration/data/payrollData";
 import SalarySlipPanel from "./SalarySlipPanel";
-import { useDownloadMySalarySlipMutation } from "../../features/administration/api/payrollApi";
+import {
+  useCreateMyPayrollAccountChangeRequestMutation,
+  useDownloadMySalarySlipMutation,
+  useGetMyPayrollAccountDetailsQuery,
+  useListMyPayrollAccountChangeRequestsQuery,
+  useListMySalarySlipsQuery,
+  useSaveMyPayrollAccountDetailsMutation,
+} from "../../features/administration/api/payrollApi";
 
 interface EmployeeSalaryPortalProps {
   heading: string;
@@ -25,12 +32,82 @@ const EmployeeSalaryPortal = ({
   staffId,
   emptyMessage,
 }: EmployeeSalaryPortalProps) => {
-  // Filter salary slips for the current user
-  const salarySlips = staffId 
-    ? mockSalarySlips.filter((slip) => slip.staffId === staffId)
-    : mockSalarySlips;
+  const { data: apiSalarySlips } = useListMySalarySlipsQuery();
+  const { data: accountDetails } = useGetMyPayrollAccountDetailsQuery();
+  const { data: accountChangeRequests = [] } = useListMyPayrollAccountChangeRequestsQuery();
   const [downloadMySalarySlip] = useDownloadMySalarySlipMutation();
+  const [saveMyPayrollAccountDetails] = useSaveMyPayrollAccountDetailsMutation();
+  const [createMyPayrollAccountChangeRequest] = useCreateMyPayrollAccountChangeRequestMutation();
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    accountHolderName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    branchName: "",
+    accountType: "Savings",
+    upiId: "",
+    proofDocumentUrl: "",
+    proofDocumentName: "",
+  });
+  const [proofFile, setProofFile] = useState<File | null>(null);
+
+  const normalizeApiSlip = (apiSlip: any): SalarySlip => ({
+    id: apiSlip.id,
+    staffId: apiSlip.staffId || apiSlip.staff_id,
+    staffName: apiSlip.staffName || apiSlip.staff_name,
+    employeeCode: apiSlip.employeeCode || apiSlip.employee_code,
+    role: apiSlip.role,
+    department: apiSlip.department,
+    category: apiSlip.category || "Teaching",
+    bankAccount: apiSlip.bankAccount || apiSlip.bank_account,
+    year: apiSlip.year,
+    monthKey: apiSlip.monthKey || apiSlip.month_key,
+    monthLabel: apiSlip.monthLabel || apiSlip.month_label,
+    workingDays: apiSlip.workingDays || apiSlip.working_days || 0,
+    payableDays: apiSlip.payableDays || apiSlip.payable_days || 0,
+    paidLeaveDays: apiSlip.paidLeaveDays || apiSlip.paid_leave_days || 0,
+    unpaidLeaveDays: apiSlip.unpaidLeaveDays || apiSlip.unpaid_leave_days || 0,
+    overtimeHours: apiSlip.overtimeHours || apiSlip.overtime_hours || 0,
+    overtimeRate: apiSlip.overtimeRate || apiSlip.overtime_rate || 0,
+    paymentMode: apiSlip.paymentMode || apiSlip.payment_mode || "Bank Transfer",
+    generatedOn: apiSlip.generatedOn || apiSlip.generated_on,
+    payoutStatus: (apiSlip.payoutStatus || apiSlip.payout_status || "Pending") as "Released" | "Pending",
+    baseSalary: apiSlip.baseSalary || apiSlip.base_salary || 0,
+    allowances: (apiSlip.allowances || []).map((a: any) => ({ label: a.name || a.label, amount: a.amount })),
+    overtimeAmount: apiSlip.overtimeAmount || apiSlip.overtime_amount || 0,
+    unpaidLeaveDeduction: apiSlip.unpaidLeaveDeduction || apiSlip.unpaid_leave_deduction || 0,
+    grossSalary: apiSlip.grossSalary || apiSlip.gross_salary || 0,
+    totalDeductions: apiSlip.totalDeductions || apiSlip.total_deductions || 0,
+    netSalary: apiSlip.netSalary || apiSlip.net_salary || 0,
+  });
+  const salarySlips = apiSalarySlips && apiSalarySlips.length > 0
+    ? apiSalarySlips.map(normalizeApiSlip)
+    : (staffId ? mockSalarySlips.filter((slip) => slip.staffId === staffId) : mockSalarySlips);
+
+  useEffect(() => {
+    if (!accountDetails) return;
+    setAccountForm({
+      accountHolderName: accountDetails.accountHolderName || "",
+      bankName: accountDetails.bankName || "",
+      accountNumber: accountDetails.accountNumber || "",
+      ifscCode: accountDetails.ifscCode || "",
+      branchName: accountDetails.branchName || "",
+      accountType: accountDetails.accountType || "Savings",
+      upiId: accountDetails.upiId || "",
+      proofDocumentUrl: accountDetails.proofDocumentUrl || "",
+      proofDocumentName: accountDetails.proofDocumentName || "",
+    });
+  }, [accountDetails]);
+
+  const canSubmitAccountForm =
+    !!accountForm.accountHolderName.trim() &&
+    !!accountForm.bankName.trim() &&
+    !!accountForm.accountNumber.trim() &&
+    !!accountForm.ifscCode.trim() &&
+    (!!proofFile || !!accountForm.proofDocumentName.trim());
 
   // PDF Download handler
   const handleDownloadPdf = async (slipId: string, staffName: string, monthLabel: string, year: string) => {
@@ -145,6 +222,128 @@ const EmployeeSalaryPortal = ({
           </div>
         </div>
       </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Salary Account Details</p>
+              <p className="mt-1 text-sm text-slate-500">Submit or update payout bank details through one guided form with required proof.</p>
+            </div>
+            <button
+              onClick={() => setShowAccountModal(true)}
+              className="rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white"
+            >
+              Submit Salary Account Details
+            </button>
+          </div>
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <p className="text-sm text-slate-500">Current status</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{accountDetails?.verificationStatus || "not submitted"}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {accountDetails?.bankName ? `${accountDetails.bankName} • ${accountDetails.maskedAccountNumber || accountDetails.accountNumber}` : "No approved salary account is stored yet."}
+            </p>
+          </div>
+          {accountMessage ? <p className="mt-4 text-sm text-slate-700">{accountMessage}</p> : null}
+        </article>
+
+        <article className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <p className="text-lg font-semibold text-slate-900">Account Change Requests</p>
+          <p className="mt-1 text-sm text-slate-500">Track proof-based updates sent to administration.</p>
+          <div className="mt-4 space-y-3">
+            {accountChangeRequests.length > 0 ? accountChangeRequests.map((request) => (
+              <div key={request.id} className="rounded-2xl border border-slate-200 px-4 py-3">
+                <p className="font-semibold text-slate-900">{request.status}</p>
+                <p className="text-sm text-slate-500">{request.proofDocumentName || "No proof file"} • {request.requestedAt || "Pending"}</p>
+                {request.reviewNotes ? <p className="mt-2 text-sm text-slate-600">{request.reviewNotes}</p> : null}
+              </div>
+            )) : <p className="text-sm text-slate-500">No change requests submitted yet.</p>}
+          </div>
+        </article>
+      </section>
+
+      {showAccountModal ? (
+        <div className="fixed inset-0 z-50 bg-black/40 p-4">
+          <div className="flex min-h-full items-center justify-center">
+            <div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xl font-semibold text-slate-900">Salary Account Submission</p>
+                  <p className="mt-1 text-sm text-slate-500">Required fields and a proof document help prevent payroll errors.</p>
+                </div>
+                <button onClick={() => setShowAccountModal(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600">Close</button>
+              </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <input required value={accountForm.accountHolderName} onChange={(event) => setAccountForm((current) => ({ ...current, accountHolderName: event.target.value }))} placeholder="Account holder name *" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input required value={accountForm.bankName} onChange={(event) => setAccountForm((current) => ({ ...current, bankName: event.target.value }))} placeholder="Bank name *" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input required value={accountForm.accountNumber} onChange={(event) => setAccountForm((current) => ({ ...current, accountNumber: event.target.value }))} placeholder="Account number *" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input required value={accountForm.ifscCode} onChange={(event) => setAccountForm((current) => ({ ...current, ifscCode: event.target.value }))} placeholder="IFSC code *" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={accountForm.branchName} onChange={(event) => setAccountForm((current) => ({ ...current, branchName: event.target.value }))} placeholder="Branch name" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={accountForm.accountType} onChange={(event) => setAccountForm((current) => ({ ...current, accountType: event.target.value }))} placeholder="Account type" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={accountForm.upiId} onChange={(event) => setAccountForm((current) => ({ ...current, upiId: event.target.value }))} placeholder="UPI ID" className="rounded-2xl border border-slate-200 px-4 py-3" />
+                <input value={accountForm.proofDocumentUrl} onChange={(event) => setAccountForm((current) => ({ ...current, proofDocumentUrl: event.target.value }))} placeholder="Proof document URL" className="rounded-2xl border border-slate-200 px-4 py-3" />
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-slate-700">Proof document *</label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    setProofFile(file);
+                    setAccountForm((current) => ({
+                      ...current,
+                      proofDocumentName: file?.name || current.proofDocumentName,
+                      proofDocumentUrl: file ? URL.createObjectURL(file) : current.proofDocumentUrl,
+                    }));
+                  }}
+                  className="mt-2 block w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                />
+                <p className="mt-2 text-xs text-slate-500">{accountForm.proofDocumentName || "No document selected yet."}</p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  disabled={!canSubmitAccountForm}
+                  onClick={async () => {
+                    setAccountMessage(null);
+                    try {
+                      await saveMyPayrollAccountDetails(accountForm).unwrap();
+                      setAccountMessage("Salary account details saved.");
+                      setShowAccountModal(false);
+                    } catch (error: any) {
+                      setAccountMessage(error?.data?.error?.message || "Unable to save salary account details.");
+                    }
+                  }}
+                  className="rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Save Directly
+                </button>
+                <button
+                  disabled={!canSubmitAccountForm}
+                  onClick={async () => {
+                    setAccountMessage(null);
+                    try {
+                      await createMyPayrollAccountChangeRequest({
+                        requestedData: accountForm,
+                        proofDocumentUrl: accountForm.proofDocumentUrl,
+                        proofDocumentName: accountForm.proofDocumentName,
+                        proofNotes: "Submitted from employee salary portal.",
+                      }).unwrap();
+                      setAccountMessage("Account change request sent for admin approval.");
+                      setShowAccountModal(false);
+                    } catch (error: any) {
+                      setAccountMessage(error?.data?.error?.message || "Unable to submit account change request.");
+                    }
+                  }}
+                  className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                >
+                  Send For Approval
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {!isViewingSlip ? (
         <section className="space-y-6">

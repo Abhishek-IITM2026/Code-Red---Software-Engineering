@@ -13,9 +13,10 @@ import FacultySchedule from "../pages/FacultySchedule";
 import CreateSchedule from "../pages/CreateSchedule";
 import AssessmentBuilder from "../pages/AssessmentBuilder";
 import FacultySalarySlip from "../pages/FacultySalarySlip";
+import RequestMaterials from "../pages/RequestMaterials";
 import PromoteStudents from "../../administration/pages/PromoteStudents";
 import Profile from "../../auth/pages/Profile";
-import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign, FiArrowUpCircle, FiBookOpen } from "react-icons/fi";
+import { FiGrid, FiBook, FiCheckCircle, FiFileText, FiUpload, FiUsers, FiBarChart2, FiCalendar, FiPlusCircle, FiUser, FiClock, FiDollarSign, FiArrowUpCircle, FiBookOpen, FiShoppingCart } from "react-icons/fi";
 import type { AuthorityKey } from "../../administration/utils/authorityAccess";
 
 export interface FacultyRouteConfig {
@@ -76,6 +77,13 @@ const facultyRoutes: FacultyRouteConfig[] = [
     element: <FacultyMaterials />,
     icon: FiUpload,
     description: "Upload study materials"
+  },
+  {
+    name: "Request Materials",
+    path: "/faculty/request-materials",
+    element: <RequestMaterials />,
+    icon: FiShoppingCart,
+    description: "Request inventory items and send them to administration for approval"
   },
   {
     name: "Student Performance",

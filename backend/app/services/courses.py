@@ -8,6 +8,7 @@ from ..api.errors import ApiError
 from ..extensions import db
 from ..models import CourseEnrollment, CoursePayment, Parent, Student, Subject, User
 from .email import send_email_message
+from .finance import create_financial_transaction
 
 
 def get_primary_parent(student_id: int) -> Parent | None:
@@ -375,6 +376,31 @@ def record_course_payment(
     enrollment.amount_paid = round(float(enrollment.amount_paid or 0) + normalized_amount, 2)
     enrollment.sync_status()
     db.session.flush()
+    create_financial_transaction(
+        transaction_type="course_payment",
+        category="course_fee",
+        direction="inflow",
+        amount=payment.amount,
+        payment_method=payment.payment_method,
+        status=payment.status,
+        reference_type="course_payment",
+        reference_id=str(payment.id),
+        related_user_id=payment.student.user_id if payment.student is not None else None,
+        counterparty_name=(
+            f"{payment.paid_by.first_name} {payment.paid_by.last_name}".strip()
+            if payment.paid_by is not None
+            else None
+        ),
+        description=f"Course payment for {payment.course.name if payment.course is not None else 'Course'}",
+        metadata={
+            "receiptNumber": payment.receipt_number,
+            "courseId": str(payment.course_id),
+            "studentId": str(payment.student_id),
+            "parentId": str(payment.parent_id) if payment.parent_id is not None else None,
+        },
+        occurred_at=payment.paid_at,
+        created_by=actor.id,
+    )
 
     _send_payment_receipt_email(payment)
     return payment

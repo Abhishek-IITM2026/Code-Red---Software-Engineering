@@ -103,6 +103,42 @@ export interface Bonus {
   updatedAt: string;
 }
 
+export interface PayrollAccountDetails {
+  id: string;
+  userId: string;
+  staffId: string;
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  maskedAccountNumber?: string;
+  ifscCode: string;
+  branchName?: string | null;
+  accountType: string;
+  upiId?: string | null;
+  proofDocumentUrl?: string | null;
+  proofDocumentName?: string | null;
+  verificationStatus: string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollAccountChangeRequest {
+  id: string;
+  userId: string;
+  staffId: string;
+  requestedData: Record<string, string | null>;
+  proofDocumentUrl?: string | null;
+  proofDocumentName?: string | null;
+  proofNotes?: string | null;
+  status: string;
+  requestedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  reviewNotes?: string | null;
+}
+
 export const payrollApi = createApi({
   reducerPath: 'payrollApi',
   baseQuery: fetchBaseQuery({
@@ -122,6 +158,8 @@ export const payrollApi = createApi({
     'Payments',
     'Adjustments',
     'Bonuses',
+    'PayrollAccount',
+    'PayrollAccountRequests',
   ],
   endpoints: (builder) => ({
     // Salary Structure
@@ -250,6 +288,53 @@ export const payrollApi = createApi({
           return { error: { status: 500, data: String(error) } };
         }
       },
+    }),
+
+    listMySalarySlips: builder.query<any[], void>({
+      query: () => '/payroll/me/salary-slips',
+      providesTags: ['SalarySlips'],
+    }),
+
+    getMyPayrollAccountDetails: builder.query<PayrollAccountDetails | null, void>({
+      query: () => '/payroll/me/account-details',
+      providesTags: ['PayrollAccount'],
+    }),
+
+    saveMyPayrollAccountDetails: builder.mutation<
+      PayrollAccountDetails,
+      Omit<
+        PayrollAccountDetails,
+        'id' | 'userId' | 'staffId' | 'maskedAccountNumber' | 'verificationStatus' | 'approvedBy' | 'approvedAt' | 'createdAt' | 'updatedAt'
+      >
+    >({
+      query: (data) => ({
+        url: '/payroll/me/account-details',
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['PayrollAccount'],
+    }),
+
+    listMyPayrollAccountChangeRequests: builder.query<PayrollAccountChangeRequest[], void>({
+      query: () => '/payroll/me/account-change-requests',
+      providesTags: ['PayrollAccountRequests'],
+    }),
+
+    createMyPayrollAccountChangeRequest: builder.mutation<
+      PayrollAccountChangeRequest,
+      {
+        requestedData: Record<string, string | null>;
+        proofDocumentUrl?: string | null;
+        proofDocumentName?: string | null;
+        proofNotes?: string | null;
+      }
+    >({
+      query: (data) => ({
+        url: '/payroll/me/account-change-requests',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: ['PayrollAccountRequests'],
     }),
 
     // Payroll Management
@@ -387,6 +472,11 @@ export const {
   useGenerateSalarySlipsMutation,
   useDownloadSalarySlipMutation,
   useDownloadMySalarySlipMutation,
+  useListMySalarySlipsQuery,
+  useGetMyPayrollAccountDetailsQuery,
+  useSaveMyPayrollAccountDetailsMutation,
+  useListMyPayrollAccountChangeRequestsQuery,
+  useCreateMyPayrollAccountChangeRequestMutation,
   useListPayrollsQuery,
   useGetPayrollQuery,
   useCreatePayrollMutation,

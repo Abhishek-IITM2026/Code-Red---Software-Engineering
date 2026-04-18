@@ -61,6 +61,11 @@ const authorityDefinitions: AuthorityDefinition[] = [
     label: "Create Schedule",
     description: "Create and manage class lecture schedules for assigned classes.",
   },
+  {
+    key: "procurementManagement",
+    label: "Manage Procurement",
+    description: "Maintain vendors and record inventory procurements plus expense entries.",
+  },
 ];
 
 const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
@@ -69,6 +74,7 @@ const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
   staffCreation: false,
   studentPromotion: false,
   scheduleCreation: false,
+  procurementManagement: false,
 });
 
 const buildAuthorities = (keys: AuthorityKey[]) => {

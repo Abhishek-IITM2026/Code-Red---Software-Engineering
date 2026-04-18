@@ -1,7 +1,12 @@
 import api from "../../../services/api/axios";
-import type { InventoryItem, StockTransaction, MaterialRequest, RequestItem } from "../types/inventory";
+import type { InventoryItem, InventoryProcurement, MaterialRequest, RequestItem, StockTransaction, Vendor } from "../types/inventory";
 
 type InventoryItemWrite = Omit<InventoryItem, "id" | "createdAt" | "updatedAt">;
+type VendorWrite = Omit<Vendor, "id" | "createdAt" | "updatedAt">;
+type ProcurementWrite = Omit<
+  InventoryProcurement,
+  "id" | "createdAt" | "updatedAt" | "inventoryItemName" | "vendorName" | "createdBy" | "totalAmount"
+>;
 type MaterialRequestCreate = {
   facultyId?: string;
   facultyName?: string;
@@ -70,6 +75,26 @@ const inventoryApi = {
         notes: item.notes,
       })),
     });
+    return response.data;
+  },
+
+  async getVendors(): Promise<Vendor[]> {
+    const response = await api.get<Vendor[]>("/inventory/vendors");
+    return response.data;
+  },
+
+  async addVendor(vendor: VendorWrite): Promise<Vendor> {
+    const response = await api.post<Vendor>("/inventory/vendors", vendor);
+    return response.data;
+  },
+
+  async getProcurements(): Promise<InventoryProcurement[]> {
+    const response = await api.get<InventoryProcurement[]>("/inventory/procurements");
+    return response.data;
+  },
+
+  async addProcurement(procurement: ProcurementWrite): Promise<InventoryProcurement> {
+    const response = await api.post<InventoryProcurement>("/inventory/procurements", procurement);
     return response.data;
   },
 };

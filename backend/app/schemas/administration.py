@@ -158,3 +158,57 @@ class FinancialRecordWriteRequest(StrictModel):
     next_review: str = Field(alias="nextReview")
     bank_account: str | None = Field(default=None, alias="bankAccount")
     earnings_breakdown: list[dict[str, str]] | None = Field(default=None, alias="earningsBreakdown")
+
+
+class StaffSalaryAccountWriteRequest(StrictModel):
+    account_holder_name: str = Field(alias="accountHolderName")
+    bank_name: str = Field(alias="bankName")
+    account_number: str = Field(alias="accountNumber")
+    ifsc_code: str = Field(alias="ifscCode")
+    branch_name: str | None = Field(default=None, alias="branchName")
+    account_type: str = Field(default="Savings", alias="accountType")
+    upi_id: str | None = Field(default=None, alias="upiId")
+    proof_document_url: str | None = Field(default=None, alias="proofDocumentUrl")
+    proof_document_name: str | None = Field(default=None, alias="proofDocumentName")
+
+
+class SalaryStructureWriteRequest(StrictModel):
+    staff_id: int = Field(alias="staffId")
+    effective_from: str = Field(alias="effectiveFrom")
+    effective_to: str | None = Field(default=None, alias="effectiveTo")
+    pay_frequency: str = Field(default="monthly", alias="payFrequency")
+    currency: str = "INR"
+    base_salary: float = Field(alias="baseSalary")
+    allowances: list[dict[str, str | int | float]] = Field(default_factory=list)
+    deductions: list[dict[str, str | int | float]] = Field(default_factory=list)
+    overtime_rate_per_hour: float = Field(default=0, alias="overtimeRatePerHour")
+    overtime_rate_per_day: float = Field(default=0, alias="overtimeRatePerDay")
+    notes: str | None = None
+    status: str = "active"
+
+
+class SalaryAccountChangeRequestCreate(StrictModel):
+    requested_data: dict[str, str | None] = Field(alias="requestedData")
+    proof_document_url: str | None = Field(default=None, alias="proofDocumentUrl")
+    proof_document_name: str | None = Field(default=None, alias="proofDocumentName")
+    proof_notes: str | None = Field(default=None, alias="proofNotes")
+
+
+class SalaryAccountChangeReviewRequest(StrictModel):
+    status: Literal["approved", "rejected"]
+    review_notes: str | None = Field(default=None, alias="reviewNotes")
+
+
+class SalaryPaymentRequest(StrictModel):
+    payment_method: str = Field(default="bank_transfer", alias="paymentMethod")
+    reference_number: str | None = Field(default=None, alias="referenceNumber")
+    notes: str | None = None
+
+
+class FinancialTransactionListQuery(StrictModel):
+    transaction_type: str | None = Field(default=None, alias="transactionType")
+    category: str | None = None
+    status: str | None = None
+    related_user_id: str | None = Field(default=None, alias="relatedUserId")
+    date_from: str | None = Field(default=None, alias="dateFrom")
+    date_to: str | None = Field(default=None, alias="dateTo")

@@ -60,6 +60,41 @@ export interface MaterialRequestForm {
   notes?: string;
 }
 
+export interface Vendor {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  gstNumber?: string;
+  address?: string;
+  notes?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryProcurement {
+  id: string;
+  inventoryItemId: string;
+  inventoryItemName?: string;
+  vendorId: string;
+  vendorName?: string;
+  quantity: number;
+  unitPrice: number;
+  taxAmount: number;
+  shippingCost: number;
+  totalAmount: number;
+  invoiceNumber?: string;
+  purchaseDate: string;
+  paymentStatus: string;
+  receivedStatus: string;
+  notes?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const inventoryCategories = [
   { id: 'stationery', name: 'Stationery', color: '#3b82f6' },
   { id: 'electronics', name: 'Electronics', color: '#8b5cf6' },

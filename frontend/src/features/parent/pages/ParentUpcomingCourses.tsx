@@ -1,10 +1,25 @@
 import { FiBookOpen, FiCalendar, FiCheckCircle, FiCreditCard, FiUsers } from "react-icons/fi";
 import ChildSelector from "../components/ChildSelector";
+import { useRecordFeePaymentMutation } from "../api/parentApi";
 import { useParentChildren } from "../useParentChildren";
 
 const ParentUpcomingCourses = function () {
   const { children, selectedChild, selectedChildId, setSelectedChildId, upcomingCourses } = useParentChildren();
   const courses = upcomingCourses;
+  const [recordFeePayment, { isLoading: isPaying }] = useRecordFeePaymentMutation();
+
+  const handlePayCourse = async (invoiceId: string, amount: number) => {
+    try {
+      await recordFeePayment({
+        invoiceId,
+        amountPaid: amount,
+        paymentMethod: "online",
+      }).unwrap();
+      window.alert("Payment recorded successfully. A receipt email has been sent.");
+    } catch (error: any) {
+      window.alert(error?.data?.error?.message || error?.data?.message || "Unable to record course payment.");
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -65,6 +80,17 @@ const ParentUpcomingCourses = function () {
                   <p>Paid: Rs. {course.enrollment.amountPaid.toLocaleString()}</p>
                   <p>Balance due: Rs. {course.enrollment.balanceDue.toLocaleString()}</p>
                 </div>
+                {course.enrollment.balanceDue > 0 ? (
+                  <button
+                    onClick={() => void handlePayCourse(course.enrollment!.id, course.enrollment!.balanceDue)}
+                    disabled={isPaying}
+                    className="mt-4 rounded-2xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {isPaying ? "Processing..." : "Pay Balance"}
+                  </button>
+                ) : (
+                  <p className="mt-4 text-sm text-emerald-700">Payment completed. Receipt emails are sent automatically after each payment.</p>
+                )}
               </div>
             ) : null}
           </article>

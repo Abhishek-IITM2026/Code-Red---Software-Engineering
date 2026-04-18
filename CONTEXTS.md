@@ -121,6 +121,7 @@ Structured relational data lives in SQLAlchemy models. Major domains include:
 - inventory, material requests
 - authority assignments
 - salary slips and staff financial profiles
+- normalized staff salary accounts, salary structures, salary-account change approvals, vendors, procurements, and unified financial transactions
 - leave requests
 
 ### Document store
@@ -219,6 +220,7 @@ Two notable implementation details:
 
 - assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/` plus the shared multimodal retrieval layer in `backend/app/rag/multimodal/`
 - payroll salary-slip records are now normalized around related staff tables: `salary_slips.user_id` links to `users`, and employee metadata such as name, employee code, designation, and department should be resolved from `users` plus `administration_staff` instead of treating duplicated salary-slip columns as the source of truth
+- finance workflows now also use dedicated tables for `staff_salary_accounts`, `salary_structures`, `salary_account_change_requests`, `financial_transactions`, `vendors`, and `inventory_procurements`
 
 ### Payroll and staff normalization
 
@@ -228,6 +230,11 @@ Two notable implementation details:
 - Seed data now creates an `AdministrationStaff` record for faculty users as well as non-teaching staff so payroll metadata has a normalized employee-code and department source for all staff categories.
 - `backend/app/services/courses.py::sync_schema_compatibility_if_needed()` also backfills missing `administration_staff` rows from existing salary slips in SQLite dev databases, which helps old local `app.db` files adapt without a manual reset.
 - That same SQLite compatibility sync is also responsible for adding `salary_slips.user_id` to older local databases and backfilling it from `administration_staff.employee_code` before payroll queries rely on the normalized relation.
+- Administration finance APIs now include salary-account CRUD, salary-structure CRUD, salary-account change-request review, salary-slip payment marking, financial transaction listing/export, and procurement summary endpoints under `backend/app/features/administration/routes.py`.
+- Payroll self-service APIs now expose `GET/PUT /api/payroll/me/account-details` plus `GET/POST /api/payroll/me/account-change-requests` for staff-managed account updates that admins can approve.
+- Unified finance logging lives in `backend/app/services/finance.py`; course payments, salary payments, and inventory procurements should create `financial_transactions` rows so report exports can include income and expense activity in one place.
+- Parent course payments still flow through `POST /api/parent/fees/<invoice_id>/payment`, and the backend sends receipt emails after successful course payments via `backend/app/services/courses.py`.
+- Inventory procurement is now authority-aware: `backend/app/features/inventory/routes.py` exposes vendor and procurement endpoints for administration users who hold the `procurementManagement` authority (or director/superadmin-level access), and procurements both increment stock and log inventory-expense transactions.
 - faculty question generation now treats provider-response, retrieval, and normalization failures as logged fallback conditions where possible, instead of letting unexpected provider/RAG exceptions surface as generic internal errors
 - student subject pages now expose a multimodal RAG-backed chatbot at `POST /api/v1/students/me/subjects/<subject_id>/chat` that answers from uploaded subject materials, can return cited snippets plus referenced images, persists conversation history in Mongo, and is expected to return polished Markdown for rich frontend rendering
 - student chat history endpoints now exist at `GET /api/v1/students/me/subjects/<subject_id>/chat/history` and `DELETE /api/v1/students/me/subjects/<subject_id>/chat/history`
@@ -498,6 +505,14 @@ Feature areas under `frontend/src/features/`:
 - Faculty assessment generation now also supports optional `week` targeting and `questionStyle` values `technical`, `nonTechnical`, and `mixed`.
 - Administration AI settings are served through RTK Query in `frontend/src/features/administration/api/adminApi.ts` and edited in `frontend/src/features/administration/pages/AISettings.tsx`.
 - Salary slip PDF download is available in administration and faculty salary slip pages through `GET /api/v1/payroll/salary-slips/<id>/download` and `GET /api/v1/payroll/me/salary-slips/<id>/download`, powered by ReportLab PDF generation.
+- Administration now also has a procurement page at `/administration/procurement` for vendor entry and inventory procurement recording, gated by the `procurementManagement` authority in the route config and frontend authority utilities.
+- Administration also has a finance-operations page at `/administration/finance-operations` that lists unified financial transactions, exports CSV/PDF ledger reports, and reviews salary-account change requests.
+- Financial transaction export now supports real `.xlsx` workbook downloads in addition to CSV and PDF through `GET /api/administration/transactions/export?format=xlsx`.
+- Administration also has a focused payment ledger page at `/administration/payment-details` that filters payment-oriented transactions such as course payments, salary payouts, and procurement payments.
+- Parent upcoming-courses UI now lets parents pay the remaining balance for enrolled courses directly from the course card and relies on the backend receipt-email flow after each recorded payment.
+- The shared employee salary portal used by administration/faculty salary-slip pages now also surfaces salary account details plus proof-backed account-change requests using the payroll self-service endpoints instead of being salary-slip only.
+- That employee salary portal now uses a single-button modal flow for salary account submission/update, with required fields and proof-document selection to reduce incomplete payroll-account submissions.
+- Faculty users now have a visible `Request Materials` route in the faculty workspace so employees can submit inventory-item requests to administration for approval using the existing inventory request workflow.
 - Administration AI settings now cover the shared student/faculty runtime, including provider labels for `grounded-rag`, `ollama`, `gemini`, `openai-compatible-cloud`, and `openai-compatible-local`, plus `mode: local | api-key`.
 - Student subject chat is integrated into `frontend/src/features/student/pages/SubjectDetails.tsx`, loads/saves backend chat history, passes an optional selected week, renders referenced images, and uses browser-native speech recognition and speech synthesis when available.
 - Student assessments are now available at `/student/assessments`, showing published assessments grouped by week with submission status and due date tracking

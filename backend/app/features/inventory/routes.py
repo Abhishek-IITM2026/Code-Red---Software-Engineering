@@ -1,20 +1,35 @@
+from datetime import date
+
 from flask import Blueprint, g, request
 
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
 from ...extensions import db
-from ...models import Faculty, InventoryItem, MaterialRequest, MaterialRequestItem
+from ...models import Faculty, InventoryItem, InventoryProcurement, MaterialRequest, MaterialRequestItem, Vendor
 from ...schemas import (
     InventoryItemPatchRequest,
+    InventoryProcurementWriteRequest,
     InventoryItemWriteRequest,
     MaterialRequestCreateRequest,
     MaterialRequestStatusUpdateRequest,
+    VendorWriteRequest,
     parse_json,
 )
+from ...services.finance import create_financial_transaction
 
 
 inventory_bp = Blueprint("inventory", __name__)
+
+
+def _has_procurement_access() -> bool:
+    if not hasattr(g, "current_user"):
+        return False
+    if g.current_user.has_any_role("director", "superadmin"):
+        return True
+    assignment = getattr(g.current_user, "authority_assignment", None)
+    authorities = assignment.authorities_json if assignment is not None else {}
+    return bool(authorities.get("procurementManagement") or authorities.get("inventoryProcurement"))
 
 
 @inventory_bp.get("/items")
@@ -150,3 +165,101 @@ def update_material_request_status(request_id: int):
                 item.inventory_item.quantity = max(0, item.inventory_item.quantity - item.quantity)
     db.session.commit()
     return success_response(material_request.to_dict())
+
+
+@inventory_bp.get("/vendors")
+@roles_required("administration")
+def list_vendors():
+    if not _has_procurement_access():
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to manage procurement vendors.")
+    return success_response([vendor.to_dict() for vendor in Vendor.query.order_by(Vendor.name.asc()).all()])
+
+
+@inventory_bp.post("/vendors")
+@roles_required("administration")
+def create_vendor():
+    if not _has_procurement_access():
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to create vendors.")
+    payload = parse_json(VendorWriteRequest, request.get_json())
+    vendor = Vendor(
+        name=payload.name,
+        contact_person=payload.contact_person,
+        email=payload.email,
+        phone=payload.phone,
+        gst_number=payload.gst_number,
+        address=payload.address,
+        notes=payload.notes,
+        is_active=payload.is_active,
+    )
+    db.session.add(vendor)
+    db.session.commit()
+    return success_response(vendor.to_dict(), status_code=201)
+
+
+@inventory_bp.get("/procurements")
+@roles_required("administration")
+def list_procurements():
+    if not _has_procurement_access():
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to view procurement records.")
+    return success_response(
+        [item.to_dict() for item in InventoryProcurement.query.order_by(InventoryProcurement.purchase_date.desc()).all()]
+    )
+
+
+@inventory_bp.post("/procurements")
+@roles_required("administration")
+def create_procurement():
+    if not _has_procurement_access():
+        raise ApiError(403, "FORBIDDEN", "You do not have permission to create procurement records.")
+    payload = parse_json(InventoryProcurementWriteRequest, request.get_json())
+    inventory_item = db.session.get(InventoryItem, payload.inventory_item_id)
+    if inventory_item is None:
+        raise ApiError(404, "ITEM_NOT_FOUND", "Inventory item was not found.")
+    vendor = db.session.get(Vendor, payload.vendor_id)
+    if vendor is None:
+        raise ApiError(404, "VENDOR_NOT_FOUND", "Vendor was not found.")
+    total_amount = round(
+        (float(payload.unit_price or 0) * int(payload.quantity or 0))
+        + float(payload.tax_amount or 0)
+        + float(payload.shipping_cost or 0),
+        2,
+    )
+    procurement = InventoryProcurement(
+        inventory_item_id=inventory_item.id,
+        vendor_id=vendor.id,
+        quantity=payload.quantity,
+        unit_price=payload.unit_price,
+        tax_amount=payload.tax_amount,
+        shipping_cost=payload.shipping_cost,
+        total_amount=total_amount,
+        invoice_number=payload.invoice_number,
+        purchase_date=date.fromisoformat(payload.purchase_date),
+        payment_status=payload.payment_status,
+        received_status=payload.received_status,
+        notes=payload.notes,
+        created_by=g.current_user.id,
+    )
+    db.session.add(procurement)
+    inventory_item.quantity += payload.quantity
+    inventory_item.available += payload.quantity
+    create_financial_transaction(
+        transaction_type="inventory_procurement",
+        category="inventory_expense",
+        direction="outflow",
+        amount=total_amount,
+        payment_method="vendor_invoice",
+        status=payload.payment_status,
+        reference_type="inventory_procurement",
+        reference_id=None,
+        counterparty_name=vendor.name,
+        description=f"Procurement for {inventory_item.name}",
+        metadata={
+            "inventoryItemId": str(inventory_item.id),
+            "vendorId": str(vendor.id),
+            "invoiceNumber": payload.invoice_number,
+            "quantity": payload.quantity,
+        },
+        created_by=g.current_user.id,
+    )
+    db.session.commit()
+    return success_response(procurement.to_dict(), status_code=201)

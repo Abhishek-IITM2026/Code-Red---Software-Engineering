@@ -3,8 +3,9 @@ from flask import Blueprint, Response, g, request
 from ...api.errors import ApiError
 from ...common.auth import roles_required
 from ...common.responses import success_response
-from ...models import SalarySlip
-from ...schemas import SalarySlipListQuery, parse_query
+from ...extensions import db
+from ...models import SalaryAccountChangeRequest, SalarySlip, StaffSalaryAccount
+from ...schemas import SalaryAccountChangeRequestCreate, SalarySlipListQuery, StaffSalaryAccountWriteRequest, parse_json, parse_query
 from ...services.pdf_generator import generate_salary_slip_pdf
 
 
@@ -22,6 +23,13 @@ def _current_staff_id() -> str | None:
     if not user_id:
         return None
     return str(user_id)
+
+
+def _current_salary_account() -> StaffSalaryAccount | None:
+    user_id = _current_user_id()
+    if not user_id:
+        return None
+    return StaffSalaryAccount.query.filter_by(user_id=user_id).first()
 
 
 @payroll_bp.get("/salary-slips")
@@ -151,3 +159,65 @@ def _find_slip_by_id(slip_id: str) -> SalarySlip | None:
         return slip
 
     return None
+
+
+@payroll_bp.get("/me/account-details")
+@roles_required("administration", "faculty")
+def get_my_salary_account():
+    account = _current_salary_account()
+    return success_response(account.to_dict() if account is not None else None)
+
+
+@payroll_bp.put("/me/account-details")
+@roles_required("administration", "faculty")
+def save_my_salary_account():
+    user_id = _current_user_id()
+    if user_id is None:
+        raise ApiError(401, "UNAUTHORIZED", "Authentication required.")
+    payload = parse_json(StaffSalaryAccountWriteRequest, request.get_json())
+    account = StaffSalaryAccount.query.filter_by(user_id=user_id).first()
+    if account is None:
+        account = StaffSalaryAccount(user_id=user_id)
+        db.session.add(account)
+    account.account_holder_name = payload.account_holder_name
+    account.bank_name = payload.bank_name
+    account.account_number = payload.account_number
+    account.ifsc_code = payload.ifsc_code
+    account.branch_name = payload.branch_name
+    account.account_type = payload.account_type
+    account.upi_id = payload.upi_id
+    account.proof_document_url = payload.proof_document_url
+    account.proof_document_name = payload.proof_document_name
+    account.verification_status = "approved"
+    db.session.commit()
+    return success_response(account.to_dict())
+
+
+@payroll_bp.get("/me/account-change-requests")
+@roles_required("administration", "faculty")
+def list_my_account_change_requests():
+    user_id = _current_user_id()
+    requests = SalaryAccountChangeRequest.query.filter_by(user_id=user_id).order_by(
+        SalaryAccountChangeRequest.requested_at.desc()
+    )
+    return success_response([item.to_dict() for item in requests.all()])
+
+
+@payroll_bp.post("/me/account-change-requests")
+@roles_required("administration", "faculty")
+def create_my_account_change_request():
+    user_id = _current_user_id()
+    if user_id is None:
+        raise ApiError(401, "UNAUTHORIZED", "Authentication required.")
+    payload = parse_json(SalaryAccountChangeRequestCreate, request.get_json())
+    change_request = SalaryAccountChangeRequest(
+        user_id=user_id,
+        requested_data_json=payload.requested_data,
+        proof_document_url=payload.proof_document_url,
+        proof_document_name=payload.proof_document_name,
+        proof_notes=payload.proof_notes,
+        status="pending",
+    )
+    db.session.add(change_request)
+    db.session.commit()
+    return success_response(change_request.to_dict(), status_code=201)

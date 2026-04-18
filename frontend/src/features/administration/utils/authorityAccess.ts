@@ -6,7 +6,8 @@ export type AuthorityKey =
   | "admissionApproval"
   | "staffCreation"
   | "studentPromotion"
-  | "scheduleCreation";
+  | "scheduleCreation"
+  | "procurementManagement";
 
 export type AuthorityAssignment = {
   staffId: string; // Contains user_id from backend (users table id) - used to link authorities to specific users
@@ -24,6 +25,7 @@ export const roleAuthorityTemplates: Record<string, AuthorityKey[]> = {
   Director: ["leaveApproval", "admissionApproval", "staffCreation", "studentPromotion", "scheduleCreation"],
   "Office Administrator": ["leaveApproval", "admissionApproval", "staffCreation", "scheduleCreation"],
   Accountant: ["admissionApproval"],
+  "Data Entry Operator": ["procurementManagement"],
   "Class Coordinator": ["leaveApproval", "studentPromotion", "scheduleCreation"],
   "Mathematics Teacher": ["studentPromotion", "scheduleCreation"],
   "Science Teacher": ["studentPromotion", "scheduleCreation"],
@@ -38,6 +40,7 @@ const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
   staffCreation: false,
   studentPromotion: false,
   scheduleCreation: false,
+  procurementManagement: false,
 });
 
 const buildAuthorities = (keys: AuthorityKey[]) => {

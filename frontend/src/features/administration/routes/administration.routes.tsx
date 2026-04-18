@@ -3,15 +3,18 @@ import AISettings from "../pages/AISettings";
 import AuthorityManagement from "../pages/AuthorityManagement";
 import CourseManagement from "../pages/CourseManagement";
 import FinancialRecords from "../pages/FinancialRecords";
+import FinanceOperations from "../pages/FinanceOperations";
 import GenerateReports from "../pages/GenerateReports";
 import LeaveManagement from "../pages/LeaveManagement";
 import ManageStaffRecords from "../pages/ManageStaffRecords";
 import ManageStudentRecords from "../pages/ManageStudentRecords";
 import MonitorPerformanceTrends from "../pages/MonitorPerformanceTrends";
+import PaymentDetails from "../pages/PaymentDetails";
 import PromoteStudents from "../pages/PromoteStudents";
 import ViewConsolidatedAttendanceReports from "../pages/ViewConsolidatedAttendanceReports";
 import ViewExamParticipationReports from "../pages/ViewExamParticipationReports";
 import InventoryDashboard from "../pages/Inventory/InventoryDashboard";
+import ProcurementManagement from "../pages/Inventory/ProcurementManagement";
 import RequestManagement from "../pages/Inventory/RequestManagement";
 import ScheduleManagement from "../pages/ScheduleManagement";
 import SalarySlips from "../pages/SalarySlips";
@@ -108,6 +111,20 @@ const administrationRoutes: AdminRouteConfig[] = [
     description: "Review staff salary and increment records"
   },
   {
+    name: "Finance Ops",
+    path: "/administration/finance-operations",
+    element: <FinanceOperations />,
+    icon: FiCreditCard,
+    description: "Approve salary account changes and export transaction ledgers",
+  },
+  {
+    name: "Payment Details",
+    path: "/administration/payment-details",
+    element: <PaymentDetails />,
+    icon: FiCreditCard,
+    description: "View all payment-related transactions in one ledger",
+  },
+  {
     name: "Salary Slips",
     path: "/administration/salary-slips",
     element: <SalarySlips />,
@@ -177,6 +194,14 @@ const administrationRoutes: AdminRouteConfig[] = [
     element: <RequestManagement />,
     icon: FiShoppingCart,
     description: "Review faculty material requests"
+  },
+  {
+    name: "Procurement",
+    path: "/administration/procurement",
+    element: <ProcurementManagement />,
+    icon: FiShoppingCart,
+    description: "Record vendor procurements and inventory expenses",
+    requiredAuthorities: ["procurementManagement"],
   },
   {
     name: "Class Schedule",

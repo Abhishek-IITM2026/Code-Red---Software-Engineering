@@ -14,7 +14,9 @@ from ..models import (
     CoursePayment,
     Faculty,
     FacultySubjectAssignment,
+    FinancialTransaction,
     InventoryItem,
+    InventoryProcurement,
     InstituteClass,
     Mark,
     Material,
@@ -24,12 +26,17 @@ from ..models import (
     OtpChallenge,
     Parent,
     Role,
+    SalaryAccountChangeRequest,
     SalarySlip,
+    SalaryStructure,
     Schedule,
+    StaffFinancialProfile,
+    StaffSalaryAccount,
     Student,
     Subject,
     User,
     UserContactProfile,
+    Vendor,
     user_roles,
 )
 
@@ -121,6 +128,7 @@ def _reset_seeded_data():
     ordered_models = [
         AssignmentSubmission,
         AssessmentSubmission,
+        FinancialTransaction,
         CoursePayment,
         CourseEnrollment,
         Attendance,
@@ -128,6 +136,7 @@ def _reset_seeded_data():
         Schedule,
         MaterialRequestItem,
         MaterialRequest,
+        InventoryProcurement,
         Assessment,
         Assignment,
         Material,
@@ -136,11 +145,16 @@ def _reset_seeded_data():
         Parent,
         Student,
         Faculty,
+        SalaryAccountChangeRequest,
+        StaffSalaryAccount,
+        SalaryStructure,
+        StaffFinancialProfile,
         AdministrationStaff,
         AuthorityAssignment,
         NotificationBatch,
         OtpChallenge,
         InventoryItem,
+        Vendor,
         SalarySlip,
         Subject,
         InstituteClass,
@@ -600,6 +614,7 @@ def seed_database(force: bool = False):
             )
         )
     db.session.add_all(seeded_course_payments)
+    db.session.flush()
 
     db.session.add_all(
         [
@@ -697,6 +712,7 @@ def seed_database(force: bool = False):
                 "staffCreation": True,
                 "studentPromotion": True,
                 "scheduleCreation": True,
+                "procurementManagement": True,
             },
             updated_by="System",
         ),
@@ -710,6 +726,7 @@ def seed_database(force: bool = False):
                 "staffCreation": True,
                 "studentPromotion": True,
                 "scheduleCreation": True,
+                "procurementManagement": True,
             },
             updated_by="System",
         ),
@@ -726,6 +743,7 @@ def seed_database(force: bool = False):
                     "staffCreation": index == 0,
                     "studentPromotion": index < 2,
                     "scheduleCreation": True,
+                    "procurementManagement": index < 2,
                 },
                 updated_by="System",
             )
@@ -744,6 +762,7 @@ def seed_database(force: bool = False):
                     "staffCreation": False,
                     "studentPromotion": index % 2 == 0,
                     "scheduleCreation": True,
+                    "procurementManagement": False,
                 },
                 updated_by="System",
             )
@@ -824,7 +843,172 @@ def seed_database(force: bool = False):
                 total_deductions=0,
                 net_salary=51000 + index * 1200 + ((4 + (index % 5)) * 350),
             )
-        )
+    )
     db.session.add_all(salary_rows)
+    db.session.flush()
+
+    db.session.add_all(
+        [
+            StaffSalaryAccount(
+                user_id=user.id,
+                account_holder_name=f"{user.first_name} {user.last_name}",
+                bank_name="State Bank of India",
+                account_number=f"1002003004{index + 1:03d}",
+                ifsc_code="SBIN0000456",
+                branch_name="Main Campus Branch",
+                account_type="Savings",
+                upi_id=f"{user.first_name.lower()}.{index + 1}@sbi",
+                proof_document_url="https://example.com/proof/passbook.pdf",
+                proof_document_name="passbook.pdf",
+                verification_status="approved",
+                approved_by=users["admin"].id,
+                approved_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            )
+            for index, user in enumerate(admin_staff_users[:3] + faculty_users[:4])
+        ]
+    )
+
+    db.session.add_all(
+        [
+            SalaryStructure(
+                user_id=user.id,
+                effective_from=date(2026, 4, 1),
+                pay_frequency="monthly",
+                currency="INR",
+                base_salary=50000 + index * 1500,
+                allowances_json=[
+                    {"label": "Housing Allowance", "amount": 8000},
+                    {"label": "Transport Allowance", "amount": 3000},
+                ],
+                deductions_json=[
+                    {"label": "Provident Fund", "amount": 1800},
+                ],
+                overtime_rate_per_hour=300 + (index * 10),
+                overtime_rate_per_day=2200 + (index * 50),
+                notes="Seeded salary structure",
+                status="active",
+                created_by=users["admin"].id,
+                approved_by=users["director"].id,
+            )
+            for index, user in enumerate(admin_staff_users[:2] + faculty_users[:4])
+        ]
+    )
+
+    db.session.add(
+        SalaryAccountChangeRequest(
+            user_id=faculty_users[0].id,
+            requested_data_json={
+                "accountHolderName": f"{faculty_users[0].first_name} {faculty_users[0].last_name}",
+                "bankName": "HDFC Bank",
+                "accountNumber": "887766554433",
+                "ifscCode": "HDFC0001234",
+                "branchName": "City Branch",
+                "accountType": "Savings",
+                "proofDocumentUrl": "https://example.com/proof/cancelled-cheque.pdf",
+                "proofDocumentName": "cancelled-cheque.pdf",
+            },
+            proof_document_url="https://example.com/proof/cancelled-cheque.pdf",
+            proof_document_name="cancelled-cheque.pdf",
+            proof_notes="Updated salary account after bank migration.",
+            status="pending",
+        )
+    )
+
+    vendors = [
+        Vendor(name="Scholars Supply House", contact_person="Rakesh Jain", email="sales@scholars.example.com", phone="+91 90000 11223", gst_number="29ABCDE1234F1Z5", address="Market Road, Bengaluru", notes="Stationery and general supplies"),
+        Vendor(name="Campus Tech Traders", contact_person="Neha Kapoor", email="orders@campustech.example.com", phone="+91 90000 44556", gst_number="29ABCDE5678F1Z9", address="Electronic City, Bengaluru", notes="Electronics and projectors"),
+    ]
+    db.session.add_all(vendors)
+    db.session.flush()
+
+    procurements = [
+        InventoryProcurement(
+            inventory_item_id=inventory_items[0].id,
+            vendor_id=vendors[0].id,
+            quantity=40,
+            unit_price=24,
+            tax_amount=96,
+            shipping_cost=50,
+            total_amount=1106,
+            invoice_number="INV-SS-2401",
+            purchase_date=date(2026, 4, 2),
+            payment_status="completed",
+            received_status="received",
+            notes="Restocked markers for classrooms",
+            created_by=users["admin"].id,
+        ),
+        InventoryProcurement(
+            inventory_item_id=inventory_items[2].id,
+            vendor_id=vendors[1].id,
+            quantity=2,
+            unit_price=15200,
+            tax_amount=5472,
+            shipping_cost=0,
+            total_amount=35872,
+            invoice_number="INV-CT-7781",
+            purchase_date=date(2026, 4, 5),
+            payment_status="completed",
+            received_status="received",
+            notes="Two new projectors for senior classrooms",
+            created_by=users["director"].id,
+        ),
+    ]
+    db.session.add_all(procurements)
+    db.session.flush()
+
+    db.session.add_all(
+        [
+            FinancialTransaction(
+                transaction_code="FTX-000001",
+                transaction_type="course_payment",
+                category="course_fee",
+                direction="inflow",
+                amount=seeded_course_payments[0].amount if seeded_course_payments else 0,
+                payment_method="online",
+                status="completed",
+                reference_type="course_payment",
+                reference_id=str(seeded_course_payments[0].id) if seeded_course_payments else None,
+                related_user_id=students[0].user_id,
+                counterparty_name=f"{parent_users[0].first_name} {parent_users[0].last_name}",
+                description="Seeded course fee payment",
+                metadata_json={"receiptNumber": seeded_course_payments[0].receipt_number if seeded_course_payments else None},
+                occurred_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                created_by=parent_users[0].id,
+            ),
+            FinancialTransaction(
+                transaction_code="FTX-000002",
+                transaction_type="salary_payment",
+                category="payroll",
+                direction="outflow",
+                amount=salary_rows[0].net_salary if salary_rows else 0,
+                payment_method="bank_transfer",
+                status="completed",
+                reference_type="salary_slip",
+                reference_id=str(salary_rows[0].id) if salary_rows else None,
+                related_user_id=salary_rows[0].user_id if salary_rows else None,
+                counterparty_name=salary_rows[0].staff_name if salary_rows else None,
+                description="Seeded salary payment transaction",
+                metadata_json={"monthKey": salary_rows[0].month_key if salary_rows else None},
+                occurred_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                created_by=users["admin"].id,
+            ),
+            FinancialTransaction(
+                transaction_code="FTX-000003",
+                transaction_type="inventory_procurement",
+                category="inventory_expense",
+                direction="outflow",
+                amount=procurements[0].total_amount,
+                payment_method="vendor_invoice",
+                status=procurements[0].payment_status,
+                reference_type="inventory_procurement",
+                reference_id=str(procurements[0].id),
+                counterparty_name=vendors[0].name,
+                description="Seeded procurement expense",
+                metadata_json={"inventoryItemId": str(procurements[0].inventory_item_id)},
+                occurred_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                created_by=users["admin"].id,
+            ),
+        ]
+    )
 
     db.session.commit()

@@ -18,11 +18,15 @@ ROLE_AUTHORITY_TEMPLATES = [
     },
     {
         "role": "Office Administrator",
-        "authorities": ["leaveApproval", "admissionApproval", "staffCreation", "scheduleCreation"],
+        "authorities": ["leaveApproval", "admissionApproval", "staffCreation", "scheduleCreation", "procurementManagement"],
     },
     {
         "role": "Accountant",
         "authorities": ["admissionApproval"],
+    },
+    {
+        "role": "Data Entry Operator",
+        "authorities": ["procurementManagement"],
     },
     {
         "role": "Mathematics Teacher",
