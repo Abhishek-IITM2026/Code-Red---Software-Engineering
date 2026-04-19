@@ -4,15 +4,12 @@ import AuthorityManagement from "../pages/AuthorityManagement";
 import CourseManagement from "../pages/CourseManagement";
 import FinancialRecords from "../pages/FinancialRecords";
 import FinanceOperations from "../pages/FinanceOperations";
-import GenerateReports from "../pages/GenerateReports";
 import LeaveManagement from "../pages/LeaveManagement";
 import ManageStaffRecords from "../pages/ManageStaffRecords";
 import ManageStudentRecords from "../pages/ManageStudentRecords";
 import MonitorPerformanceTrends from "../pages/MonitorPerformanceTrends";
 import PaymentDetails from "../pages/PaymentDetails";
 import PromoteStudents from "../pages/PromoteStudents";
-import ViewConsolidatedAttendanceReports from "../pages/ViewConsolidatedAttendanceReports";
-import ViewExamParticipationReports from "../pages/ViewExamParticipationReports";
 import InventoryDashboard from "../pages/Inventory/InventoryDashboard";
 import ProcurementManagement from "../pages/Inventory/ProcurementManagement";
 import RequestManagement from "../pages/Inventory/RequestManagement";
@@ -154,32 +151,11 @@ const administrationRoutes: AdminRouteConfig[] = [
     description: "Detailed staff financial profile"
   },
   {
-    name: "Attendance Reports",
-    path: "/administration/attendance-reports",
-    element: <ViewConsolidatedAttendanceReports />,
-    icon: FiCheckSquare,
-    description: "View consolidated attendance"
-  },
-  {
-    name: "Exam Reports",
-    path: "/administration/exam-reports",
-    element: <ViewExamParticipationReports />,
-    icon: FiBarChart2,
-    description: "View exam participation reports"
-  },
-  {
     name: "Performance Trends",
     path: "/administration/performance-trends",
     element: <MonitorPerformanceTrends />,
     icon: FiTrendingUp,
-    description: "Monitor performance analytics"
-  },
-  {
-    name: "Reports",
-    path: "/administration/reports",
-    element: <GenerateReports />,
-    icon: FiFileText,
-    description: "Generate various reports"
+    description: "Monitor class-wise exam performance and analytics"
   },
   {
     name: "Inventory",

@@ -1,6 +1,6 @@
 # Codebase Context
 
-Updated: 2026-04-18
+Updated: 2026-04-20
 
 This is the repo-level context file for coding agents and future maintainers. It is based on the current code, not older summary docs.
 
@@ -203,10 +203,10 @@ Current modules:
 - `attendance`: attendance write/list/stats flows
 - `marks`: marks views
 "- `schedule`: schedule CRUD and self-service schedule views
-- `faculty`: faculty classes, subjects, materials, performance, upcoming courses"
+- `faculty`: faculty classes, subjects, materials, performance, upcoming courses
 - `inventory`: stock and request management
 - `authority`: authority assignment endpoints
-- `administration`: dashboard, student/staff CRUD, courses, promotions, finance, reports
+- `administration`: dashboard, student/staff CRUD, courses, promotions, finance, reports, performance analytics
 - `payroll`: payroll and salary-slip workflows with PDF download for salary slips
 - `jobs`: job-status endpoints
 - `leave`: leave request, review, cancel, stats
@@ -216,11 +216,19 @@ Current modules:
 - `rag`: admin-only ingestion endpoint
 - `uploads`: file-related endpoints
 
-Two notable implementation details:
+Three notable implementation details:
 
 - assessment question generation is now retrieval-grounded through `backend/app/rag/assessment/` plus the shared multimodal retrieval layer in `backend/app/rag/multimodal/`
 - payroll salary-slip records are now normalized around related staff tables: `salary_slips.user_id` links to `users`, and employee metadata such as name, employee code, designation, and department should be resolved from `users` plus `administration_staff` instead of treating duplicated salary-slip columns as the source of truth
 - finance workflows now also use dedicated tables for `staff_salary_accounts`, `salary_structures`, `salary_account_change_requests`, `financial_transactions`, `vendors`, and `inventory_procurements`
+- student promotion workflows now support:
+  - rule-based eligibility checking with configurable thresholds for attendance and average marks
+  - `GET /api/v1/administration/promotions/rules` returns current promotion rules with `minAttendancePercentage`, `minAverageMarks`, `optionalMinAttendance`, and `optionalMinMarks`
+  - `POST /api/v1/administration/promotions/rules` updates promotion rules dynamically
+  - `GET /api/v1/administration/promotions/candidates` accepts query params `sortBy` (name|attendance|average|eligible) and `sortOrder` (asc|desc) for flexible candidate listing
+  - candidates are categorized as "Eligible" (meets strict criteria), "Review Required" (borderline), or "Not Eligible"
+  - bulk promotion endpoint accepts `classId` and `sectionId` for source class specification
+  - performance trends now include individual student performance drill-down at `GET /api/v1/administration/performance-trends/class/<class_id>/students` returning per-student average marks, attendance, and exam-wise breakdown
 
 ### Payroll and staff normalization
 
@@ -469,6 +477,23 @@ Schedule-related types and hooks in `frontend/src/services/api/dataApi.ts`:
 - `useGetAvailableSlotsQuery`: fetches available/occupied slots for schedule conflict prevention
 - Conflict errors are detected by `err.status === 409` or `err.data.code === 'SCHEDULE_CONFLICT'`
 
+### Performance and Promotion API
+
+Performance and promotion-related types and hooks in `frontend/src/features/administration/api/adminApi.ts`:
+
+- `PerformanceTrend`: class-wise performance with `{ className, classId, grade, section, studentCount, examCount, average, highest, lowest, strongestArea, needsAttention, subjectPerformance, trend }`
+- `StudentPerformanceDetail`: individual student performance with `{ studentId, studentName, rollNumber, average, attendancePercentage, examCount, examDetails[] }`
+- `ClassStudentPerformance`: grouped class performance with `{ className, studentCount, students[] }`
+- `PromotionRules`: `{ minAttendancePercentage, minAverageMarks, optionalMinAttendance, optionalMinMarks }`
+- `PromotionCandidate`: `{ id, admissionNo, name, className, section, attendance, average, status, resultStatus, targetClass, notes }`
+- `useGetPerformanceTrendsQuery`: fetches class-wise exam performance with trend status
+- `useGetClassStudentPerformanceQuery`: fetches individual student performance for a specific class (lazy-loaded)
+- `useGetPromotionRulesQuery`: fetches current promotion eligibility rules
+- `useUpdatePromotionRulesMutation`: updates promotion thresholds dynamically
+- `useListPromotionCandidatesQuery`: fetches promotion candidates with optional `sortBy` and `sortOrder` query params
+- `usePromoteStudentMutation`: promotes a single student
+- `usePromoteStudentsMutation`: bulk promotes multiple students with `classId`, `sectionId`, `studentIds[]`, `promoteToClass`, `promoteToSection`
+
 Dashboard types in `frontend/src/features/administration/api/adminApi.ts`:
 - `UpcomingEvent`: `{ id, title, className, section, startDate }` for upcoming courses/events display
 
@@ -505,11 +530,21 @@ Feature areas under `frontend/src/features/`:
 - `student`: dashboard, attendance, marks, assessments, materials, assignments, subjects, leave, schedule, upcoming course enrollment/payment
 - `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
 - `parent`: dashboard, attendance, performance, fees, communication, timetable, child selector, live course/fee invoice views
-- `administration`: dashboard, authority management, course management, AI settings, records, promotions, finance, reports, inventory, schedule
+- `administration`: dashboard, authority management, course management, AI settings, records, promotions, finance, reports, inventory, schedule, performance analytics
 - `leave`: leave portal plus RTK Query/localStorage utilities
 - `notifications`: notification API helpers
 - `courses`: academic course API/local storage helpers
 - schedule creation UI in administration and faculty portals now shows available/occupied time slots and displays conflict error messages when overlapping schedules are detected
+- student promotion workflows now support dynamic eligibility rules editing with `PromoteStudents` component featuring:
+  - sorting/filtering promotion candidates by name, attendance, average marks, or eligibility status
+  - bulk selection UI with sticky promotion bar
+  - rules editor modal for dynamic threshold configuration
+  - individual and bulk promotion modals with error handling
+- student performance trends now support individual student performance visualization through `MonitorPerformanceTrends` component featuring:
+  - expandable class performance cards with trend indicators
+  - individual student performance cards showing average marks, attendance, and exam-wise breakdown
+  - lazy-loaded student detail data via `useGetClassStudentPerformanceQuery` hook
+  - color-coded performance indicators and subject-wise performance visualization
 
 ### Notable frontend implementation details
 
@@ -624,6 +659,19 @@ Update all affected items:
 - faculty assessment builder API/types
 - student assessment/submission consumers
 - document-store notes in this file
+
+### If you change student promotion or performance analytics
+
+Update all affected items:
+
+- `backend/app/features/administration/routes.py` (promotion endpoints and performance calculation functions)
+- `backend/app/models/core.py` (Mark, Attendance, Student, ClassEnrollment models as needed)
+- `backend/app/services/` (any attendance/performance calculation utilities)
+- frontend RTK Query types in `adminApi.ts` (PerformanceTrend, StudentPerformanceDetail, ClassStudentPerformance, PromotionRules, PromotionCandidate)
+- `frontend/src/features/administration/pages/PromoteStudents.tsx` (promotion workflow, rules editing, sorting/filtering)
+- `frontend/src/features/administration/pages/MonitorPerformanceTrends.tsx` (performance trends display, individual student drill-down)
+- backend tests for promotion and performance endpoints
+- this file
 
 ### If you change AI settings or system prompts
 

@@ -529,6 +529,42 @@ def _transaction_query(filters: FinancialTransactionListQuery):
     return query.order_by(FinancialTransaction.occurred_at.desc(), FinancialTransaction.id.desc())
 
 
+def _get_promotion_rules():
+    """Get default promotion rules for coaching institute."""
+    return {
+        "minAttendancePercentage": 75,
+        "minAverageMarks": 50,
+        "optionalMinAttendance": 65,  # For review case
+        "optionalMinMarks": 40,       # For review case
+    }
+
+
+def _check_promotion_eligibility(attendance_percentage: float, average_marks: float, rules: dict = None):
+    """Check if a student is eligible for promotion based on rules."""
+    if rules is None:
+        rules = _get_promotion_rules()
+    
+    # Check strict eligibility
+    is_eligible = (
+        attendance_percentage >= rules["minAttendancePercentage"] and
+        average_marks >= rules["minAverageMarks"]
+    )
+    
+    # Check review case
+    needs_review = (
+        not is_eligible and
+        attendance_percentage >= rules["optionalMinAttendance"] and
+        average_marks >= rules["optionalMinMarks"]
+    )
+    
+    if is_eligible:
+        return "Eligible", "Meets all promotion criteria"
+    elif needs_review:
+        return "Review Required", "Borderline case - manual review recommended"
+    else:
+        return "Not Eligible", "Does not meet minimum promotion requirements"
+
+
 def _promotion_candidate(student: Student):
     enrollment = student.current_enrollment()
     stats = get_attendance_stats(student.id)
@@ -537,6 +573,14 @@ def _promotion_candidate(student: Student):
     target_grade = grade + 1 if grade else grade
     parent = Parent.query.filter_by(student_id=student.id, is_primary=True).first()
     parent_phone = parent.user.contact_profile.phone_number if parent and parent.user.contact_profile else None
+    
+    rules = _get_promotion_rules()
+    result_status, result_reason = _check_promotion_eligibility(
+        stats["percentage"], 
+        performance["average"],
+        rules
+    )
+    
     return {
         "id": str(student.id),
         "admissionNo": student.roll_number,
@@ -545,12 +589,19 @@ def _promotion_candidate(student: Student):
         "section": enrollment.institute_class.section if enrollment else None,
         "guardian": f"{parent.user.first_name} {parent.user.last_name}" if parent else None,
         "parentPhone": parent_phone,
-        "attendance": f"{stats['percentage']}%",
-        "average": f"{performance['average']}%",
+        "attendance": f"{stats['percentage']:.1f}%",
+        "attendanceValue": stats["percentage"],
+        "average": f"{performance['average']:.1f}%",
+        "averageValue": performance["average"],
         "status": "Active" if student.status.value == "ACTIVE" else "Inactive",
-        "resultStatus": "Eligible" if stats["percentage"] >= 75 and performance["average"] >= 50 else "Review Required",
+        "resultStatus": result_status,
+        "resultReason": result_reason,
         "targetClass": f"Class {target_grade}" if target_grade else None,
-        "notes": "Promotion derived from attendance and marks summary.",
+        "promotionRules": {
+            "minAttendance": rules["minAttendancePercentage"],
+            "minMarks": rules["minAverageMarks"],
+        },
+        "notes": result_reason,
     }
 
 
@@ -1115,13 +1166,204 @@ def save_ai_settings_configuration():
     return success_response(updated, message="AI settings updated successfully.")
 
 
+def _performance_trends_payload():
+    """Calculate performance trends for each class based on exam marks."""
+    trends_by_class = {}
+    
+    # Get all classes
+    classes = InstituteClass.query.all()
+    for inst_class in classes:
+        # Get all enrollments for this class
+        enrollments = ClassEnrollment.query.filter_by(class_id=inst_class.id).all()
+        student_ids = [e.student_id for e in enrollments]
+        
+        if not student_ids:
+            continue
+        
+        # Get marks for all students in this class
+        marks = Mark.query.filter(Mark.student_id.in_(student_ids)).all()
+        
+        if not marks:
+            continue
+        
+        # Calculate statistics
+        mark_percentages = []
+        for mark in marks:
+            percentage = (mark.marks_obtained / mark.total_marks * 100) if mark.total_marks > 0 else 0
+            mark_percentages.append(percentage)
+        
+        if mark_percentages:
+            average_percentage = sum(mark_percentages) / len(mark_percentages)
+            highest_percentage = max(mark_percentages)
+            lowest_percentage = min(mark_percentages)
+        else:
+            average_percentage = highest_percentage = lowest_percentage = 0
+        
+        # Get subject-wise performance
+        subject_performance = {}
+        for mark in marks:
+            subject = db.session.get(Subject, mark.subject_id)
+            if subject:
+                subject_name = subject.name
+                if subject_name not in subject_performance:
+                    subject_performance[subject_name] = []
+                percentage = (mark.marks_obtained / mark.total_marks * 100) if mark.total_marks > 0 else 0
+                subject_performance[subject_name].append(percentage)
+        
+        # Calculate subject-wise averages
+        subject_averages = {}
+        for subject_name, percentages in subject_performance.items():
+            subject_averages[subject_name] = round(sum(percentages) / len(percentages), 2)
+        
+        # Find strongest and needs attention subjects
+        if subject_averages:
+            strongest_subject = max(subject_averages.items(), key=lambda x: x[1])
+            needs_attention_subject = min(subject_averages.items(), key=lambda x: x[1])
+        else:
+            strongest_subject = ("N/A", 0)
+            needs_attention_subject = ("N/A", 0)
+        
+        class_key = f"{inst_class.name} - Section {inst_class.section}"
+        trends_by_class[class_key] = {
+            "className": class_key,
+            "classId": str(inst_class.id),
+            "grade": inst_class.grade,
+            "section": inst_class.section,
+            "studentCount": len(student_ids),
+            "examCount": len(set(m.examination_name for m in marks)),
+            "average": round(average_percentage, 2),
+            "highest": round(highest_percentage, 2),
+            "lowest": round(lowest_percentage, 2),
+            "strongestArea": f"{strongest_subject[0]} ({strongest_subject[1]:.1f}%)",
+            "needsAttention": f"{needs_attention_subject[0]} ({needs_attention_subject[1]:.1f}%)",
+            "subjectPerformance": subject_averages,
+            "trend": "Improving" if average_percentage >= 65 else "Needs Attention" if average_percentage >= 50 else "Critical",
+        }
+    
+    return list(trends_by_class.values())
+
+
+@administration_bp.get("/performance-trends")
+@roles_required("administration")
+def get_performance_trends():
+    """Get performance trend data for all classes."""
+    trends = _performance_trends_payload()
+    return success_response(trends)
+
+
+@administration_bp.get("/performance-trends/class/<int:class_id>/students")
+@roles_required("administration")
+def get_class_student_performance(class_id: int):
+    """Get individual student performance for a specific class."""
+    institute_class = db.session.get(InstituteClass, class_id)
+    if institute_class is None:
+        raise ApiError(404, "CLASS_NOT_FOUND", "Class not found.")
+    
+    enrollments = ClassEnrollment.query.filter_by(class_id=class_id).all()
+    student_performance = []
+    
+    for enrollment in enrollments:
+        student = db.session.get(Student, enrollment.student_id)
+        if student is None:
+            continue
+        
+        # Get marks for this student
+        marks = Mark.query.filter_by(student_id=student.id).all()
+        
+        if not marks:
+            continue
+        
+        # Calculate performance
+        mark_percentages = []
+        exam_details = []
+        for mark in marks:
+            percentage = (mark.marks_obtained / mark.total_marks * 100) if mark.total_marks > 0 else 0
+            mark_percentages.append(percentage)
+            exam_details.append({
+                "examName": mark.examination_name,
+                "examType": mark.exam_type,
+                "subjectName": db.session.get(Subject, mark.subject_id).name if mark.subject_id else "Unknown",
+                "marksObtained": mark.marks_obtained,
+                "totalMarks": mark.total_marks,
+                "percentage": round(percentage, 2),
+            })
+        
+        if mark_percentages:
+            average_percentage = sum(mark_percentages) / len(mark_percentages)
+        else:
+            average_percentage = 0
+        
+        # Get attendance
+        stats = get_attendance_stats(student.id)
+        
+        student_performance.append({
+            "studentId": str(student.id),
+            "studentName": f"{student.user.first_name} {student.user.last_name}",
+            "rollNumber": student.roll_number,
+            "average": round(average_percentage, 2),
+            "attendancePercentage": round(stats["percentage"], 2),
+            "examCount": len(set(m.examination_name for m in marks)),
+            "examDetails": exam_details,
+        })
+    
+    # Sort by average marks descending
+    student_performance.sort(key=lambda x: x["average"], reverse=True)
+    
+    return success_response({
+        "className": f"{institute_class.name} - Section {institute_class.section}",
+        "studentCount": len(student_performance),
+        "students": student_performance,
+    })
+
+
+@administration_bp.get("/promotions/rules")
+@roles_required("administration")
+def get_promotion_rules():
+    """Get current promotion rules."""
+    rules = _get_promotion_rules()
+    return success_response(rules)
+
+
+@administration_bp.post("/promotions/rules")
+@roles_required("administration")
+def update_promotion_rules():
+    """Update promotion rules for the institute."""
+    payload = request.get_json() or {}
+    # In a production system, you would store these in a configuration table
+    # For now, we return the updated rules (they would normally be persisted)
+    rules = {
+        "minAttendancePercentage": float(payload.get("minAttendancePercentage", 75)),
+        "minAverageMarks": float(payload.get("minAverageMarks", 50)),
+        "optionalMinAttendance": float(payload.get("optionalMinAttendance", 65)),
+        "optionalMinMarks": float(payload.get("optionalMinMarks", 40)),
+    }
+    return success_response(rules, message="Promotion rules updated successfully.")
+
+
 @administration_bp.get("/promotions/candidates")
 @roles_required("administration")
 def list_promotion_candidates():
     target_class = request.args.get("targetClass")
+    sort_by = request.args.get("sortBy", "name")  # name, attendance, average, eligible
+    sort_order = request.args.get("sortOrder", "asc")  # asc, desc
+    
     candidates = [_promotion_candidate(student) for student in Student.query.all()]
+    
     if target_class:
         candidates = [candidate for candidate in candidates if candidate["targetClass"] == target_class]
+    
+    # Apply sorting
+    reverse = sort_order.lower() == "desc"
+    if sort_by == "attendance":
+        candidates.sort(key=lambda x: x.get("attendanceValue", 0), reverse=reverse)
+    elif sort_by == "average":
+        candidates.sort(key=lambda x: x.get("averageValue", 0), reverse=reverse)
+    elif sort_by == "eligible":
+        # Sort eligible first, then by name
+        candidates.sort(key=lambda x: (x.get("resultStatus") != "Eligible", x.get("name", "")), reverse=reverse)
+    else:  # default to name
+        candidates.sort(key=lambda x: x.get("name", ""), reverse=reverse)
+    
     return success_response(candidates)
 
 

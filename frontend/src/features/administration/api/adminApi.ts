@@ -206,6 +206,52 @@ export interface AttendanceReport {
   audience: 'students' | 'faculty' | 'staff';
 }
 
+export interface PerformanceTrend {
+  className: string;
+  classId: string;
+  grade: string;
+  section: string;
+  studentCount: number;
+  examCount: number;
+  average: number;
+  highest: number;
+  lowest: number;
+  strongestArea: string;
+  needsAttention: string;
+  subjectPerformance: Record<string, number>;
+  trend: 'Improving' | 'Needs Attention' | 'Critical';
+}
+
+export interface StudentPerformanceDetail {
+  studentId: string;
+  studentName: string;
+  rollNumber: string;
+  average: number;
+  attendancePercentage: number;
+  examCount: number;
+  examDetails: Array<{
+    examName: string;
+    examType: string;
+    subjectName: string;
+    marksObtained: number;
+    totalMarks: number;
+    percentage: number;
+  }>;
+}
+
+export interface ClassStudentPerformance {
+  className: string;
+  studentCount: number;
+  students: StudentPerformanceDetail[];
+}
+
+export interface PromotionRules {
+  minAttendancePercentage: number;
+  minAverageMarks: number;
+  optionalMinAttendance: number;
+  optionalMinMarks: number;
+}
+
 export interface ExamParticipationReport {
   studentId: string;
   studentName: string;
@@ -576,6 +622,31 @@ export const adminApi = createApi({
       invalidatesTags: ['SalaryAccountApprovals', 'Finance'],
     }),
 
+    // Performance Trends and Promotion
+    getPerformanceTrends: builder.query<PerformanceTrend[], void>({
+      query: () => '/administration/performance-trends',
+      providesTags: ['Dashboard'],
+    }),
+
+    getClassStudentPerformance: builder.query<ClassStudentPerformance, string>({
+      query: (classId) => `/administration/performance-trends/class/${classId}/students`,
+      providesTags: (_result, _err, classId) => [{ type: 'Dashboard', id: `student-perf-${classId}` }],
+    }),
+
+    getPromotionRules: builder.query<PromotionRules, void>({
+      query: () => '/administration/promotions/rules',
+      providesTags: ['Students'],
+    }),
+
+    updatePromotionRules: builder.mutation<PromotionRules, Partial<PromotionRules>>({
+      query: (rules) => ({
+        url: '/administration/promotions/rules',
+        method: 'POST',
+        body: rules,
+      }),
+      invalidatesTags: ['Students'],
+    }),
+
     // Reports
     getAttendanceReports: builder.query<AttendanceReport[], void>({
       query: () => '/administration/reports/attendance',
@@ -625,6 +696,10 @@ export const {
   usePromoteStudentsMutation,
   useListPromotionCandidatesQuery,
   usePromoteStudentMutation,
+  useGetPerformanceTrendsQuery,
+  useGetClassStudentPerformanceQuery,
+  useGetPromotionRulesQuery,
+  useUpdatePromotionRulesMutation,
   useListFinancialRecordsQuery,
   useGetFinancialRecordQuery,
   useCreateFinancialRecordMutation,

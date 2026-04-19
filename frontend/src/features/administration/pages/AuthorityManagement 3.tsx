@@ -69,6 +69,7 @@ const emptyAuthorities = (): Record<AuthorityKey, boolean> => ({
   staffCreation: false,
   studentPromotion: false,
   scheduleCreation: false,
+  procurementManagement: false,
 });
 
 const buildAuthorities = (keys: AuthorityKey[]) => {
