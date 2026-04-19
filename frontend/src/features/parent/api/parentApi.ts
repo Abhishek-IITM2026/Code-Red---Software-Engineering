@@ -507,6 +507,46 @@ export const parentApi = createApi({
         body: { attendanceParent },
       }),
     }),
+
+    // Course Enrollment & Payment (NEW)
+    enrollInCourse: builder.mutation<
+      ParentCourseEnrollment,
+      {
+        courseId: string;
+        studentId: string;
+        paymentPlan: 'one_time' | 'installments';
+        installmentCount?: number;
+      }
+    >({
+      query: ({ courseId, studentId, paymentPlan, installmentCount }) => ({
+        url: `/student/courses/${courseId}/enroll`,
+        method: 'POST',
+        body: { paymentPlan, installmentCount },
+      }),
+      invalidatesTags: ['Courses'],
+    }),
+
+    payCourseEnrollment: builder.mutation<
+      FeePaymentResponse,
+      {
+        enrollmentId: string;
+        amount: number;
+        paymentMethod: string;
+        referenceNumber?: string;
+      }
+    >({
+      query: ({ enrollmentId, amount, paymentMethod, referenceNumber }) => ({
+        url: `/parent/fees/${enrollmentId}/payment`,
+        method: 'POST',
+        body: { amountPaid: amount, paymentMethod, referenceNumber },
+      }),
+      invalidatesTags: ['Fees', 'Courses'],
+    }),
+
+    getUpcomingCoursesForChild: builder.query<ParentUpcomingCourse[], string>({
+      query: (studentId) => `/parent/children/${studentId}/courses`,
+      providesTags: ['Courses'],
+    }),
   }),
 });
 
@@ -534,4 +574,7 @@ export const {
   useGetSchoolAnnouncementsQuery,
   useGetUpcomingEventsQuery,
   useRsvpEventMutation,
+  useEnrollInCourseMutation,
+  usePayCourseEnrollmentMutation,
+  useGetUpcomingCoursesForChildQuery,
 } = parentApi;
