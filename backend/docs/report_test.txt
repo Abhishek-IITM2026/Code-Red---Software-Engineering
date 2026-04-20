@@ -1,0 +1,3226 @@
+(.benv) dheerajkumarvishwakarma@dheerajkhumarvishwakarma:/media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend$  python -m pytest tests/ -v
+================================================================== test session starts ==================================================================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0 -- /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/.benv/bin/python
+cachedir: .pytest_cache
+rootdir: /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend
+plugins: langsmith-0.7.30, anyio-4.13.0
+collected 176 items                                                                                                                                     
+
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_as_student FAILED                                  [  0%]
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_as_faculty ERROR                                   [  1%]
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_as_admin PASSED                                    [  1%]
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_unauthenticated PASSED                             [  2%]
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_with_date_filter PASSED                            [  2%]
+tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_with_student_filter PASSED                         [  3%]
+tests/integration/test_attendance_endpoints.py::TestAttendanceMeStatsEndpoint::test_get_my_attendance_stats FAILED                                [  3%]
+tests/integration/test_attendance_endpoints.py::TestAttendanceMeStatsEndpoint::test_get_stats_unauthenticated PASSED                              [  4%]
+tests/integration/test_attendance_endpoints.py::TestAttendanceMeStatsEndpoint::test_get_stats_as_faculty_unauthorized ERROR                       [  5%]
+tests/integration/test_attendance_endpoints.py::TestCreateAttendanceEndpoint::test_create_attendance_as_admin FAILED                              [  5%]
+tests/integration/test_attendance_endpoints.py::TestCreateAttendanceEndpoint::test_create_attendance_as_faculty ERROR                             [  6%]
+tests/integration/test_attendance_endpoints.py::TestCreateAttendanceEndpoint::test_create_attendance_as_student_forbidden PASSED                  [  6%]
+tests/integration/test_attendance_endpoints.py::TestUpdateAttendanceEndpoint::test_update_attendance_as_admin FAILED                              [  7%]
+tests/integration/test_attendance_endpoints.py::TestUpdateAttendanceEndpoint::test_update_attendance_unauthenticated PASSED                       [  7%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_success_student PASSED                                                [  8%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_success_admin PASSED                                                  [  9%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_invalid_email PASSED                                                  [  9%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_wrong_password PASSED                                                 [ 10%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_missing_email PASSED                                                  [ 10%]
+tests/integration/test_auth_endpoints.py::TestAuthLoginEndpoint::test_login_missing_password PASSED                                               [ 11%]
+tests/integration/test_auth_endpoints.py::TestAuthMeEndpoint::test_me_authenticated PASSED                                                        [ 11%]
+tests/integration/test_auth_endpoints.py::TestAuthMeEndpoint::test_me_unauthenticated PASSED                                                      [ 12%]
+tests/integration/test_auth_endpoints.py::TestAuthMeEndpoint::test_me_invalid_token PASSED                                                        [ 13%]
+tests/integration/test_auth_endpoints.py::TestAuthLogoutEndpoint::test_logout_success PASSED                                                      [ 13%]
+tests/integration/test_auth_endpoints.py::TestAuthLogoutEndpoint::test_logout_unauthenticated FAILED                                              [ 14%]
+tests/integration/test_auth_endpoints.py::TestAuthRefreshEndpoint::test_refresh_token PASSED                                                      [ 14%]
+tests/integration/test_faculty_endpoints.py::TestListFacultyEndpoint::test_list_faculty_as_admin FAILED                                           [ 15%]
+tests/integration/test_faculty_endpoints.py::TestListFacultyEndpoint::test_list_faculty_as_faculty ERROR                                          [ 15%]
+tests/integration/test_faculty_endpoints.py::TestListFacultyEndpoint::test_list_faculty_unauthenticated PASSED                                    [ 16%]
+tests/integration/test_faculty_endpoints.py::TestFacultyClassesEndpoint::test_get_faculty_classes ERROR                                           [ 17%]
+tests/integration/test_faculty_endpoints.py::TestFacultyClassesEndpoint::test_get_classes_as_admin PASSED                                         [ 17%]
+tests/integration/test_faculty_endpoints.py::TestFacultyClassesOverviewEndpoint::test_get_classes_overview ERROR                                  [ 18%]
+tests/integration/test_faculty_endpoints.py::TestFacultyClassesOverviewEndpoint::test_get_overview_as_admin PASSED                                [ 18%]
+tests/integration/test_faculty_endpoints.py::TestFacultyUpcomingCoursesEndpoint::test_get_upcoming_courses ERROR                                  [ 19%]
+tests/integration/test_faculty_endpoints.py::TestFacultyUpcomingCoursesEndpoint::test_get_courses_unauthenticated PASSED                          [ 19%]
+tests/integration/test_faculty_endpoints.py::TestFacultyStudentPerformanceEndpoint::test_get_student_performance ERROR                            [ 20%]
+tests/integration/test_faculty_endpoints.py::TestFacultyStudentPerformanceEndpoint::test_get_performance_as_admin PASSED                          [ 21%]
+tests/integration/test_faculty_endpoints.py::TestFacultyStudentPerformanceEndpoint::test_get_performance_with_class_filter ERROR                  [ 21%]
+tests/integration/test_inventory_endpoints.py::TestListInventoryItemsEndpoint::test_list_items_as_admin FAILED                                    [ 22%]
+tests/integration/test_inventory_endpoints.py::TestListInventoryItemsEndpoint::test_list_items_unauthenticated PASSED                             [ 22%]
+tests/integration/test_inventory_endpoints.py::TestCreateInventoryItemEndpoint::test_create_item_success PASSED                                   [ 23%]
+tests/integration/test_inventory_endpoints.py::TestCreateInventoryItemEndpoint::test_create_item_unauthenticated PASSED                           [ 23%]
+tests/integration/test_inventory_endpoints.py::TestCreateInventoryItemEndpoint::test_create_item_missing_fields FAILED                            [ 24%]
+tests/integration/test_inventory_endpoints.py::TestInventoryRequestsEndpoint::test_list_requests_as_admin PASSED                                  [ 25%]
+tests/integration/test_inventory_endpoints.py::TestInventoryRequestsEndpoint::test_list_requests_with_status_filter PASSED                        [ 25%]
+tests/integration/test_inventory_endpoints.py::TestInventoryVendorsEndpoint::test_list_vendors_as_admin PASSED                                    [ 26%]
+tests/integration/test_inventory_endpoints.py::TestInventoryVendorsEndpoint::test_create_vendor_success PASSED                                    [ 26%]
+tests/integration/test_inventory_endpoints.py::TestInventoryProcurementsEndpoint::test_list_procurements_as_admin PASSED                          [ 27%]
+tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_as_student FAILED                                       [ 27%]
+tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_as_admin FAILED                                         [ 28%]
+tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_unauthenticated FAILED                                  [ 28%]
+tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_with_status_filter FAILED                               [ 29%]
+tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_as_student FAILED                                    [ 30%]
+tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_as_faculty ERROR                                     [ 30%]
+tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_invalid_date_range FAILED                            [ 31%]
+tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_missing_fields FAILED                                [ 31%]
+tests/integration/test_leave_endpoints.py::TestLeaveReviewEndpoint::test_review_leave_as_admin PASSED                                             [ 32%]
+tests/integration/test_leave_endpoints.py::TestLeaveReviewEndpoint::test_review_leave_as_student_forbidden FAILED                                 [ 32%]
+tests/integration/test_leave_endpoints.py::TestLeaveCancelEndpoint::test_cancel_leave_unauthenticated FAILED                                      [ 33%]
+tests/integration/test_leave_endpoints.py::TestLeaveStatsEndpoint::test_leave_stats_as_admin FAILED                                               [ 34%]
+tests/integration/test_leave_endpoints.py::TestLeaveStatsEndpoint::test_leave_stats_as_student_forbidden FAILED                                   [ 34%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_as_student FAILED                                               [ 35%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_as_faculty ERROR                                                [ 35%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_as_admin PASSED                                                 [ 36%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_unauthenticated PASSED                                          [ 36%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_with_exam_type_filter PASSED                                    [ 37%]
+tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_with_subject_filter PASSED                                      [ 38%]
+tests/integration/test_marks_endpoints.py::TestStudentMarksEndpoint::test_student_can_only_see_own_marks PASSED                                   [ 38%]
+tests/integration/test_marks_endpoints.py::TestStudentMarksEndpoint::test_student_can_view_own_marks PASSED                                       [ 39%]
+tests/integration/test_notifications_endpoints.py::TestScheduleNotificationEndpoint::test_schedule_notification PASSED                            [ 39%]
+tests/integration/test_notifications_endpoints.py::TestScheduleNotificationEndpoint::test_schedule_notification_unauthenticated PASSED            [ 40%]
+tests/integration/test_notifications_endpoints.py::TestEmailStatusEndpoint::test_get_email_status PASSED                                          [ 40%]
+tests/integration/test_notifications_endpoints.py::TestSendEmailEndpoint::test_send_email PASSED                                                  [ 41%]
+tests/integration/test_notifications_endpoints.py::TestSendEmailEndpoint::test_send_email_missing_fields PASSED                                   [ 42%]
+tests/integration/test_notifications_endpoints.py::TestEmailMessagesEndpoint::test_list_email_messages FAILED                                     [ 42%]
+tests/integration/test_notifications_endpoints.py::TestEmailMessagesEndpoint::test_list_email_messages_with_filters PASSED                        [ 43%]
+tests/integration/test_notifications_endpoints.py::TestEmailSyncEndpoint::test_sync_emails FAILED                                                 [ 43%]
+tests/integration/test_parent_endpoints.py::TestParentChildrenEndpoint::test_list_children_as_parent FAILED                                       [ 44%]
+tests/integration/test_parent_endpoints.py::TestParentChildrenEndpoint::test_list_children_unauthenticated PASSED                                 [ 44%]
+tests/integration/test_parent_endpoints.py::TestParentStudentAttendanceEndpoint::test_get_child_attendance PASSED                                 [ 45%]
+tests/integration/test_parent_endpoints.py::TestParentStudentAttendanceEndpoint::test_get_attendance_unauthenticated FAILED                       [ 46%]
+tests/integration/test_parent_endpoints.py::TestParentStudentMarksEndpoint::test_get_child_marks PASSED                                           [ 46%]
+tests/integration/test_parent_endpoints.py::TestParentStudentPerformanceEndpoint::test_get_child_performance PASSED                               [ 47%]
+tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_as_admin FAILED                                  [ 47%]
+tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_as_faculty ERROR                                 [ 48%]
+tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_unauthenticated PASSED                           [ 48%]
+tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_with_year_filter PASSED                          [ 49%]
+tests/integration/test_payroll_endpoints.py::TestMySalarySlipsEndpoint::test_list_my_salary_slips ERROR                                           [ 50%]
+tests/integration/test_payroll_endpoints.py::TestMySalarySlipsEndpoint::test_my_salary_slips_unauthenticated PASSED                               [ 50%]
+tests/integration/test_payroll_endpoints.py::TestSalaryAccountEndpoint::test_get_my_account_details ERROR                                         [ 51%]
+tests/integration/test_payroll_endpoints.py::TestSalaryAccountEndpoint::test_save_my_account_details PASSED                                       [ 51%]
+tests/integration/test_payroll_endpoints.py::TestAccountChangeRequestsEndpoint::test_list_my_account_change_requests PASSED                       [ 52%]
+tests/integration/test_payroll_endpoints.py::TestAccountChangeRequestsEndpoint::test_create_account_change_request PASSED                         [ 52%]
+tests/integration/test_schedule_endpoints.py::TestScheduleListEndpoint::test_list_schedule_as_faculty ERROR                                       [ 53%]
+tests/integration/test_schedule_endpoints.py::TestScheduleListEndpoint::test_list_schedule_as_admin PASSED                                        [ 53%]
+tests/integration/test_schedule_endpoints.py::TestScheduleListEndpoint::test_list_schedule_as_student PASSED                                      [ 54%]
+tests/integration/test_schedule_endpoints.py::TestScheduleListEndpoint::test_list_schedule_unauthenticated PASSED                                 [ 55%]
+tests/integration/test_schedule_endpoints.py::TestScheduleByClassEndpoint::test_get_schedule_by_class FAILED                                      [ 55%]
+tests/integration/test_schedule_endpoints.py::TestScheduleByClassEndpoint::test_get_schedule_by_class_with_date FAILED                            [ 56%]
+tests/integration/test_schedule_endpoints.py::TestScheduleByFacultyEndpoint::test_get_schedule_by_faculty FAILED                                  [ 56%]
+tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_as_faculty ERROR                                       [ 57%]
+tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_as_admin PASSED                                        [ 57%]
+tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_unauthenticated PASSED                                 [ 58%]
+tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_with_class_filter ERROR                                [ 59%]
+tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_with_section_filter ERROR                              [ 59%]
+tests/integration/test_students_endpoints.py::TestStudentMeEndpoint::test_get_me_as_student FAILED                                                [ 60%]
+tests/integration/test_students_endpoints.py::TestStudentMeEndpoint::test_get_me_unauthenticated PASSED                                           [ 60%]
+tests/integration/test_students_endpoints.py::TestStudentSubjectsEndpoint::test_get_my_subjects PASSED                                            [ 61%]
+tests/integration/test_students_endpoints.py::TestStudentSubjectsEndpoint::test_get_my_subjects_unauthenticated PASSED                            [ 61%]
+tests/integration/test_students_endpoints.py::TestStudentPerformanceEndpoint::test_get_my_performance PASSED                                      [ 62%]
+tests/integration/test_students_endpoints.py::TestStudentPerformanceEndpoint::test_get_performance_unauthenticated PASSED                         [ 63%]
+tests/integration/test_students_endpoints.py::TestStudentCoursesEndpoint::test_get_my_courses PASSED                                              [ 63%]
+tests/integration/test_students_endpoints.py::TestStudentCoursesEndpoint::test_get_my_courses_unauthenticated PASSED                              [ 64%]
+tests/integration/test_students_endpoints.py::TestUpcomingCoursesEndpoint::test_get_upcoming_courses PASSED                                       [ 64%]
+tests/integration/test_students_endpoints.py::TestUpcomingCoursesEndpoint::test_get_upcoming_courses_unauthenticated PASSED                       [ 65%]
+tests/integration/test_students_endpoints.py::TestCourseEnrollmentsEndpoint::test_list_course_enrollments PASSED                                  [ 65%]
+tests/integration/test_students_endpoints.py::TestCourseEnrollmentsEndpoint::test_list_enrollments_unauthenticated PASSED                         [ 66%]
+tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_creation ERROR                                                             [ 67%]
+tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_to_dict ERROR                                                              [ 67%]
+tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_status_uppercase ERROR                                                     [ 68%]
+tests/unit/test_attendance_bp.py::TestAttendanceDateFiltering::test_filter_by_date ERROR                                                          [ 68%]
+tests/unit/test_auth_bp.py::TestTokenGeneration::test_generate_token_returns_string ERROR                                                         [ 69%]
+tests/unit/test_auth_bp.py::TestTokenGeneration::test_verify_valid_token ERROR                                                                    [ 69%]
+tests/unit/test_auth_bp.py::TestTokenGeneration::test_verify_invalid_token_raises_error PASSED                                                    [ 70%]
+tests/unit/test_auth_bp.py::TestTokenGeneration::test_token_expiry ERROR                                                                          [ 71%]
+tests/unit/test_auth_bp.py::TestRoleNormalization::test_normalize_role_name_lowercase PASSED                                                      [ 71%]
+tests/unit/test_auth_bp.py::TestRoleNormalization::test_user_role_names_student ERROR                                                             [ 72%]
+tests/unit/test_auth_bp.py::TestUserModel::test_user_creation FAILED                                                                              [ 72%]
+tests/unit/test_auth_bp.py::TestUserModel::test_user_to_dict ERROR                                                                                [ 73%]
+tests/unit/test_faculty_bp.py::TestFacultyModel::test_faculty_creation ERROR                                                                      [ 73%]
+tests/unit/test_faculty_bp.py::TestFacultyModel::test_faculty_to_dict ERROR                                                                       [ 74%]
+tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_assignment_creation ERROR                                                         [ 75%]
+tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_assignment_to_dict ERROR                                                          [ 75%]
+tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_get_faculty_classes ERROR                                                         [ 76%]
+tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_get_faculty_subjects ERROR                                                        [ 76%]
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_creation PASSED                                                                [ 77%]
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_to_dict PASSED                                                                 [ 77%]
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_stock_status PASSED                                                            [ 78%]
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_creation PASSED                                                                     [ 78%]
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_to_dict PASSED                                                                      [ 79%]
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_active_status PASSED                                                                [ 80%]
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_update_item_quantity PASSED                                                        [ 80%]
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_reserve_stock PASSED                                                               [ 81%]
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_item_delete PASSED                                                                 [ 81%]
+tests/unit/test_leave_bp.py::TestLeaveRequestModel::test_leave_request_creation ERROR                                                             [ 82%]
+tests/unit/test_leave_bp.py::TestLeaveRequestModel::test_leave_request_to_dict ERROR                                                              [ 82%]
+tests/unit/test_leave_bp.py::TestLeaveRequestModel::test_leave_total_days_calculation PASSED                                                      [ 83%]
+tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_approve_leave_request ERROR                                                         [ 84%]
+tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_reject_leave_request ERROR                                                          [ 84%]
+tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_leave_request_delete ERROR                                                          [ 85%]
+tests/unit/test_leave_bp.py::TestLeaveDateValidation::test_valid_date_range PASSED                                                                [ 85%]
+tests/unit/test_leave_bp.py::TestLeaveDateValidation::test_same_day_leave PASSED                                                                  [ 86%]
+tests/unit/test_leave_bp.py::TestLeaveDateValidation::test_invalid_date_range PASSED                                                              [ 86%]
+tests/unit/test_marks_bp.py::TestMarkModel::test_mark_creation ERROR                                                                              [ 87%]
+tests/unit/test_marks_bp.py::TestMarkModel::test_mark_to_dict ERROR                                                                               [ 88%]
+tests/unit/test_marks_bp.py::TestMarkModel::test_mark_percentage ERROR                                                                            [ 88%]
+tests/unit/test_marks_bp.py::TestMarkQueries::test_filter_by_student ERROR                                                                        [ 89%]
+tests/unit/test_marks_bp.py::TestMarkQueries::test_filter_by_exam_type ERROR                                                                      [ 89%]
+tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_creation ERROR                                                        [ 90%]
+tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_to_dict ERROR                                                         [ 90%]
+tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_creation_time ERROR                                                   [ 91%]
+tests/unit/test_notifications_bp.py::TestEmailMessageModel::test_email_message_creation PASSED                                                    [ 92%]
+tests/unit/test_notifications_bp.py::TestEmailMessageModel::test_email_message_to_dict PASSED                                                     [ 92%]
+tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_creation ERROR                                                               [ 93%]
+tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_to_dict ERROR                                                                [ 93%]
+tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_month_key ERROR                                                              [ 94%]
+tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_salary_account_creation ERROR                                                         [ 94%]
+tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_salary_account_to_dict ERROR                                                          [ 95%]
+tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_account_verification_status ERROR                                                     [ 96%]
+tests/unit/test_payroll_bp.py::TestPayrollCalculations::test_net_salary_calculation PASSED                                                        [ 96%]
+tests/unit/test_payroll_bp.py::TestPayrollCalculations::test_salary_slip_normalized_name ERROR                                                    [ 97%]
+tests/unit/test_students_bp.py::TestStudentModel::test_student_creation ERROR                                                                     [ 97%]
+tests/unit/test_students_bp.py::TestStudentModel::test_student_to_dict ERROR                                                                      [ 98%]
+tests/unit/test_students_bp.py::TestStudentModel::test_current_enrollment ERROR                                                                   [ 98%]
+tests/unit/test_students_bp.py::TestStudentQueries::test_get_student_subjects ERROR                                                               [ 99%]
+tests/unit/test_students_bp.py::TestStudentQueries::test_student_by_class ERROR                                                                   [100%]
+
+======================================================================== ERRORS =========================================================================
+______________________________________ ERROR at setup of TestGetAttendanceEndpoint.test_get_attendance_as_faculty _______________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_attendance_endpoints.py:48: AssertionError
+________________________________ ERROR at setup of TestAttendanceMeStatsEndpoint.test_get_stats_as_faculty_unauthorized _________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_attendance_endpoints.py:48: AssertionError
+___________________________________ ERROR at setup of TestCreateAttendanceEndpoint.test_create_attendance_as_faculty ____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_attendance_endpoints.py:48: AssertionError
+________________________________________ ERROR at setup of TestListFacultyEndpoint.test_list_faculty_as_faculty _________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+_________________________________________ ERROR at setup of TestFacultyClassesEndpoint.test_get_faculty_classes _________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+____________________________________ ERROR at setup of TestFacultyClassesOverviewEndpoint.test_get_classes_overview _____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+____________________________________ ERROR at setup of TestFacultyUpcomingCoursesEndpoint.test_get_upcoming_courses _____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+_________________________________ ERROR at setup of TestFacultyStudentPerformanceEndpoint.test_get_student_performance __________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+____________________________ ERROR at setup of TestFacultyStudentPerformanceEndpoint.test_get_performance_with_class_filter _____________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_faculty_endpoints.py:36: AssertionError
+_____________________________________ ERROR at setup of TestCreateLeaveRequestEndpoint.test_create_leave_as_faculty _____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_leave_endpoints.py:48: AssertionError
+__________________________________________ ERROR at setup of TestListMarksEndpoint.test_list_marks_as_faculty ___________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_marks_endpoints.py:47: AssertionError
+____________________________________ ERROR at setup of TestListSalarySlipsEndpoint.test_list_salary_slips_as_faculty ____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_payroll_endpoints.py:36: AssertionError
+_________________________________________ ERROR at setup of TestMySalarySlipsEndpoint.test_list_my_salary_slips _________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_payroll_endpoints.py:36: AssertionError
+________________________________________ ERROR at setup of TestSalaryAccountEndpoint.test_get_my_account_details ________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_payroll_endpoints.py:36: AssertionError
+_______________________________________ ERROR at setup of TestScheduleListEndpoint.test_list_schedule_as_faculty ________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_schedule_endpoints.py:37: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+_______________________________________ ERROR at setup of TestListStudentsEndpoint.test_list_students_as_faculty ________________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_students_endpoints.py:47: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+____________________________________ ERROR at setup of TestListStudentsEndpoint.test_list_students_with_class_filter ____________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_students_endpoints.py:47: AssertionError
+___________________________________ ERROR at setup of TestListStudentsEndpoint.test_list_students_with_section_filter ___________________________________
+
+client = <FlaskClient <Flask 'app'>>
+
+    @pytest.fixture
+    def faculty_auth(client):
+        response = client.post("/api/v1/auth/login", json={
+            "email": SEEDED_FACULTY_EMAIL,
+            "password": "faculty123"
+        })
+>       assert response.status_code == 200
+E       assert 401 == 200
+E        +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+tests/integration/test_students_endpoints.py:47: AssertionError
+____________________________________________ ERROR at setup of TestAttendanceModel.test_attendance_creation _____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_attendance_data(app):
+        """Create sample data for attendance testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 1",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_attendance_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161315748288)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 1', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+_____________________________________________ ERROR at setup of TestAttendanceModel.test_attendance_to_dict _____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_attendance_data(app):
+        """Create sample data for attendance testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 1",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_attendance_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161220045984)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 1', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+________________________________________ ERROR at setup of TestAttendanceModel.test_attendance_status_uppercase _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_attendance_data(app):
+        """Create sample data for attendance testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 1",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_attendance_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161220601888)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 1', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+___________________________________________ ERROR at setup of TestAttendanceDateFiltering.test_filter_by_date ___________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_attendance_data(app):
+        """Create sample data for attendance testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 1",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_attendance_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161221539904)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 1', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+_______________________________________ ERROR at setup of TestTokenGeneration.test_generate_token_returns_string ________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_user(app):
+        """Create a sample user for testing."""
+        with app.app_context():
+>           user = User(
+                email="testuser@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161225218192)>
+kwargs = {'email': 'testuser@example.com', 'first_name': 'Test', 'last_name': 'User', 'password_hash': 'hashed_password', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+_____________________________________________ ERROR at setup of TestTokenGeneration.test_verify_valid_token _____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_user(app):
+        """Create a sample user for testing."""
+        with app.app_context():
+>           user = User(
+                email="testuser@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161218081536)>
+kwargs = {'email': 'testuser@example.com', 'first_name': 'Test', 'last_name': 'User', 'password_hash': 'hashed_password', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+________________________________________________ ERROR at setup of TestTokenGeneration.test_token_expiry ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_user(app):
+        """Create a sample user for testing."""
+        with app.app_context():
+>           user = User(
+                email="testuser@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161218079856)>
+kwargs = {'email': 'testuser@example.com', 'first_name': 'Test', 'last_name': 'User', 'password_hash': 'hashed_password', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestRoleNormalization.test_user_role_names_student __________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_user(app):
+        """Create a sample user for testing."""
+        with app.app_context():
+>           user = User(
+                email="testuser@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161226743776)>
+kwargs = {'email': 'testuser@example.com', 'first_name': 'Test', 'last_name': 'User', 'password_hash': 'hashed_password', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+___________________________________________________ ERROR at setup of TestUserModel.test_user_to_dict ___________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def sample_user(app):
+        """Create a sample user for testing."""
+        with app.app_context():
+>           user = User(
+                email="testuser@example.com",
+                first_name="Test",
+                last_name="User",
+                password_hash="hashed_password",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161226384960)>
+kwargs = {'email': 'testuser@example.com', 'first_name': 'Test', 'last_name': 'User', 'password_hash': 'hashed_password', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_______________________________________________ ERROR at setup of TestFacultyModel.test_faculty_creation ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161228595648)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________________ ERROR at setup of TestFacultyModel.test_faculty_to_dict ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161213507520)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestFacultyAssignmentModel.test_assignment_creation _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161213515296)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestFacultyAssignmentModel.test_assignment_to_dict __________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161213585456)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestFacultyAssignmentModel.test_get_faculty_classes _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161213593280)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+________________________________________ ERROR at setup of TestFacultyAssignmentModel.test_get_faculty_subjects _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def faculty_data(app):
+        """Create sample data for faculty testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="faculty_unit@test.com",
+                first_name="Unit",
+                last_name="Faculty",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_faculty_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161213505840)>
+kwargs = {'email': 'faculty_unit@test.com', 'first_name': 'Unit', 'last_name': 'Faculty', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+__________________________________________ ERROR at setup of TestLeaveRequestModel.test_leave_request_creation __________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def leave_data(app):
+        """Create sample data for leave testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="leave_test@example.com",
+                first_name="Leave",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_leave_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161217429824)>
+kwargs = {'email': 'leave_test@example.com', 'first_name': 'Leave', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+__________________________________________ ERROR at setup of TestLeaveRequestModel.test_leave_request_to_dict ___________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def leave_data(app):
+        """Create sample data for leave testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="leave_test@example.com",
+                first_name="Leave",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_leave_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161210093744)>
+kwargs = {'email': 'leave_test@example.com', 'first_name': 'Leave', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+________________________________________ ERROR at setup of TestLeaveStatusTransitions.test_approve_leave_request ________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def leave_data(app):
+        """Create sample data for leave testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="leave_test@example.com",
+                first_name="Leave",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_leave_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161210753040)>
+kwargs = {'email': 'leave_test@example.com', 'first_name': 'Leave', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+________________________________________ ERROR at setup of TestLeaveStatusTransitions.test_reject_leave_request _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def leave_data(app):
+        """Create sample data for leave testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="leave_test@example.com",
+                first_name="Leave",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_leave_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161205468976)>
+kwargs = {'email': 'leave_test@example.com', 'first_name': 'Leave', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+________________________________________ ERROR at setup of TestLeaveStatusTransitions.test_leave_request_delete _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def leave_data(app):
+        """Create sample data for leave testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="leave_test@example.com",
+                first_name="Leave",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_leave_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161208045440)>
+kwargs = {'email': 'leave_test@example.com', 'first_name': 'Leave', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+__________________________________________________ ERROR at setup of TestMarkModel.test_mark_creation ___________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def mark_data(app):
+        """Create sample data for marks testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 6",
+                section="B",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_marks_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161194730592)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 6', 'section': 'B'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+___________________________________________________ ERROR at setup of TestMarkModel.test_mark_to_dict ___________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def mark_data(app):
+        """Create sample data for marks testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 6",
+                section="B",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_marks_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161225921024)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 6', 'section': 'B'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+_________________________________________________ ERROR at setup of TestMarkModel.test_mark_percentage __________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def mark_data(app):
+        """Create sample data for marks testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 6",
+                section="B",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_marks_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161200019648)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 6', 'section': 'B'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+_______________________________________________ ERROR at setup of TestMarkQueries.test_filter_by_student ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def mark_data(app):
+        """Create sample data for marks testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 6",
+                section="B",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_marks_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161209185984)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 6', 'section': 'B'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+______________________________________________ ERROR at setup of TestMarkQueries.test_filter_by_exam_type _______________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def mark_data(app):
+        """Create sample data for marks testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 6",
+                section="B",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_marks_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161199524416)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 6', 'section': 'B'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+___________________________________________ ERROR at setup of TestNotificationBatchModel.test_batch_creation ____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def notification_data(app):
+        """Create sample data for notifications testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="notify_test@example.com",
+                first_name="Notify",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="administration",
+            )
+
+tests/unit/test_notifications_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161199339632)>
+kwargs = {'email': 'notify_test@example.com', 'first_name': 'Notify', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+____________________________________________ ERROR at setup of TestNotificationBatchModel.test_batch_to_dict ____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def notification_data(app):
+        """Create sample data for notifications testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="notify_test@example.com",
+                first_name="Notify",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="administration",
+            )
+
+tests/unit/test_notifications_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161196085376)>
+kwargs = {'email': 'notify_test@example.com', 'first_name': 'Notify', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestNotificationBatchModel.test_batch_creation_time _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def notification_data(app):
+        """Create sample data for notifications testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="notify_test@example.com",
+                first_name="Notify",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="administration",
+            )
+
+tests/unit/test_notifications_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161195879104)>
+kwargs = {'email': 'notify_test@example.com', 'first_name': 'Notify', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+____________________________________________ ERROR at setup of TestSalarySlipModel.test_salary_slip_creation ____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161203915088)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+____________________________________________ ERROR at setup of TestSalarySlipModel.test_salary_slip_to_dict _____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161197342656)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+___________________________________________ ERROR at setup of TestSalarySlipModel.test_salary_slip_month_key ____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161198415168)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestSalaryAccountModel.test_salary_account_creation _________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161197214800)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_________________________________________ ERROR at setup of TestSalaryAccountModel.test_salary_account_to_dict __________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161196498576)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_______________________________________ ERROR at setup of TestSalaryAccountModel.test_account_verification_status _______________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161196619600)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+______________________________________ ERROR at setup of TestPayrollCalculations.test_salary_slip_normalized_name _______________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def payroll_data(app):
+        """Create sample data for payroll testing."""
+        with app.app_context():
+            # Create user
+>           user = User(
+                email="payroll_test@example.com",
+                first_name="Payroll",
+                last_name="Test",
+                password_hash="hash",
+                status=UserStatus.ACTIVE,
+                role_scope="faculty",
+            )
+
+tests/unit/test_payroll_bp.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161218086384)>
+kwargs = {'email': 'payroll_test@example.com', 'first_name': 'Payroll', 'last_name': 'Test', 'password_hash': 'hash', ...}
+cls_ = <class 'app.models.core.User'>, k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+_______________________________________________ ERROR at setup of TestStudentModel.test_student_creation ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def student_user(app):
+        """Create a student user for testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 5",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_students_bp.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161194732944)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 5', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________________ ERROR at setup of TestStudentModel.test_student_to_dict ________________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def student_user(app):
+        """Create a student user for testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 5",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_students_bp.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161190021648)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 5', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+______________________________________________ ERROR at setup of TestStudentModel.test_current_enrollment _______________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def student_user(app):
+        """Create a student user for testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 5",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_students_bp.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161190357216)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 5', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+____________________________________________ ERROR at setup of TestStudentQueries.test_get_student_subjects _____________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def student_user(app):
+        """Create a student user for testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 5",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_students_bp.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161186876640)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 5', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+______________________________________________ ERROR at setup of TestStudentQueries.test_student_by_class _______________________________________________
+
+app = <Flask 'app'>
+
+    @pytest.fixture
+    def student_user(app):
+        """Create a student user for testing."""
+        with app.app_context():
+            # Create institute class
+>           institute_class = InstituteClass(
+                name="Class 5",
+                section="A",
+                academic_year="2024-2025",
+                class_teacher_id=1
+            )
+
+tests/unit/test_students_bp.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <InstituteClass (transient 127161186877664)>, kwargs = {'academic_year': '2024-2025', 'class_teacher_id': 1, 'name': 'Class 5', 'section': 'A'}
+cls_ = <class 'app.models.core.InstituteClass'>, k = 'class_teacher_id'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2179: TypeError
+======================================================================= FAILURES ========================================================================
+_______________________________________________ TestGetAttendanceEndpoint.test_get_attendance_as_student ________________________________________________
+
+self = <integration.test_attendance_endpoints.TestGetAttendanceEndpoint object at 0x73a70ec60d40>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY13g.Sx8dvh25KC2ZH3i9SUCTmgTK1LY'}
+
+    def test_get_attendance_as_student(self, client, student_auth):
+        """Test student can get own attendance."""
+        response = client.get("/api/v1/attendance", headers=student_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'courseId': '1', 'date': '2026-04-20', 'id': '1', 'markedBy': '11', ...}, {'courseId': '6', 'date': '2026-04-19', 'id': '2', 'markedBy': '18', ...}, {'courseId': '11', 'date': '2026-04-18', 'id': '3', 'markedBy': '13', ...}, {'courseId': '1', 'date': '2026-04-17', 'id': '4', 'markedBy': '11', ...}]
+
+tests/integration/test_attendance_endpoints.py:70: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+______________________________________________ TestAttendanceMeStatsEndpoint.test_get_my_attendance_stats _______________________________________________
+
+self = <integration.test_attendance_endpoints.TestAttendanceMeStatsEndpoint object at 0x73a70ec93590>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY13w.9MX20G8eNu7qGqCX0s1UXARwEjA'}
+
+    def test_get_my_attendance_stats(self, client, student_auth):
+        """Test student can get own attendance stats."""
+        response = client.get("/api/v1/attendance/me/stats", headers=student_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in {'absent': 1, 'percentage': 50.0, 'present': 2, 'total': 4}
+
+tests/integration/test_attendance_endpoints.py:108: AssertionError
+_____________________________________________ TestCreateAttendanceEndpoint.test_create_attendance_as_admin ______________________________________________
+
+self = <integration.test_attendance_endpoints.TestCreateAttendanceEndpoint object at 0x73a70ec934a0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY13w.OQPbo58McEfh2JghlV1lz43qaNI'}
+
+    def test_create_attendance_as_admin(self, client, admin_auth):
+        """Test admin can create attendance records."""
+        # This test requires proper class and student data
+        response = client.post("/api/v1/attendance", headers=admin_auth, json={
+            "attendanceDate": date.today().isoformat(),
+            "classId": 1,
+            "records": []
+        })
+        # Should succeed with valid data structure
+>       assert response.status_code in [201, 400, 404]
+E       assert 422 in [201, 400, 404]
+E        +  where 422 = <WrapperTestResponse streamed [422 UNPROCESSABLE ENTITY]>.status_code
+
+tests/integration/test_attendance_endpoints.py:134: AssertionError
+_____________________________________________ TestUpdateAttendanceEndpoint.test_update_attendance_as_admin ______________________________________________
+
+self = <integration.test_attendance_endpoints.TestUpdateAttendanceEndpoint object at 0x73a70ec930b0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY13w.OQPbo58McEfh2JghlV1lz43qaNI'}
+
+    def test_update_attendance_as_admin(self, client, admin_auth):
+        """Test admin can update attendance records."""
+        response = client.put("/api/v1/attendance", headers=admin_auth, json={
+            "attendanceDate": date.today().isoformat(),
+            "classId": 1,
+            "records": []
+        })
+>       assert response.status_code in [200, 400, 404]
+E       assert 422 in [200, 400, 404]
+E        +  where 422 = <WrapperTestResponse streamed [422 UNPROCESSABLE ENTITY]>.status_code
+
+tests/integration/test_attendance_endpoints.py:165: AssertionError
+__________________________________________________ TestAuthLogoutEndpoint.test_logout_unauthenticated ___________________________________________________
+
+self = <integration.test_auth_endpoints.TestAuthLogoutEndpoint object at 0x73a70eb7e510>, client = <FlaskClient <Flask 'app'>>
+
+    def test_logout_unauthenticated(self, client):
+        """Test logout without authentication."""
+        response = client.post("/api/v1/auth/logout")
+>       assert response.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/integration/test_auth_endpoints.py:145: AssertionError
+__________________________________________________ TestListFacultyEndpoint.test_list_faculty_as_admin ___________________________________________________
+
+self = <integration.test_faculty_endpoints.TestListFacultyEndpoint object at 0x73a70eb7c4a0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2Ug.rM4dcLz9KrH2Mu-CxAa9eBHGWFY'}
+
+    def test_list_faculty_as_admin(self, client, admin_auth):
+        """Test admin can list all faculty."""
+        response = client.get("/api/v1/faculty", headers=admin_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'email': 'faculty001.isha@example.in', 'firstName': 'Isha', 'id': '1', 'lastName': 'Sharma', ...}, {'email': 'faculty002.avni@example.in', 'firstName': 'Avni', 'id': '2', 'lastName': 'Reddy', ...}, {'email': 'faculty003.bhavna@example.in', 'firstName': 'Bhavna', 'id': '3', 'lastName': 'Gupta', ...}, {'email': 'faculty004.chhavi@example.in', 'firstName': 'Chhavi', 'id': '4', 'lastName': 'Das', ...}, {'email': 'faculty005.divya@example.in', 'firstName': 'Divya', 'id': '5', 'lastName': 'Joshi', ...}, {'email': 'faculty006.ekta@example.in', 'firstName': 'Ekta', 'id': '6', 'lastName': 'Yadav', ...}, ...]
+
+tests/integration/test_faculty_endpoints.py:58: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________________ TestListInventoryItemsEndpoint.test_list_items_as_admin ________________________________________________
+
+self = <integration.test_inventory_endpoints.TestListInventoryItemsEndpoint object at 0x73a70eb7d5e0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2iw.hsUSzqAYzA9cL_kIYzMm76V-dQY'}
+
+    def test_list_items_as_admin(self, client, admin_auth):
+        """Test admin can list inventory items."""
+        response = client.get("/api/v1/inventory/items", headers=admin_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'available': 160, 'category': 'stationery', 'createdAt': '2026-04-20T14:22:03.459602', 'description': None, ...}, {'available': 210, 'category': 'stationery', 'createdAt': '2026-04-20T14:22:03.459607', 'description': None, ...}, {'available': 10, 'category': 'electronics', 'createdAt': '2026-04-20T14:22:03.459610', 'description': None, ...}, {'available': 12, 'category': 'laboratory', 'createdAt': '2026-04-20T14:22:03.459612', 'description': None, ...}, {'available': 24, 'category': 'electronics', 'createdAt': '2026-04-20T14:22:03.459614', 'description': None, ...}, {'available': 16, 'category': 'laboratory', 'createdAt': '2026-04-20T14:22:03.459616', 'description': None, ...}, ...]
+
+tests/integration/test_inventory_endpoints.py:47: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+____________________________________________ TestCreateInventoryItemEndpoint.test_create_item_missing_fields ____________________________________________
+
+self = <integration.test_inventory_endpoints.TestCreateInventoryItemEndpoint object at 0x73a70eb7c560>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2iw.hsUSzqAYzA9cL_kIYzMm76V-dQY'}
+
+    def test_create_item_missing_fields(self, client, admin_auth):
+        """Test creating item with missing required fields."""
+        response = client.post("/api/v1/inventory/items", headers=admin_auth, json={
+            "name": "Test Item"
+        })
+>       assert response.status_code == 422
+E       assert 201 == 422
+E        +  where 201 = <WrapperTestResponse streamed [201 CREATED]>.status_code
+
+tests/integration/test_inventory_endpoints.py:85: AssertionError
+_______________________________________________ TestListLeaveRequestsEndpoint.test_list_leave_as_student ________________________________________________
+
+self = <integration.test_leave_endpoints.TestListLeaveRequestsEndpoint object at 0x73a70eb7e810>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xA.ADR-anri_ujc6ntw9orBAbsdATE'}
+
+    def test_list_leave_as_student(self, client, student_auth):
+        """Test student can list own leave requests."""
+        response = client.get("/api/v1/leave/leave", headers=student_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:68: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________________ TestListLeaveRequestsEndpoint.test_list_leave_as_admin _________________________________________________
+
+self = <integration.test_leave_endpoints.TestListLeaveRequestsEndpoint object at 0x73a70eb7d520>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2xQ.Z8Cxg2Pf5Jo_YX5SGr03zDZuTsw'}
+
+    def test_list_leave_as_admin(self, client, admin_auth):
+        """Test admin can list all leave requests."""
+        response = client.get("/api/v1/leave/leave", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:76: AssertionError
+_____________________________________________ TestListLeaveRequestsEndpoint.test_list_leave_unauthenticated _____________________________________________
+
+self = <integration.test_leave_endpoints.TestListLeaveRequestsEndpoint object at 0x73a70eb7e450>, client = <FlaskClient <Flask 'app'>>
+
+    def test_list_leave_unauthenticated(self, client):
+        """Test listing leave without auth fails."""
+        response = client.get("/api/v1/leave/leave")
+>       assert response.status_code == 401
+E       assert 404 == 401
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:81: AssertionError
+___________________________________________ TestListLeaveRequestsEndpoint.test_list_leave_with_status_filter ____________________________________________
+
+self = <integration.test_leave_endpoints.TestListLeaveRequestsEndpoint object at 0x73a70eb7e480>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2xQ.Z8Cxg2Pf5Jo_YX5SGr03zDZuTsw'}
+
+    def test_list_leave_with_status_filter(self, client, admin_auth):
+        """Test listing leave with status filter."""
+        response = client.get("/api/v1/leave/leave?status=Pending", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:86: AssertionError
+______________________________________________ TestCreateLeaveRequestEndpoint.test_create_leave_as_student ______________________________________________
+
+self = <integration.test_leave_endpoints.TestCreateLeaveRequestEndpoint object at 0x73a70eb7d7c0>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xQ.gO1_ndBu2bSslIGSHZluhXHTrY0'}
+
+    def test_create_leave_as_student(self, client, student_auth):
+        """Test student can create leave request."""
+        from_date = (date.today() + timedelta(days=5)).isoformat()
+        to_date = (date.today() + timedelta(days=7)).isoformat()
+        response = client.post("/api/v1/leave/leave", headers=student_auth, json={
+            "fromDate": from_date,
+            "toDate": to_date,
+            "leaveType": "Sick Leave",
+            "reason": "Medical appointment"
+        })
+>       assert response.status_code == 201
+E       assert 404 == 201
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:102: AssertionError
+__________________________________________ TestCreateLeaveRequestEndpoint.test_create_leave_invalid_date_range __________________________________________
+
+self = <integration.test_leave_endpoints.TestCreateLeaveRequestEndpoint object at 0x73a70eb7d1f0>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xQ.gO1_ndBu2bSslIGSHZluhXHTrY0'}
+
+    def test_create_leave_invalid_date_range(self, client, student_auth):
+        """Test creating leave with invalid date range."""
+        from_date = (date.today() + timedelta(days=10)).isoformat()
+        to_date = (date.today() + timedelta(days=5)).isoformat()
+        response = client.post("/api/v1/leave/leave", headers=student_auth, json={
+            "fromDate": from_date,
+            "toDate": to_date,
+            "leaveType": "Sick Leave",
+            "reason": "Test"
+        })
+>       assert response.status_code == 400
+E       assert 404 == 400
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:126: AssertionError
+____________________________________________ TestCreateLeaveRequestEndpoint.test_create_leave_missing_fields ____________________________________________
+
+self = <integration.test_leave_endpoints.TestCreateLeaveRequestEndpoint object at 0x73a70eb7ecf0>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xQ.gO1_ndBu2bSslIGSHZluhXHTrY0'}
+
+    def test_create_leave_missing_fields(self, client, student_auth):
+        """Test creating leave with missing fields."""
+        response = client.post("/api/v1/leave/leave", headers=student_auth, json={
+            "fromDate": date.today().isoformat()
+        })
+>       assert response.status_code == 422
+E       assert 404 == 422
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:133: AssertionError
+____________________________________________ TestLeaveReviewEndpoint.test_review_leave_as_student_forbidden _____________________________________________
+
+self = <integration.test_leave_endpoints.TestLeaveReviewEndpoint object at 0x73a70eb7f4d0>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xQ.gO1_ndBu2bSslIGSHZluhXHTrY0'}
+
+    def test_review_leave_as_student_forbidden(self, client, student_auth):
+        """Test student cannot review leave requests."""
+        response = client.put("/api/v1/leave/leave/1/review", headers=student_auth, json={
+            "status": "Approved"
+        })
+>       assert response.status_code == 403
+E       assert 404 == 403
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:153: AssertionError
+_______________________________________________ TestLeaveCancelEndpoint.test_cancel_leave_unauthenticated _______________________________________________
+
+self = <integration.test_leave_endpoints.TestLeaveCancelEndpoint object at 0x73a70eb7f6b0>, client = <FlaskClient <Flask 'app'>>
+
+    def test_cancel_leave_unauthenticated(self, client):
+        """Test cancelling leave without auth fails."""
+        response = client.put("/api/v1/leave/leave/1/cancel")
+>       assert response.status_code == 401
+E       assert 404 == 401
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:162: AssertionError
+___________________________________________________ TestLeaveStatsEndpoint.test_leave_stats_as_admin ____________________________________________________
+
+self = <integration.test_leave_endpoints.TestLeaveStatsEndpoint object at 0x73a70eb7f8f0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY2xQ.Z8Cxg2Pf5Jo_YX5SGr03zDZuTsw'}
+
+    def test_leave_stats_as_admin(self, client, admin_auth):
+        """Test admin can get leave statistics."""
+        response = client.get("/api/v1/leave/leave/stats", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:171: AssertionError
+_____________________________________________ TestLeaveStatsEndpoint.test_leave_stats_as_student_forbidden ______________________________________________
+
+self = <integration.test_leave_endpoints.TestLeaveStatsEndpoint object at 0x73a70eb7fa40>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2xQ.gO1_ndBu2bSslIGSHZluhXHTrY0'}
+
+    def test_leave_stats_as_student_forbidden(self, client, student_auth):
+        """Test student cannot access leave statistics."""
+        response = client.get("/api/v1/leave/leave/stats", headers=student_auth)
+>       assert response.status_code == 403
+E       assert 404 == 403
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_leave_endpoints.py:176: AssertionError
+___________________________________________________ TestListMarksEndpoint.test_list_marks_as_student ____________________________________________________
+
+self = <integration.test_marks_endpoints.TestListMarksEndpoint object at 0x73a70eb7e600>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY2_Q.FHogCBg8hyTKVyXEyHDcFol-d-o'}
+
+    def test_list_marks_as_student(self, client, student_auth):
+        """Test student can get own marks."""
+        response = client.get("/api/v1/marks", headers=student_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'courseId': '1', 'courseTitle': 'Mathematics', 'date': '2026-04-10', 'examType': 'UNIT_TEST', ...}, {'courseId': '6', 'courseTitle': 'Physics', 'date': '2026-04-13', 'examType': 'MID_TERM', ...}]
+
+tests/integration/test_marks_endpoints.py:69: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+__________________________________________________ TestEmailMessagesEndpoint.test_list_email_messages ___________________________________________________
+
+self = <integration.test_notifications_endpoints.TestEmailMessagesEndpoint object at 0x73a70eaecce0>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY3Pw.C18sZp0nY7qyDQ49LWQjxYu0qUk'}
+
+    def test_list_email_messages(self, client, admin_auth):
+        """Test listing email messages."""
+        response = client.get("/api/v1/notifications/email/messages", headers=admin_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'batchId': None, 'bcc': [], 'category': 'general', 'cc': [], ...}, {'batchId': '6', 'bcc': [], 'category': 'notification', 'cc': [], ...}]
+
+tests/integration/test_notifications_endpoints.py:95: AssertionError
+________________________________________________________ TestEmailSyncEndpoint.test_sync_emails _________________________________________________________
+
+self = <integration.test_notifications_endpoints.TestEmailSyncEndpoint object at 0x73a70eaed070>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY3Pw.C18sZp0nY7qyDQ49LWQjxYu0qUk'}
+
+    def test_sync_emails(self, client, admin_auth):
+        """Test syncing emails."""
+        response = client.post("/api/v1/notifications/email/sync", headers=admin_auth, json={
+            "limit": 10,
+            "mailbox": "INBOX",
+            "unseenOnly": False
+        })
+>       assert response.status_code == 200
+E       assert 202 == 200
+E        +  where 202 = <WrapperTestResponse streamed [202 ACCEPTED]>.status_code
+
+tests/integration/test_notifications_endpoints.py:116: AssertionError
+________________________________________________ TestParentChildrenEndpoint.test_list_children_as_parent ________________________________________________
+
+self = <integration.test_parent_endpoints.TestParentChildrenEndpoint object at 0x73a70eaecec0>, client = <FlaskClient <Flask 'app'>>
+parent_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyNH0.aeY3eg.zTCvj7YBKC3jfrDAwX7cS7c8OCI'}
+
+    def test_list_children_as_parent(self, client, parent_auth):
+        """Test parent can list children."""
+        response = client.get("/api/v1/parent/children", headers=parent_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'class': 'Class 8', 'classId': '1', 'email': 'student0001.aarav@example.in', 'enrollmentNo': 'APX2026-0001', ...}]
+
+tests/integration/test_parent_endpoints.py:58: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________ TestParentStudentAttendanceEndpoint.test_get_attendance_unauthenticated ________________________________________
+
+self = <integration.test_parent_endpoints.TestParentStudentAttendanceEndpoint object at 0x73a70eaed0a0>, client = <FlaskClient <Flask 'app'>>
+
+    def test_get_attendance_unauthenticated(self, client):
+        """Test without auth fails."""
+        response = client.get("/api/v1/parent/students/1/attendance")
+>       assert response.status_code == 401
+E       assert 404 == 401
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_parent_endpoints.py:77: AssertionError
+______________________________________________ TestListSalarySlipsEndpoint.test_list_salary_slips_as_admin ______________________________________________
+
+self = <integration.test_payroll_endpoints.TestListSalarySlipsEndpoint object at 0x73a70eaee450>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY3sQ.Z7G3OPMTe393cYQ3IBOPkP-4EfU'}
+
+    def test_list_salary_slips_as_admin(self, client, admin_auth):
+        """Test admin can list salary slips."""
+        response = client.get("/api/v1/payroll/salary-slips", headers=admin_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in [{'allowances': [{'amount': 48900, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8012', 'baseSalary': 65200.0, 'category': 'Teaching', ...}, {'allowances': [{'amount': 48000, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8011', 'baseSalary': 64000.0, 'category': 'Teaching', ...}, {'allowances': [{'amount': 47100, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8010', 'baseSalary': 62800.0, 'category': 'Teaching', ...}, {'allowances': [{'amount': 46200, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8009', 'baseSalary': 61600.0, 'category': 'Teaching', ...}, {'allowances': [{'amount': 45300, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8008', 'baseSalary': 60400.0, 'category': 'Teaching', ...}, {'allowances': [{'amount': 44400, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount': 5000, 'label': 'Transport Allowance'}], 'bankAccount': 'XXXXXX8007', 'baseSalary': 59200.0, 'category': 'Teaching', ...}, ...]
+
+tests/integration/test_payroll_endpoints.py:58: AssertionError
+------------------------------------------------------------------ Captured log setup -------------------------------------------------------------------
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:238 MongoDB cleanup skipped: 'Flask' object has no attribute 'document_store'
+WARNING  app.seed:__init__.py:180 MongoDB seeding skipped: 'Flask' object has no attribute 'document_store'
+________________________________________________ TestScheduleByClassEndpoint.test_get_schedule_by_class _________________________________________________
+
+self = <integration.test_schedule_endpoints.TestScheduleByClassEndpoint object at 0x73a70eaefa10>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY36w.L2jrnU56Tb1NsD66AsematoJhG0'}
+
+    def test_get_schedule_by_class(self, client, admin_auth):
+        """Test getting schedule by class."""
+        response = client.get("/api/v1/schedule/class/1", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_schedule_endpoints.py:93: AssertionError
+___________________________________________ TestScheduleByClassEndpoint.test_get_schedule_by_class_with_date ____________________________________________
+
+self = <integration.test_schedule_endpoints.TestScheduleByClassEndpoint object at 0x73a70eaefb90>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY36w.L2jrnU56Tb1NsD66AsematoJhG0'}
+
+    def test_get_schedule_by_class_with_date(self, client, admin_auth):
+        """Test getting schedule with date filter."""
+        response = client.get("/api/v1/schedule/class/1?date=2024-05-01", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_schedule_endpoints.py:98: AssertionError
+______________________________________________ TestScheduleByFacultyEndpoint.test_get_schedule_by_faculty _______________________________________________
+
+self = <integration.test_schedule_endpoints.TestScheduleByFacultyEndpoint object at 0x73a70eaefd40>, client = <FlaskClient <Flask 'app'>>
+admin_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyfQ.aeY36w.L2jrnU56Tb1NsD66AsematoJhG0'}
+
+    def test_get_schedule_by_faculty(self, client, admin_auth):
+        """Test getting schedule by faculty."""
+        response = client.get("/api/v1/schedule/faculty/1", headers=admin_auth)
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/integration/test_schedule_endpoints.py:107: AssertionError
+_____________________________________________________ TestStudentMeEndpoint.test_get_me_as_student ______________________________________________________
+
+self = <integration.test_students_endpoints.TestStudentMeEndpoint object at 0x73a70eae8680>, client = <FlaskClient <Flask 'app'>>
+student_auth = {'Authorization': 'Bearer eyJ1c2VyX2lkIjoyM30.aeY4JQ.iYISj6_HdsqcDZDllJPpxnCa0uQ'}
+
+    def test_get_me_as_student(self, client, student_auth):
+        """Test student can get own profile."""
+        response = client.get("/api/v1/students/me", headers=student_auth)
+        assert response.status_code == 200
+        data = response.get_json()
+>       assert "data" in data
+E       AssertionError: assert 'data' in {'class': 'Class 8', 'classId': '1', 'email': 'student0001.aarav@example.in', 'enrollmentNo': 'APX2026-0001', ...}
+
+tests/integration/test_students_endpoints.py:101: AssertionError
+___________________________________________________________ TestUserModel.test_user_creation ____________________________________________________________
+
+self = <unit.test_auth_bp.TestUserModel object at 0x73a70eaeb1a0>, app = <Flask 'app'>
+
+    def test_user_creation(self, app):
+        """Test creating a new user."""
+        with app.app_context():
+>           user = User(
+                email="newuser@test.com",
+                first_name="New",
+                last_name="User",
+                password_hash="hash123",
+                status=UserStatus.ACTIVE,
+                role_scope="student",
+            )
+
+tests/unit/test_auth_bp.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:596: in _initialize_instance
+    with util.safe_reraise():
+.benv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:594: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <User (transient 127161227279776)>
+kwargs = {'email': 'newuser@test.com', 'first_name': 'New', 'last_name': 'User', 'password_hash': 'hash123', ...}, cls_ = <class 'app.models.core.User'>
+k = 'role_scope'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'role_scope' of 'User' object has no setter
+
+.benv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py:2182: AttributeError
+=================================================================== warnings summary ====================================================================
+<frozen importlib._bootstrap>:488
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_creation
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:71: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_to_dict
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:79: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryItemModel::test_item_stock_status
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:89: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_creation
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:100: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    vendor = Vendor.query.get(inventory_data["vendor"].id)
+
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_to_dict
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:107: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    vendor = Vendor.query.get(inventory_data["vendor"].id)
+
+tests/unit/test_inventory_bp.py::TestVendorModel::test_vendor_active_status
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:116: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    vendor = Vendor.query.get(inventory_data["vendor"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_update_item_quantity
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:126: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_update_item_quantity
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:131: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_reserve_stock
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:138: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_reserve_stock
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:144: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    updated_item = InventoryItem.query.get(inventory_data["item"].id)
+
+tests/unit/test_inventory_bp.py::TestInventoryOperations::test_item_delete
+  /media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend/tests/unit/test_inventory_bp.py:166: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    deleted_item = InventoryItem.query.get(item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================================================ short test summary info ================================================================
+FAILED tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_as_student - AssertionError: assert 'data' in [{'courseId': '1', 'date': '2026-04-20', 'id': '1', 'markedBy': '11', ...}, {'courseId': '6', 'date': '2026-04-19',...
+FAILED tests/integration/test_attendance_endpoints.py::TestAttendanceMeStatsEndpoint::test_get_my_attendance_stats - AssertionError: assert 'data' in {'absent': 1, 'percentage': 50.0, 'present': 2, 'total': 4}
+FAILED tests/integration/test_attendance_endpoints.py::TestCreateAttendanceEndpoint::test_create_attendance_as_admin - assert 422 in [201, 400, 404]
+FAILED tests/integration/test_attendance_endpoints.py::TestUpdateAttendanceEndpoint::test_update_attendance_as_admin - assert 422 in [200, 400, 404]
+FAILED tests/integration/test_auth_endpoints.py::TestAuthLogoutEndpoint::test_logout_unauthenticated - assert 200 == 401
+FAILED tests/integration/test_faculty_endpoints.py::TestListFacultyEndpoint::test_list_faculty_as_admin - AssertionError: assert 'data' in [{'email': 'faculty001.isha@example.in', 'firstName': 'Isha', 'id': '1', 'lastName': 'Sharma', ...}, {'email': 'fac...
+FAILED tests/integration/test_inventory_endpoints.py::TestListInventoryItemsEndpoint::test_list_items_as_admin - AssertionError: assert 'data' in [{'available': 160, 'category': 'stationery', 'createdAt': '2026-04-20T14:22:03.459602', 'description': None, ...},...
+FAILED tests/integration/test_inventory_endpoints.py::TestCreateInventoryItemEndpoint::test_create_item_missing_fields - assert 201 == 422
+FAILED tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_as_student - assert 404 == 200
+FAILED tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_as_admin - assert 404 == 200
+FAILED tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_unauthenticated - assert 404 == 401
+FAILED tests/integration/test_leave_endpoints.py::TestListLeaveRequestsEndpoint::test_list_leave_with_status_filter - assert 404 == 200
+FAILED tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_as_student - assert 404 == 201
+FAILED tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_invalid_date_range - assert 404 == 400
+FAILED tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_missing_fields - assert 404 == 422
+FAILED tests/integration/test_leave_endpoints.py::TestLeaveReviewEndpoint::test_review_leave_as_student_forbidden - assert 404 == 403
+FAILED tests/integration/test_leave_endpoints.py::TestLeaveCancelEndpoint::test_cancel_leave_unauthenticated - assert 404 == 401
+FAILED tests/integration/test_leave_endpoints.py::TestLeaveStatsEndpoint::test_leave_stats_as_admin - assert 404 == 200
+FAILED tests/integration/test_leave_endpoints.py::TestLeaveStatsEndpoint::test_leave_stats_as_student_forbidden - assert 404 == 403
+FAILED tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_as_student - AssertionError: assert 'data' in [{'courseId': '1', 'courseTitle': 'Mathematics', 'date': '2026-04-10', 'examType': 'UNIT_TEST', ...}, {'courseId': ...
+FAILED tests/integration/test_notifications_endpoints.py::TestEmailMessagesEndpoint::test_list_email_messages - AssertionError: assert 'data' in [{'batchId': None, 'bcc': [], 'category': 'general', 'cc': [], ...}, {'batchId': '6', 'bcc': [], 'category': 'notif...
+FAILED tests/integration/test_notifications_endpoints.py::TestEmailSyncEndpoint::test_sync_emails - assert 202 == 200
+FAILED tests/integration/test_parent_endpoints.py::TestParentChildrenEndpoint::test_list_children_as_parent - AssertionError: assert 'data' in [{'class': 'Class 8', 'classId': '1', 'email': 'student0001.aarav@example.in', 'enrollmentNo': 'APX2026-0001', ...}]
+FAILED tests/integration/test_parent_endpoints.py::TestParentStudentAttendanceEndpoint::test_get_attendance_unauthenticated - assert 404 == 401
+FAILED tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_as_admin - AssertionError: assert 'data' in [{'allowances': [{'amount': 48900, 'label': 'Basic Pay'}, {'amount': 7000, 'label': 'Academic Allowance'}, {'amount...
+FAILED tests/integration/test_schedule_endpoints.py::TestScheduleByClassEndpoint::test_get_schedule_by_class - assert 404 == 200
+FAILED tests/integration/test_schedule_endpoints.py::TestScheduleByClassEndpoint::test_get_schedule_by_class_with_date - assert 404 == 200
+FAILED tests/integration/test_schedule_endpoints.py::TestScheduleByFacultyEndpoint::test_get_schedule_by_faculty - assert 404 == 200
+FAILED tests/integration/test_students_endpoints.py::TestStudentMeEndpoint::test_get_me_as_student - AssertionError: assert 'data' in {'class': 'Class 8', 'classId': '1', 'email': 'student0001.aarav@example.in', 'enrollmentNo': 'APX2026-0001', ...}
+FAILED tests/unit/test_auth_bp.py::TestUserModel::test_user_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/integration/test_attendance_endpoints.py::TestGetAttendanceEndpoint::test_get_attendance_as_faculty - assert 401 == 200
+ERROR tests/integration/test_attendance_endpoints.py::TestAttendanceMeStatsEndpoint::test_get_stats_as_faculty_unauthorized - assert 401 == 200
+ERROR tests/integration/test_attendance_endpoints.py::TestCreateAttendanceEndpoint::test_create_attendance_as_faculty - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestListFacultyEndpoint::test_list_faculty_as_faculty - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestFacultyClassesEndpoint::test_get_faculty_classes - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestFacultyClassesOverviewEndpoint::test_get_classes_overview - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestFacultyUpcomingCoursesEndpoint::test_get_upcoming_courses - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestFacultyStudentPerformanceEndpoint::test_get_student_performance - assert 401 == 200
+ERROR tests/integration/test_faculty_endpoints.py::TestFacultyStudentPerformanceEndpoint::test_get_performance_with_class_filter - assert 401 == 200
+ERROR tests/integration/test_leave_endpoints.py::TestCreateLeaveRequestEndpoint::test_create_leave_as_faculty - assert 401 == 200
+ERROR tests/integration/test_marks_endpoints.py::TestListMarksEndpoint::test_list_marks_as_faculty - assert 401 == 200
+ERROR tests/integration/test_payroll_endpoints.py::TestListSalarySlipsEndpoint::test_list_salary_slips_as_faculty - assert 401 == 200
+ERROR tests/integration/test_payroll_endpoints.py::TestMySalarySlipsEndpoint::test_list_my_salary_slips - assert 401 == 200
+ERROR tests/integration/test_payroll_endpoints.py::TestSalaryAccountEndpoint::test_get_my_account_details - assert 401 == 200
+ERROR tests/integration/test_schedule_endpoints.py::TestScheduleListEndpoint::test_list_schedule_as_faculty - assert 401 == 200
+ERROR tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_as_faculty - assert 401 == 200
+ERROR tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_with_class_filter - assert 401 == 200
+ERROR tests/integration/test_students_endpoints.py::TestListStudentsEndpoint::test_list_students_with_section_filter - assert 401 == 200
+ERROR tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_creation - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_to_dict - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_attendance_bp.py::TestAttendanceModel::test_attendance_status_uppercase - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_attendance_bp.py::TestAttendanceDateFiltering::test_filter_by_date - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_auth_bp.py::TestTokenGeneration::test_generate_token_returns_string - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_auth_bp.py::TestTokenGeneration::test_verify_valid_token - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_auth_bp.py::TestTokenGeneration::test_token_expiry - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_auth_bp.py::TestRoleNormalization::test_user_role_names_student - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_auth_bp.py::TestUserModel::test_user_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyModel::test_faculty_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyModel::test_faculty_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_assignment_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_assignment_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_get_faculty_classes - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_faculty_bp.py::TestFacultyAssignmentModel::test_get_faculty_subjects - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_leave_bp.py::TestLeaveRequestModel::test_leave_request_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_leave_bp.py::TestLeaveRequestModel::test_leave_request_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_approve_leave_request - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_reject_leave_request - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_leave_bp.py::TestLeaveStatusTransitions::test_leave_request_delete - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_marks_bp.py::TestMarkModel::test_mark_creation - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_marks_bp.py::TestMarkModel::test_mark_to_dict - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_marks_bp.py::TestMarkModel::test_mark_percentage - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_marks_bp.py::TestMarkQueries::test_filter_by_student - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_marks_bp.py::TestMarkQueries::test_filter_by_exam_type - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_notifications_bp.py::TestNotificationBatchModel::test_batch_creation_time - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalarySlipModel::test_salary_slip_month_key - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_salary_account_creation - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_salary_account_to_dict - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestSalaryAccountModel::test_account_verification_status - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_payroll_bp.py::TestPayrollCalculations::test_salary_slip_normalized_name - AttributeError: property 'role_scope' of 'User' object has no setter
+ERROR tests/unit/test_students_bp.py::TestStudentModel::test_student_creation - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_students_bp.py::TestStudentModel::test_student_to_dict - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_students_bp.py::TestStudentModel::test_current_enrollment - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_students_bp.py::TestStudentQueries::test_get_student_subjects - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+ERROR tests/unit/test_students_bp.py::TestStudentQueries::test_student_by_class - TypeError: 'class_teacher_id' is an invalid keyword argument for InstituteClass
+=========================================== 30 failed, 88 passed, 16 warnings, 58 errors in 903.61s (0:15:03) ===========================================
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+(.benv) dheerajkumarvishwakarma@dheerajkhumarvishwakarma:/media/dheerajkumarvishwakarma/E/degree_level/software engineering/project/Code-Red---Software-Engineering/backend$ 
+

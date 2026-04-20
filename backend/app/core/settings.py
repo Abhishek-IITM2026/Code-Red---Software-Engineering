@@ -56,8 +56,23 @@ class Settings(BaseSettings):
     RAG_MAX_CONTEXT_CHUNKS: int = 6
     RAG_SOURCE_ROOT: str = str(BACKEND_DIR / "uploads" / "documents")
     RAG_VECTOR_DIR: str = str(BACKEND_DIR / "instance" / "rag" / "chroma")
-    RAG_TEXT_MODEL: str = "all-MiniLM-L6-v2"
-    RAG_CLIP_MODEL: str = "openai/clip-vit-base-patch32"
+    
+    # Text Embedding Configuration
+    RAG_TEXT_EMBEDDING_PROVIDER: str = "local"  # local, openai, huggingface, ollama
+    RAG_TEXT_MODEL: str = "all-MiniLM-L6-v2"  # HuggingFace model name or local path
+    
+    # Image Embedding Configuration
+    RAG_IMAGE_EMBEDDING_PROVIDER: str = "local"  # local, openai, huggingface
+    RAG_CLIP_MODEL: str = "openai/clip-vit-base-patch32"  # Used for local embeddings
+    
+    # API Configuration for Embeddings
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"  # For OpenAI embeddings
+    OPENAI_EMBEDDING_API_KEY: str = ""  # OpenAI API key (optional, uses OPENAI_API_KEY if not set)
+    HUGGINGFACE_EMBEDDING_API_KEY: str = ""  # Hugging Face API key
+    OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"  # For Ollama embeddings
+    OLLAMA_EMBEDDING_BASE_URL: str = "http://localhost:11434"  # Ollama endpoint for embeddings
+    
+    # Embedding Retrieval Settings
     RAG_TEXT_TOP_K: int = 4
     RAG_IMAGE_TOP_K: int = 3
     RAG_CHUNK_TOKENS: int = 700

@@ -14,17 +14,35 @@ DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "llama3.2"
 
 DEFAULT_AI_SETTINGS: dict[str, Any] = {
-    "provider": "ollama",
-    "mode": "local",
+    # LLM Configuration
+    "provider": "ollama",  # ollama, gemini, openai-compatible
+    "mode": "local",  # local, api-key
     "model": DEFAULT_OLLAMA_MODEL,
     "baseUrl": DEFAULT_OLLAMA_BASE_URL,
     "apiKey": None,
     "temperature": 0.2,
     "maxTokens": 1200,
+    
+    # Embedding Configuration (Text)
+    "textEmbeddingProvider": "local",  # local, openai, huggingface, ollama
+    "textEmbeddingModel": "all-MiniLM-L6-v2",  # HuggingFace model name
+    "textEmbeddingDimension": 384,  # Output dimension of embeddings
+    "textEmbeddingApiKey": None,  # For OpenAI/HuggingFace APIs
+    
+    # Embedding Configuration (Images)
+    "imageEmbeddingProvider": "local",  # local, openai, huggingface
+    "imageEmbeddingModel": "openai/clip-vit-base-patch32",  # For local CLIP model
+    "imageEmbeddingDimension": 512,  # Output dimension of image embeddings
+    "imageEmbeddingApiKey": None,  # For API-based image embeddings
+    
+    # Rate Limits & Behavior
     "generationRateLimit": "15 per minute",
     "modificationRateLimit": "15 per minute",
+    "embeddingBatchSize": 32,  # Batch size for embedding API calls
     "fallbackToGroundedRag": True,
     "notes": None,
+    
+    # System Prompts
     "assessmentSystemPrompt": (
         "You are an expert academic assessment creator specializing in generating high-quality, pedagogically sound exam questions. "
         "Your questions must: (1) be grounded strictly in the provided course context, (2) be clear, unambiguous, and free of typos, "
@@ -108,53 +126,109 @@ def _merge_settings(document: dict[str, Any] | None) -> dict[str, Any]:
 def get_ai_settings(include_secret: bool = False) -> dict[str, Any]:
     settings = _merge_settings(AISettingsRepository().get())
     payload = {
+        # LLM Settings
         "provider": settings["provider"],
         "mode": settings.get("mode", "local"),
         "model": settings["model"],
         "baseUrl": settings.get("baseUrl"),
         "temperature": settings["temperature"],
         "maxTokens": settings["maxTokens"],
+        
+        # Text Embedding Settings
+        "textEmbeddingProvider": settings.get("textEmbeddingProvider", "local"),
+        "textEmbeddingModel": settings.get("textEmbeddingModel", "all-MiniLM-L6-v2"),
+        "textEmbeddingDimension": settings.get("textEmbeddingDimension", 384),
+        "hasTextEmbeddingApiKey": bool(settings.get("textEmbeddingApiKey")),
+        "textEmbeddingApiKeyPreview": _mask_api_key(settings.get("textEmbeddingApiKey")),
+        
+        # Image Embedding Settings
+        "imageEmbeddingProvider": settings.get("imageEmbeddingProvider", "local"),
+        "imageEmbeddingModel": settings.get("imageEmbeddingModel", "openai/clip-vit-base-patch32"),
+        "imageEmbeddingDimension": settings.get("imageEmbeddingDimension", 512),
+        "hasImageEmbeddingApiKey": bool(settings.get("imageEmbeddingApiKey")),
+        "imageEmbeddingApiKeyPreview": _mask_api_key(settings.get("imageEmbeddingApiKey")),
+        
+        # Behavior & Limits
         "generationRateLimit": settings["generationRateLimit"],
         "modificationRateLimit": settings["modificationRateLimit"],
+        "embeddingBatchSize": settings.get("embeddingBatchSize", 32),
         "fallbackToGroundedRag": bool(settings.get("fallbackToGroundedRag", True)),
         "notes": settings.get("notes"),
+        
+        # System Prompts
         "assessmentSystemPrompt": settings.get("assessmentSystemPrompt") or DEFAULT_AI_SETTINGS["assessmentSystemPrompt"],
         "assessmentModifySystemPrompt": settings.get("assessmentModifySystemPrompt") or DEFAULT_AI_SETTINGS["assessmentModifySystemPrompt"],
         "studentChatSystemPrompt": settings.get("studentChatSystemPrompt") or DEFAULT_AI_SETTINGS["studentChatSystemPrompt"],
         "assessmentUserPromptTemplate": settings.get("assessmentUserPromptTemplate") or DEFAULT_AI_SETTINGS["assessmentUserPromptTemplate"],
+        
+        # Metadata
         "updatedAt": settings.get("updatedAt"),
         "hasApiKey": bool(settings.get("apiKey")),
         "apiKeyPreview": _mask_api_key(settings.get("apiKey")),
     }
     if include_secret:
         payload["apiKey"] = settings.get("apiKey")
+        payload["textEmbeddingApiKey"] = settings.get("textEmbeddingApiKey")
+        payload["imageEmbeddingApiKey"] = settings.get("imageEmbeddingApiKey")
     return payload
 
 
 def update_ai_settings(payload: dict[str, Any]) -> dict[str, Any]:
     current = get_ai_settings(include_secret=True)
     next_settings = {
+        # LLM Settings
         "provider": payload.get("provider", current["provider"]),
         "mode": payload.get("mode", current.get("mode", "local")),
         "model": payload.get("model", current["model"]),
         "baseUrl": payload.get("baseUrl", current.get("baseUrl")),
         "temperature": payload.get("temperature", current["temperature"]),
         "maxTokens": payload.get("maxTokens", current["maxTokens"]),
+        
+        # Text Embedding Settings
+        "textEmbeddingProvider": payload.get("textEmbeddingProvider", current.get("textEmbeddingProvider", "local")),
+        "textEmbeddingModel": payload.get("textEmbeddingModel", current.get("textEmbeddingModel", "all-MiniLM-L6-v2")),
+        "textEmbeddingDimension": payload.get("textEmbeddingDimension", current.get("textEmbeddingDimension", 384)),
+        "textEmbeddingApiKey": current.get("textEmbeddingApiKey"),
+        
+        # Image Embedding Settings
+        "imageEmbeddingProvider": payload.get("imageEmbeddingProvider", current.get("imageEmbeddingProvider", "local")),
+        "imageEmbeddingModel": payload.get("imageEmbeddingModel", current.get("imageEmbeddingModel", "openai/clip-vit-base-patch32")),
+        "imageEmbeddingDimension": payload.get("imageEmbeddingDimension", current.get("imageEmbeddingDimension", 512)),
+        "imageEmbeddingApiKey": current.get("imageEmbeddingApiKey"),
+        
+        # Behavior & Limits
         "generationRateLimit": payload.get("generationRateLimit", current["generationRateLimit"]),
         "modificationRateLimit": payload.get("modificationRateLimit", current["modificationRateLimit"]),
+        "embeddingBatchSize": payload.get("embeddingBatchSize", current.get("embeddingBatchSize", 32)),
         "fallbackToGroundedRag": payload.get("fallbackToGroundedRag", current.get("fallbackToGroundedRag", True)),
         "notes": payload.get("notes", current.get("notes")),
+        
+        # System Prompts
         "assessmentSystemPrompt": payload.get("assessmentSystemPrompt", current.get("assessmentSystemPrompt")),
         "assessmentModifySystemPrompt": payload.get("assessmentModifySystemPrompt", current.get("assessmentModifySystemPrompt")),
         "studentChatSystemPrompt": payload.get("studentChatSystemPrompt", current.get("studentChatSystemPrompt")),
         "assessmentUserPromptTemplate": payload.get("assessmentUserPromptTemplate", current.get("assessmentUserPromptTemplate")),
+        
+        # Metadata
         "updatedAt": datetime.utcnow().isoformat(),
         "apiKey": current.get("apiKey"),
     }
+    
+    # Handle API keys with clear flags
     if payload.get("clearApiKey"):
         next_settings["apiKey"] = None
     elif payload.get("apiKey") is not None:
         next_settings["apiKey"] = payload["apiKey"]
+    
+    if payload.get("clearTextEmbeddingApiKey"):
+        next_settings["textEmbeddingApiKey"] = None
+    elif payload.get("textEmbeddingApiKey") is not None:
+        next_settings["textEmbeddingApiKey"] = payload["textEmbeddingApiKey"]
+    
+    if payload.get("clearImageEmbeddingApiKey"):
+        next_settings["imageEmbeddingApiKey"] = None
+    elif payload.get("imageEmbeddingApiKey") is not None:
+        next_settings["imageEmbeddingApiKey"] = payload["imageEmbeddingApiKey"]
 
     AISettingsRepository().upsert(next_settings)
     return get_ai_settings(include_secret=False)
