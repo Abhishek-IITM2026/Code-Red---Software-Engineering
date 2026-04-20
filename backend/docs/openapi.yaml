@@ -1,11 +1,10 @@
 openapi: 3.0.3
 info:
-  title: School Management System API
-  description: Comprehensive API for managing school operations including students,
+  title: Coaching Institute operation Management API
+  description: Comprehensive API for managing coaching institute operations including students,
     faculty, attendance, marks, payroll, and more.
   version: 1.0.0
-  contact:
-    email: support@school.edu
+  
 servers:
 - url: /api/v1
   description: API v1
