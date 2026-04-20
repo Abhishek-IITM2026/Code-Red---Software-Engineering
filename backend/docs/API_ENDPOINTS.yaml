@@ -1,0 +1,2152 @@
+openapi: 3.1.0
+info:
+  title: Code-Red CIOP Platform Backend API
+  description: Comprehensive REST API documentation for the Coaching Institute Operations Platform (CIOP)
+  version: 1.0.0
+  contact:
+    name: Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Local Development Server
+  - url: https://api.ciop.example.com
+    description: Production Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/v1/auth/login
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid request parameters"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [student, faculty, parent, admin, administration, director, superadmin]
+        status:
+          type: string
+          enum: [active, inactive, suspended, on-leave]
+        profilePicture:
+          type: string
+          nullable: true
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AISettings:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [grounded-rag, ollama, openai-compatible-cloud, openai-compatible-local, gemini]
+        mode:
+          type: string
+          enum: [local, api-key]
+        model:
+          type: string
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+        maxTokens:
+          type: integer
+          minimum: 1
+        generationRateLimit:
+          type: string
+          example: "15 per minute"
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: User Login
+      description: Authenticate user with email and password, returns JWT token
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+              example:
+                email: user@example.com
+                password: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+                        description: JWT Bearer token
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/register:
+    post:
+      summary: User Registration
+      description: Register a new user account (student, faculty, parent, or admin)
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                  enum: [student, faculty, parent, admin]
+                  default: student
+                title:
+                  type: string
+                  nullable: true
+                  example: "Dr."
+              example:
+                email: newuser@example.com
+                password: SecurePass123!
+                firstName: John
+                lastName: Doe
+                role: student
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+        '400':
+          description: Validation error or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/logout:
+    post:
+      summary: User Logout
+      description: Logout current user (invalidate token)
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /api/v1/auth/me:
+    get:
+      summary: Get Current User Profile
+      description: Retrieve authenticated user's profile information
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh Authentication Token
+      description: Obtain a new JWT token using existing token
+      tags:
+        - Authentication
+      responses:
+        '200':
+          description: New token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+
+  /api/v1/auth/otp/send:
+    post:
+      summary: Send OTP for Verification
+      description: Send One-Time Password to user's email for verification purposes
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, purpose]
+              properties:
+                email:
+                  type: string
+                  format: email
+                purpose:
+                  type: string
+                  enum: [profile_update, password_change, profile_picture_update, email_change, password_reset, account_verification]
+              example:
+                email: user@example.com
+                purpose: password_reset
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "OTP sent to your email"
+
+  /api/v1/auth/otp/verify:
+    post:
+      summary: Verify OTP Code
+      description: Verify OTP code sent to user's email
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, purpose, otp]
+              properties:
+                email:
+                  type: string
+                  format: email
+                purpose:
+                  type: string
+                otp:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+              example:
+                email: user@example.com
+                purpose: password_reset
+                otp: "123456"
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/profile/update:
+    post:
+      summary: Update User Profile
+      description: Update user profile information (name, phone, etc.)
+      tags:
+        - Authentication
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+              example:
+                firstName: John
+                lastName: Smith
+                phone: "+1234567890"
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/v1/auth/profile/picture:
+    post:
+      summary: Update Profile Picture
+      description: Upload and set a new profile picture for user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                profilePicture:
+                  type: string
+                  description: Base64 encoded image or image URL
+              example:
+                profilePicture: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+      responses:
+        '200':
+          description: Profile picture updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/profile/change-password:
+    post:
+      summary: Change Password
+      description: Change user's password with current password verification
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword, confirmPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+                confirmPassword:
+                  type: string
+                  minLength: 8
+              example:
+                currentPassword: oldpass123
+                newPassword: newpass456
+                confirmPassword: newpass456
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/password/reset-request:
+    post:
+      summary: Request Password Reset
+      description: Request password reset by email
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+              example:
+                email: user@example.com
+      responses:
+        '200':
+          description: Password reset OTP sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/password/reset-confirm:
+    post:
+      summary: Confirm Password Reset
+      description: Complete password reset using OTP code
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp, newPassword]
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+              example:
+                email: user@example.com
+                otp: "123456"
+                newPassword: newpass456
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/email/change-request:
+    post:
+      summary: Request Email Change
+      description: Request to change user's email address
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newEmail]
+              properties:
+                newEmail:
+                  type: string
+                  format: email
+              example:
+                newEmail: newemail@example.com
+      responses:
+        '200':
+          description: Email change OTP sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/auth/email/change-confirm:
+    post:
+      summary: Confirm Email Change
+      description: Confirm email change using OTP
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+                  minLength: 6
+              example:
+                otp: "123456"
+      responses:
+        '200':
+          description: Email changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/administration/dashboard:
+    get:
+      summary: Get Admin Dashboard Data
+      description: Retrieve dashboard statistics and overview data for administrators
+      tags:
+        - Administration
+      responses:
+        '200':
+          description: Dashboard data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalStudents:
+                        type: integer
+                      totalStaff:
+                        type: integer
+                      totalCourses:
+                        type: integer
+                      activeCourses:
+                        type: integer
+
+  /api/v1/administration/ai-settings:
+    get:
+      summary: Get AI Settings Configuration
+      description: Retrieve current AI system settings including model, provider, and rate limits
+      tags:
+        - Administration
+        - AI Settings
+      responses:
+        '200':
+          description: AI settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AISettings'
+
+    put:
+      summary: Update AI Settings Configuration
+      description: Update AI system settings including LLM provider, model selection, temperature, and rate limits
+      tags:
+        - Administration
+        - AI Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider:
+                  type: string
+                  enum: [grounded-rag, ollama, openai-compatible-cloud, openai-compatible-local, gemini]
+                mode:
+                  type: string
+                  enum: [local, api-key]
+                model:
+                  type: string
+                  example: "llama3.2"
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                  example: 0.2
+                maxTokens:
+                  type: integer
+                  example: 1200
+                generationRateLimit:
+                  type: string
+                  example: "15 per minute"
+                apiKey:
+                  type: string
+                  nullable: true
+                  description: API key for cloud providers
+                baseUrl:
+                  type: string
+                  nullable: true
+                  description: Base URL for OpenAI-compatible endpoints
+                clearApiKey:
+                  type: boolean
+                  description: Set to true to clear existing API key
+                assessmentSystemPrompt:
+                  type: string
+                  nullable: true
+                studentChatSystemPrompt:
+                  type: string
+                  nullable: true
+              example:
+                provider: "ollama"
+                mode: "local"
+                model: "llama3.2"
+                temperature: 0.2
+                maxTokens: 1200
+                generationRateLimit: "15 per minute"
+      responses:
+        '200':
+          description: AI settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AISettings'
+
+  /api/v1/administration/students:
+    get:
+      summary: List All Students
+      description: Retrieve list of all students with pagination support
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended, pending-approval]
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+
+    post:
+      summary: Create New Student
+      description: Register a new student in the system
+      tags:
+        - Administration
+        - Students
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, firstName, lastName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                phone:
+                  type: string
+                  nullable: true
+              example:
+                email: student@example.com
+                firstName: Alice
+                lastName: Johnson
+                password: SecurePass123!
+      responses:
+        '201':
+          description: Student created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/v1/administration/students/{student_id}:
+    get:
+      summary: Get Student Details
+      description: Retrieve detailed information for a specific student
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+    put:
+      summary: Update Student Information
+      description: Update student's profile information
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+              example:
+                firstName: Alice
+                lastName: Smith
+      responses:
+        '200':
+          description: Student updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+    delete:
+      summary: Delete Student
+      description: Remove a student from the system
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Student deleted successfully
+
+  /api/v1/administration/students/{student_id}/approve:
+    post:
+      summary: Approve Student Account
+      description: Approve a pending student account for activation
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/administration/students/pending-approvals:
+    get:
+      summary: Get Pending Student Approvals
+      description: List all students pending approval
+      tags:
+        - Administration
+        - Students
+      responses:
+        '200':
+          description: Pending students list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+
+  /api/v1/administration/students/{student_id}/status:
+    patch:
+      summary: Update Student Status
+      description: Change student account status (active, inactive, suspended)
+      tags:
+        - Administration
+        - Students
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, inactive, suspended, on-leave]
+              example:
+                status: active
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/administration/staff:
+    get:
+      summary: List All Staff
+      description: Retrieve list of all staff members (faculty, admin, etc.)
+      tags:
+        - Administration
+        - Staff
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of staff members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+
+    post:
+      summary: Create New Staff Member
+      description: Add a new staff member (faculty, admin, etc.)
+      tags:
+        - Administration
+        - Staff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, firstName, lastName, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                  enum: [faculty, admin, administration, director, superadmin]
+                password:
+                  type: string
+                  minLength: 8
+              example:
+                email: faculty@example.com
+                firstName: Bob
+                lastName: Smith
+                role: faculty
+                password: SecurePass123!
+      responses:
+        '201':
+          description: Staff member created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/v1/administration/courses:
+    get:
+      summary: List All Courses
+      description: Retrieve list of all courses in the system
+      tags:
+        - Administration
+        - Courses
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      summary: Create New Course
+      description: Create a new course in the system
+      tags:
+        - Administration
+        - Courses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                duration:
+                  type: string
+                  nullable: true
+              example:
+                name: "Advanced Mathematics"
+                description: "Year 10 Mathematics Course"
+      responses:
+        '201':
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/administration/promotions/rules:
+    get:
+      summary: Get Student Promotion Rules
+      description: Retrieve student promotion/advancement rules
+      tags:
+        - Administration
+        - Promotions
+      responses:
+        '200':
+          description: Promotion rules retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+
+    post:
+      summary: Set Student Promotion Rules
+      description: Configure rules for student promotion/advancement
+      tags:
+        - Administration
+        - Promotions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                minimumPercentage:
+                  type: number
+                  example: 40
+                requirementType:
+                  type: string
+                  enum: [percentage, grade]
+              example:
+                minimumPercentage: 40
+                requirementType: percentage
+      responses:
+        '200':
+          description: Rules updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/assessments/ai/settings:
+    get:
+      summary: Get Assessment AI Settings
+      description: Retrieve AI settings specific to assessment generation
+      tags:
+        - Assessments
+        - AI
+      responses:
+        '200':
+          description: Assessment AI settings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AISettings'
+
+  /api/v1/assessments/ai/generate-questions:
+    post:
+      summary: Generate Assessment Questions Using AI
+      description: Generate exam/assessment questions using AI based on topic and difficulty
+      tags:
+        - Assessments
+        - AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic, difficulty, count]
+              properties:
+                topic:
+                  type: string
+                  example: "Quadratic Equations"
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard]
+                count:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                subject:
+                  type: string
+                  nullable: true
+              example:
+                topic: "Quadratic Equations"
+                difficulty: "hard"
+                count: 10
+      responses:
+        '200':
+          description: Questions generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      questions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            text:
+                              type: string
+                            options:
+                              type: array
+                              items:
+                                type: string
+                            correctAnswer:
+                              type: string
+
+  /api/v1/assessments/ai/modify-questions:
+    post:
+      summary: Modify AI-Generated Questions
+      description: Request modifications to previously generated assessment questions
+      tags:
+        - Assessments
+        - AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questionIds, instruction]
+              properties:
+                questionIds:
+                  type: array
+                  items:
+                    type: integer
+                instruction:
+                  type: string
+                  example: "Make questions easier"
+              example:
+                questionIds: [1, 2, 3]
+                instruction: "Make the questions more focused on key concepts"
+      responses:
+        '200':
+          description: Questions modified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/assessments/assessments:
+    get:
+      summary: List Assessments
+      description: Retrieve list of assessments with pagination
+      tags:
+        - Assessments
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of assessments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      summary: Create Assessment
+      description: Create a new assessment/exam
+      tags:
+        - Assessments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, subject_id, class_id]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                subject_id:
+                  type: integer
+                class_id:
+                  type: integer
+                duration:
+                  type: integer
+                  description: Duration in minutes
+                totalMarks:
+                  type: integer
+              example:
+                title: "Final Exam - Mathematics"
+                subject_id: 1
+                class_id: 5
+                duration: 120
+                totalMarks: 100
+      responses:
+        '201':
+          description: Assessment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/assessments/assessments/{assessment_id}/publish:
+    post:
+      summary: Publish Assessment
+      description: Publish an assessment to make it available to students
+      tags:
+        - Assessments
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assessment published successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/assessments/assessments/{assessment_id}/submit:
+    post:
+      summary: Submit Assessment Response
+      description: Student submits their assessment responses
+      tags:
+        - Assessments
+      parameters:
+        - name: assessment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      questionId:
+                        type: integer
+                      selectedAnswer:
+                        type: string
+              example:
+                answers:
+                  - questionId: 1
+                    selectedAnswer: "A"
+                  - questionId: 2
+                    selectedAnswer: "B"
+      responses:
+        '200':
+          description: Assessment submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/attendance/me/stats:
+    get:
+      summary: Get User's Attendance Statistics
+      description: Retrieve personal attendance statistics
+      tags:
+        - Attendance
+      responses:
+        '200':
+          description: Attendance statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      present:
+                        type: integer
+                      absent:
+                        type: integer
+                      percentage:
+                        type: number
+
+  /api/v1/academics/classes:
+    get:
+      summary: Get All Classes
+      description: List all classes in the institution
+      tags:
+        - Academics
+      responses:
+        '200':
+          description: List of classes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/academics/classes/{class_id}/sections:
+    get:
+      summary: Get Class Sections
+      description: Get all sections within a class
+      tags:
+        - Academics
+      parameters:
+        - name: class_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of sections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/students/me:
+    get:
+      summary: Get Student Profile
+      description: Retrieve current student's profile information
+      tags:
+        - Students
+      responses:
+        '200':
+          description: Student profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /api/v1/students/me/subjects:
+    get:
+      summary: Get Student's Subjects
+      description: Get list of subjects enrolled by student
+      tags:
+        - Students
+      responses:
+        '200':
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/students/me/subjects/{subject_id}/chat:
+    post:
+      summary: Chat with AI About Subject Content
+      description: Ask AI questions about subject material using RAG
+      tags:
+        - Students
+        - AI Chat
+      parameters:
+        - name: subject_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  example: "What is a quadratic equation?"
+      responses:
+        '200':
+          description: AI response to question
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      response:
+                        type: string
+                      sources:
+                        type: array
+                        items:
+                          type: object
+
+  /api/v1/students/me/performance:
+    get:
+      summary: Get Student Performance Data
+      description: Retrieve student's academic performance metrics
+      tags:
+        - Students
+      responses:
+        '200':
+          description: Performance data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      gpa:
+                        type: number
+                      totalMarks:
+                        type: integer
+                      average:
+                        type: number
+
+  /api/v1/faculty/classes:
+    get:
+      summary: Get Faculty's Classes
+      description: Retrieve classes assigned to faculty member
+      tags:
+        - Faculty
+      responses:
+        '200':
+          description: List of assigned classes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/faculty/subjects/{subject_id}/materials:
+    get:
+      summary: Get Subject Materials
+      description: Retrieve teaching materials for a subject
+      tags:
+        - Faculty
+      parameters:
+        - name: subject_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of materials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      summary: Create Subject Material
+      description: Upload or create new teaching material for subject
+      tags:
+        - Faculty
+      parameters:
+        - name: subject_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type]
+              properties:
+                title:
+                  type: string
+                type:
+                  type: string
+                  enum: [pdf, image, video, text, link]
+                documentId:
+                  type: integer
+                  nullable: true
+                sourceText:
+                  type: string
+                  nullable: true
+                externalUrl:
+                  type: string
+                  nullable: true
+              example:
+                title: "Chapter 5: Quadratic Equations"
+                type: "pdf"
+      responses:
+        '201':
+          description: Material created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/inventory/items:
+    get:
+      summary: List Inventory Items
+      description: Get list of all inventory items
+      tags:
+        - Inventory
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: List of inventory items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      summary: Create Inventory Item
+      description: Add new item to inventory
+      tags:
+        - Inventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, quantity]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                quantity:
+                  type: integer
+                unit:
+                  type: string
+              example:
+                name: "Chalk Box"
+                quantity: 50
+                unit: "boxes"
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/payroll/salary-slips:
+    get:
+      summary: List Salary Slips
+      description: Retrieve salary slips for administration view
+      tags:
+        - Payroll
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: List of salary slips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/payroll/me/salary-slips:
+    get:
+      summary: Get My Salary Slips
+      description: Retrieve user's personal salary slips
+      tags:
+        - Payroll
+      responses:
+        '200':
+          description: List of salary slips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/parent/children:
+    get:
+      summary: Get Parent's Children
+      description: Retrieve list of children enrolled in the institution
+      tags:
+        - Parent
+      responses:
+        '200':
+          description: List of children
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/parent/children/{child_id}/dashboard:
+    get:
+      summary: Get Child's Dashboard
+      description: Retrieve child's academic dashboard for parent view
+      tags:
+        - Parent
+      parameters:
+        - name: child_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Child dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+
+  /api/v1/parent/students/{child_id}/fees:
+    get:
+      summary: Get Child's Fees
+      description: Retrieve fee information and invoices for child
+      tags:
+        - Parent
+      parameters:
+        - name: child_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Fee information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/parent/fees/{invoice_id}/download:
+    get:
+      summary: Download Invoice PDF
+      description: Download fee invoice as PDF document
+      tags:
+        - Parent
+      parameters:
+        - name: invoice_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /api/v1/notifications/schedule:
+    post:
+      summary: Schedule Notification
+      description: Schedule a notification to be sent at specified time
+      tags:
+        - Notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipients, subject, message, scheduledTime]
+              properties:
+                recipients:
+                  type: array
+                  items:
+                    type: integer
+                  description: User IDs to receive notification
+                subject:
+                  type: string
+                message:
+                  type: string
+                scheduledTime:
+                  type: string
+                  format: date-time
+              example:
+                recipients: [1, 2, 3]
+                subject: "New Assignment"
+                message: "Assignment due tomorrow"
+                scheduledTime: "2024-01-15T10:00:00Z"
+      responses:
+        '200':
+          description: Notification scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /api/v1/rag/ingest:
+    post:
+      summary: Ingest Materials for RAG
+      description: Upload and process materials for RAG document store
+      tags:
+        - RAG
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [subject_id, files]
+              properties:
+                subject_id:
+                  type: integer
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Materials ingested successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      processedFiles:
+                        type: integer
+                      chunks:
+                        type: integer
+
+  /api/v1/schedule/me:
+    get:
+      summary: Get Personal Schedule
+      description: Retrieve user's personal schedule
+      tags:
+        - Schedule
+      responses:
+        '200':
+          description: Schedule data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /api/v1/uploads/documents:
+    post:
+      summary: Upload Document
+      description: Upload a document file (PDF, image, etc.)
+      tags:
+        - Uploads
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                documentType:
+                  type: string
+                  enum: [pdf, image, video, document]
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      documentId:
+                        type: integer
+                      url:
+                        type: string
+
+    get:
+      summary: List Uploaded Documents
+      description: Retrieve list of uploaded documents
+      tags:
+        - Uploads
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+tags:
+  - name: Authentication
+    description: User authentication and account management
+  - name: Administration
+    description: Administrative operations and system management
+  - name: Students
+    description: Student-specific endpoints and academic data
+  - name: Faculty
+    description: Faculty and teaching-related endpoints
+  - name: Parent
+    description: Parent portal and child tracking
+  - name: Assessments
+    description: Assessment, exam, and evaluation management
+  - name: Attendance
+    description: Attendance tracking and statistics
+  - name: Academics
+    description: Academic structure (classes, sections, subjects)
+  - name: Inventory
+    description: Inventory management endpoints
+  - name: Payroll
+    description: Payroll and salary-related endpoints
+  - name: Notifications
+    description: Notification and messaging endpoints
+  - name: RAG
+    description: Retrieval-Augmented Generation endpoints
+  - name: AI
+    description: AI-powered features and integrations
+  - name: Schedule
+    description: Scheduling and timetable endpoints
+  - name: Uploads
+    description: File upload and document management
+  - name: AI Settings
+    description: AI system configuration and management
