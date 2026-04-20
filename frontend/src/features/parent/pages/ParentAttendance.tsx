@@ -2,14 +2,21 @@ import { useEffect, useState } from "react";
 import { Search } from "../../../components/common";
 import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
+import { useGetChildAttendanceRowsQuery } from "../api/parentApi";
+import type { AttendanceRow } from "../data";
 
 const ParentAttendance = function() {
-  const { children, selectedChild, selectedChildId, setSelectedChildId, attendanceRows, isLoading } = useParentChildren();
-  const [filteredRows, setFilteredRows] = useState(attendanceRows);
+  const { children, selectedChild, selectedChildId, setSelectedChildId } = useParentChildren();
+  const [filteredRows, setFilteredRows] = useState<AttendanceRow[]>([]);
+  
+  // Fetch attendance rows directly from backend
+  const { data: attendanceRows = [], isLoading } = useGetChildAttendanceRowsQuery(selectedChildId, {
+    skip: !selectedChildId,
+  });
 
   useEffect(() => {
     setFilteredRows(attendanceRows);
-  }, [attendanceRows]);
+  }, [attendanceRows, selectedChildId]);
 
   const searchConfig = {
     fields: [

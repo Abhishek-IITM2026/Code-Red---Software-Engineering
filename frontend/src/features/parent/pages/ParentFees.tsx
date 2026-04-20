@@ -64,13 +64,23 @@ const ParentFees = function () {
         invoiceId: invoice.id,
         format: "pdf",
       }).unwrap();
-      if (response.url) {
-        window.open(response.url, "_blank", "noopener,noreferrer");
+      
+      // Response is already a Blob from RTK Query
+      if (response instanceof Blob) {
+        const url = window.URL.createObjectURL(response);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Invoice_CRS${invoice.id.toString().padStart(5, '0')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
         return;
       }
-      window.alert("Invoice download link is not available yet.");
+      
+      window.alert("Unable to process invoice download.");
     } catch (error: any) {
-      window.alert(error?.data?.error?.message || error?.data?.message || "Unable to open this invoice.");
+      window.alert(error?.data?.error?.message || error?.data?.message || "Unable to download this invoice.");
     }
   };
 

@@ -1,6 +1,6 @@
 # Codebase Context
 
-Updated: 2026-04-20
+Updated: 2024-12-19
 
 This is the repo-level context file for coding agents and future maintainers. It is based on the current code, not older summary docs.
 
@@ -337,7 +337,20 @@ Current backend endpoints added/changed for this flow:
 
 - administration course CRUD still lives under `backend/app/features/administration/routes.py`
 - student enrollment/payment routes live under `backend/app/features/students/routes.py`
-- parent fee invoice/payment routes live under `backend/app/features/parent/routes.py`
+- parent routes live under `backend/app/features/parent/routes.py`:
+  - `GET /api/parent/children` - list linked student(s)
+  - `GET /api/parent/children/<int:child_id>/dashboard` - comprehensive child dashboard with attendance, performance, fees, faculty contacts, upcoming courses
+  - `GET /api/parent/children/<int:child_id>/attendance` - attendance statistics summary
+  - `GET /api/parent/children/<int:child_id>/attendance-rows` - **NEW**: subject-wise attendance rows with attended/total/percentage for ParentAttendance page
+  - `GET /api/parent/children/<int:child_id>/performance` - performance summary
+  - `GET /api/parent/children/<int:child_id>/faculty-contacts` - faculty contacts list with phone/email
+  - `GET /api/parent/children/<int:child_id>/timetable` - class schedule
+  - `GET /api/parent/children/<int:child_id>/coaching-analytics` - coaching-specific performance metrics
+  - `GET /api/parent/children/<int:child_id>/subject/<id>/detailed-report` - detailed subject report
+  - `GET /api/parent/students/<int:child_id>/fees` - list all fee invoices
+  - `GET /api/parent/fees/<int:invoice_id>` - fetch single invoice details
+  - `POST /api/parent/fees/<int:invoice_id>/payment` - record fee payment
+  - `GET /api/parent/fees/<int:invoice_id>/download` - download invoice as PDF using ReportLab with professional layout
 - faculty upcoming-course visibility uses the same unified course table in `backend/app/features/faculty/routes.py`
 - this file
 
@@ -529,7 +542,7 @@ Feature areas under `frontend/src/features/`:
 - `auth`: login, register, profile, OTP modal, password reset/change, auth API/types/store
 - `student`: dashboard, attendance, marks, assessments, materials, assignments, subjects, leave, schedule, upcoming course enrollment/payment
 - `faculty`: dashboard, classes, attendance, materials, schedule, leave, salary slip, assessment builder, unified upcoming-course view
-- `parent`: dashboard, attendance, performance, fees, communication, timetable, child selector, live course/fee invoice views
+- `parent`: dashboard, attendance (with direct RTK Query), performance, fees, communication, timetable, child selector, live course/fee invoice views
 - `administration`: dashboard, authority management, course management, AI settings, records, promotions, finance, reports, inventory, schedule, performance analytics
 - `leave`: leave portal plus RTK Query/localStorage utilities
 - `notifications`: notification API helpers
@@ -552,6 +565,7 @@ Feature areas under `frontend/src/features/`:
 - Faculty study-material publishing is now backend-backed through `frontend/src/features/faculty/api/facultyApi.ts` and `frontend/src/features/faculty/pages/FacultyMaterials.tsx`, not the earlier local-only material helper path.
 - Student course enrollment/payment UI is driven by `frontend/src/features/student/api/studentApi.ts` and `frontend/src/features/student/pages/UpcomingCourses.tsx`.
 - Parent fee invoices/payments are now driven by live RTK Query calls in `frontend/src/features/parent/api/parentApi.ts` and `frontend/src/features/parent/pages/ParentFees.tsx`.
+- **Parent attendance page** now uses direct RTK Query `useGetChildAttendanceRowsQuery` hook instead of dashboard workspace data, ensuring fresh subject-wise attendance data (subject, attended, total, percentage) with search/filter capability in `frontend/src/features/parent/pages/ParentAttendance.tsx`.
 - Parent and faculty upcoming-course pages now expect the richer unified course payload: status, fee/installment metadata, and optional enrollment state for parent dashboards.
 - Faculty assessment generation now expects richer material payloads, can preview question images/context snippets, can see the active AI runtime summary, and can jump directly into manual question authoring from the generate step.
 - Faculty assessment generation now also supports optional `week` targeting and `questionStyle` values `technical`, `nonTechnical`, and `mixed`.
@@ -696,7 +710,31 @@ Update all affected items:
 - any stored URL assumptions in frontend types/components
 - this file
 
-## Practical Guidance For Future Agents
+### If you change parent portal features
+
+Update all affected items:
+
+- **Backend parent routes** in `backend/app/features/parent/routes.py`:
+  - New attendance endpoints must use `_child_attendance_rows(child_id)` helper for consistent formatting
+  - **Important phone_number pattern**: phone numbers are stored in `UserContactProfile` model, accessed via `user.contact_profile.phone_number if user.contact_profile else "N/A"` (not directly on User)
+  - Faculty contact phone retrieval: `assignment.faculty.user.contact_profile.phone_number if assignment.faculty.user.contact_profile else "N/A"`
+  - All parent endpoints are gated by `@roles_required("parent")` and `_get_parent()` auth helper
+- **Frontend parent API** in `frontend/src/features/parent/api/parentApi.ts`:
+  - New RTK Query hooks must import types from `frontend/src/features/parent/data.ts`
+  - AttendanceRow type: `{ subject: string; attended: string; total: string; percentage: string }`
+  - RTK Query hooks use cache tags (Attendance, Performance, Courses, Communications, Fees) for proper invalidation
+- **Parent portal pages**:
+  - ParentAttendance component uses `useGetChildAttendanceRowsQuery` for live attendance data with search/filter
+  - ParentDashboard navigation is simplified (subject reports feature removed)
+  - Dashboard calls `useGetChildDashboardDataQuery` which provides aggregated data from the backend
+- **Type definitions** in `frontend/src/features/parent/data.ts`:
+  - Maintain AttendanceRow interface for attendance-specific data
+  - Parent and child selection persist in localStorage via `useParentChildren.ts`
+- Backend tests under `backend/tests/test_parent.py` should cover:
+  - Attendance row retrieval by subject
+  - Faculty contact phone_number resolution from UserContactProfile
+  - Authorization checks for linked children only
+- this file
 
 - Read code, not only older docs. Some older context files are already outdated.
 - Prefer adding new backend capability inside an existing feature module unless the domain is clearly separate.

@@ -4,10 +4,9 @@ import ParentPerformance from "../pages/ParentPerformance";
 import ParentFees from "../pages/ParentFees";
 import ParentCommunication from "../pages/ParentCommunication";
 import ParentUpcomingCourses from "../pages/ParentUpcomingCourses";
-import ParentSubjectReport from "../pages/ParentSubjectReport";
 import ParentTimetable from "../pages/ParentTimetable";
 import Profile from "../../auth/pages/Profile";
-import { FiGrid, FiCheckCircle, FiAward, FiDollarSign, FiMessageSquare, FiBookOpen, FiCalendar, FiUser } from "react-icons/fi";
+import { FiGrid, FiCheckCircle, FiAward, FiDollarSign, FiMessageSquare, FiCalendar, FiUser } from "react-icons/fi";
 
 export interface ParentRouteConfig {
   name: string;
@@ -59,20 +58,6 @@ const parentRoutes: ParentRouteConfig[] = [
     element: <ParentCommunication />,
     icon: FiMessageSquare,
     description: "Communicate with teachers"
-  },
-  {
-    name: "Subject Report",
-    path: "/parent/subject-report",
-    element: <ParentSubjectReport />,
-    icon: FiBookOpen,
-    description: "Detailed subject-wise reports"
-  },
-  {
-    name: "Subject Report Detail",
-    path: "/parent/subject-report/:subjectId",
-    element: <ParentSubjectReport />,
-    icon: FiBookOpen,
-    description: "Detailed subject-wise report"
   },
   {
     name: "Timetable",

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { FiArrowRight, FiAward, FiBookOpen, FiCalendar, FiCheckCircle, FiDollarSign, FiMessageSquare } from "react-icons/fi";
+import { FiArrowRight, FiAward, FiCalendar, FiCheckCircle, FiDollarSign, FiMessageSquare } from "react-icons/fi";
 import ChildSelector from "../components/ChildSelector";
 import { useParentChildren } from "../useParentChildren";
 
@@ -15,12 +15,6 @@ const cards = [
     description: "Track subject-wise attendance and identify low coverage early.",
     path: "/parent/attendance",
     icon: FiCheckCircle,
-  },
-  {
-    title: "Subject Reports",
-    description: "Open each subject report and review syllabus progress.",
-    path: "/parent/subject-report",
-    icon: FiBookOpen,
   },
   {
     title: "Fees",
@@ -70,18 +64,9 @@ const ParentDashboard = function () {
             </p>
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">{selectedChild.name}</h1>
             <p className="mt-3 max-w-3xl text-base text-[var(--text)]/75">
-              Monitor attendance, subject reports, fees, timetable, communication, and upcoming courses for {selectedChild.className} {selectedChild.section} from one parent-friendly workspace.
+              Monitor attendance, fees, timetable, communication, and upcoming courses for {selectedChild.className} {selectedChild.section} from one parent-friendly workspace.
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => navigate("/parent/subject-report")}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--primary)] px-5 py-3 font-semibold text-white transition hover:opacity-90"
-          >
-            <FiBookOpen className="h-5 w-5" />
-            Open Subject Reports
-          </button>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">

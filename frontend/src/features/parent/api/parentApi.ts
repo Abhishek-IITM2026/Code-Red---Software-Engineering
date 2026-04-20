@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../../app/store';
+import type { AttendanceRow } from '../data';
 
 // Types
 export interface ParentProfile {
@@ -228,6 +229,75 @@ export interface ParentChildWorkspace {
   upcomingCourses: ParentUpcomingCourse[];
 }
 
+// Coaching Institute Specific Types
+export interface FacultyContact {
+  id: string;
+  subject: string;
+  faculty: string;
+  email: string;
+  phone: string;
+}
+
+export interface SubjectReport {
+  subjectId: string;
+  subjectName: string;
+  facultyName: string;
+  assessmentsCount: number;
+  averageScore: number;
+  highestScore: number;
+  lowestScore: number;
+  improvementTrend: number;
+  performanceLevel: string;
+  scoreHistory: Array<{
+    score: number;
+    date: string;
+  }>;
+  recommendations: string[];
+  report: string[];
+}
+
+export interface CoachingAnalytics {
+  studentId: string;
+  attendancePercentage: number;
+  attendanceStatus: string;
+  averageMarks: number;
+  performanceGrade: string;
+  totalSubjects: number;
+  assessmentsCompleted: number;
+  overallRank: string;
+  strengths: string[];
+  improvements: string[];
+  coachingRecommendations: string[];
+}
+
+export interface ProgressCard {
+  studentId: string;
+  studentName: string;
+  subjectPerformance: Record<string, {
+    average: number;
+    assessments: number;
+    status: string;
+  }>;
+  subjectAttendance: Record<string, {
+    present: number;
+    total: number;
+    percentage: number;
+  }>;
+  overallStats: {
+    totalAssessments: number;
+    overallAverage: number;
+    totalAttendance: number;
+    attendancePercentage: number;
+  };
+}
+
+export interface TimetableEntry {
+  day: string;
+  time: string;
+  subject: string;
+  room: string;
+}
+
 export const parentApi = createApi({
   reducerPath: 'parentApi',
   baseQuery: fetchBaseQuery({
@@ -334,6 +404,11 @@ export const parentApi = createApi({
       providesTags: ['Attendance'],
     }),
 
+    getChildAttendanceRows: builder.query<AttendanceRow[], string>({
+      query: (studentId) => `/parent/children/${studentId}/attendance-rows`,
+      providesTags: ['Attendance'],
+    }),
+
     // Academic Performance
     getStudentPerformance: builder.query<
       PerformanceInfo[],
@@ -425,13 +500,17 @@ export const parentApi = createApi({
     }),
 
     downloadFeeInvoice: builder.mutation<
-      { url: string },
+      Blob,
       { invoiceId: string; format: 'pdf' | 'excel' }
     >({
       query: ({ invoiceId, format }) => ({
         url: `/parent/fees/${invoiceId}/download`,
         method: 'GET',
         params: { format },
+        responseHandler: async (response) => {
+          if (!response.ok) throw response;
+          return await response.blob();
+        },
       }),
     }),
 
@@ -547,6 +626,36 @@ export const parentApi = createApi({
       query: (studentId) => `/parent/children/${studentId}/courses`,
       providesTags: ['Courses'],
     }),
+
+    // Coaching Institute Features
+    getChildFacultyContacts: builder.query<FacultyContact[], string>({
+      query: (childId) => `/parent/children/${childId}/faculty-contacts`,
+      providesTags: ['Communications'],
+    }),
+
+    getDetailedSubjectReport: builder.query<
+      SubjectReport,
+      { childId: string; subjectId: string }
+    >({
+      query: ({ childId, subjectId }) =>
+        `/parent/children/${childId}/subject/${subjectId}/detailed-report`,
+      providesTags: ['Performance'],
+    }),
+
+    getChildTimetable: builder.query<TimetableEntry[], string>({
+      query: (childId) => `/parent/children/${childId}/timetable`,
+      providesTags: ['Courses'],
+    }),
+
+    getCoachingAnalytics: builder.query<CoachingAnalytics, string>({
+      query: (childId) => `/parent/children/${childId}/coaching-analytics`,
+      providesTags: ['Performance'],
+    }),
+
+    getProgressCard: builder.query<ProgressCard, string>({
+      query: (childId) => `/parent/children/${childId}/progress-card`,
+      providesTags: ['Performance'],
+    }),
   }),
 });
 
@@ -558,6 +667,7 @@ export const {
   useGetStudentOverviewQuery,
   useLinkChildToAccountMutation,
   useGetStudentAttendanceQuery,
+  useGetChildAttendanceRowsQuery,
   useGetStudentPerformanceQuery,
   useGetPerformanceSummaryQuery,
   useGetStudentAssignmentsQuery,
@@ -577,4 +687,10 @@ export const {
   useEnrollInCourseMutation,
   usePayCourseEnrollmentMutation,
   useGetUpcomingCoursesForChildQuery,
+  // Coaching Institute Features
+  useGetChildFacultyContactsQuery,
+  useGetDetailedSubjectReportQuery,
+  useGetChildTimetableQuery,
+  useGetCoachingAnalyticsQuery,
+  useGetProgressCardQuery,
 } = parentApi;
