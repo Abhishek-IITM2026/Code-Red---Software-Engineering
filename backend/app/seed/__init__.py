@@ -1,6 +1,9 @@
 from datetime import date, datetime, timedelta, timezone
+import logging
+from flask import current_app
 
 from ..extensions import db
+from ..document_store.mongo import InMemoryDocumentStore, MongoDocumentStore
 from ..models import (
     AdministrationStaff,
     Assignment,
@@ -41,10 +44,15 @@ from ..models import (
 )
 
 
-STAFF_COUNT = 5
-FACULTY_COUNT = 10
-STUDENT_COUNT = 200
+STAFF_COUNT = 8
+FACULTY_COUNT = 12
+STUDENT_COUNT = 150
 PARENT_COUNT = STUDENT_COUNT
+
+# Real-world coaching institute structure
+INSTITUTE_NAME = "Apex Academy - Excellence in Education"
+INSTITUTE_ADDRESS = "Plot No. 123, Tech Park, Bengaluru - 560001"
+INSTITUTE_PHONE = "+91-80-4567-8900"
 
 GRADE_SECTION_PLAN = [
     ("Class 8", "8", "A"),
@@ -53,19 +61,19 @@ GRADE_SECTION_PLAN = [
     ("Class 9", "9", "B"),
     ("Class 10", "10", "A"),
     ("Class 10", "10", "B"),
-    ("Class 11", "11", "A"),
-    ("Class 11", "11", "B"),
-    ("Class 12", "12", "A"),
-    ("Class 12", "12", "B"),
+    ("Class 11 (CBSE)", "11", "A"),
+    ("Class 11 (CBSE)", "11", "B"),
+    ("Class 12 (CBSE)", "12", "A"),
+    ("Class 12 (CBSE)", "12", "B"),
 ]
 
 SUBJECT_BLUEPRINTS = [
-    ("Mathematics", "MATH", "Mathematics concepts and practice"),
-    ("Physics", "PHY", "Physics fundamentals"),
-    ("Chemistry", "CHEM", "Chemistry theory and numericals"),
-    ("Biology", "BIO", "Life science and biology"),
-    ("English", "ENG", "Language and literature"),
-    ("Computer Science", "CS", "Computing and programming"),
+    ("Mathematics", "MATH", "Comprehensive mathematics covering algebra, geometry, and calculus concepts with practice problems"),
+    ("Physics", "PHY", "Physics fundamentals including mechanics, thermodynamics, and modern physics"),
+    ("Chemistry", "CHEM", "Chemistry theory with balanced numericals and practicals for competitive exams"),
+    ("Biology", "BIO", "Life science and biology with diagrams, practicals, and conceptual clarity"),
+    ("English", "ENG", "English language and literature with comprehension and creative writing"),
+    ("Computer Science", "CS", "Computing and programming with hands-on coding practice and algorithms"),
 ]
 
 FACULTY_SPECIALIZATIONS = [
@@ -77,18 +85,30 @@ FACULTY_SPECIALIZATIONS = [
     "Computer Science",
     "Mathematics",
     "Physics",
+    "Chemistry",
     "Biology",
     "English",
+    "Computer Science",
 ]
 
+# Indian names - realistic and authentic
 FIRST_NAMES = [
+    # Male names
     "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Krishna", "Rohan", "Karan", "Rahul",
+    "Aryan", "Ishaan", "Nikunj", "Pranav", "Vedant", "Abhishek", "Aman", "Akshay", "Ankit", "Ashok",
+    "Harshit", "Hardik", "Harsh", "Vikram", "Varun", "Manish", "Mohan", "Mukesh", "Neeraj", "Nitin",
+    # Female names
     "Neha", "Diya", "Ananya", "Meera", "Kavya", "Ishita", "Riya", "Pooja", "Sneha", "Aditi",
+    "Isha", "Avni", "Bhavna", "Chhavi", "Divya", "Ekta", "Farah", "Gitika", "Hema", "Ila",
+    "Jyoti", "Kalpana", "Lakshmi", "Megha", "Nisha", "Ojasvi", "Priya", "Priyanka", "Rashmi", "Ria",
 ]
 
 LAST_NAMES = [
     "Sharma", "Verma", "Patel", "Reddy", "Rao", "Singh", "Gupta", "Kapoor", "Nair", "Das",
     "Mehta", "Kumar", "Joshi", "Saxena", "Mishra", "Yadav", "Menon", "Pillai", "Bose", "Jain",
+    "Agarwal", "Arora", "Bhatt", "Chopra", "Dutta", "Gill", "Iyer", "Kaur", "Malhotra", "Malik",
+    "Namdev", "Oza", "Pandya", "Quadri", "Rastogi", "Sharma", "Thakur", "Unni", "Vaidya", "Vyas",
+    "Walia", "Yadav", "Zondal", "Tripathi", "Tiwari", "Trivedi", "Bharat", "Bansal", "Bansode", "Bajaj",
 ]
 
 
@@ -123,7 +143,45 @@ def attach_roles(user: User, *roles: Role):
             user.roles.append(role)
 
 
+def _seed_mongodb():
+    """Seed MongoDB collections with assessment and material documents."""
+    try:
+        doc_store = current_app.document_store
+        if doc_store is None:
+            return
+        
+        # Seed assessment documents
+        for i in range(10):
+            doc_store.insert_one("assessments", {
+                "title": f"Assessment Document {i+1}",
+                "subject": f"Subject {i+1}",
+                "class": f"Class {8 + (i % 5)}",
+                "questions": [
+                    {"id": f"q-{i+1}-1", "text": f"Question {i+1}-1", "type": "mcq"},
+                    {"id": f"q-{i+1}-2", "text": f"Question {i+1}-2", "type": "short_answer"},
+                ],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        
+        # Seed material documents
+        for i in range(30):
+            doc_store.insert_one("materials", {
+                "title": f"Study Material {i+1}",
+                "subject": f"Subject {(i % 6) + 1}",
+                "grade": str(8 + (i % 5)),
+                "unit": f"Unit {(i % 4) + 1}",
+                "type": "notes" if i % 2 == 0 else "worksheet",
+                "content": f"Structured content for material {i+1}",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+        
+        logging.getLogger(__name__).info(f"✓ MongoDB seeded successfully with 40 documents")
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"MongoDB seeding skipped: {e}")
+
+
 def _reset_seeded_data():
+    # Clear SQL database
     db.session.execute(user_roles.delete())
     ordered_models = [
         AssignmentSubmission,
@@ -165,6 +223,19 @@ def _reset_seeded_data():
     for model in ordered_models:
         model.query.delete()
     db.session.commit()
+    
+    # Clear MongoDB collections
+    try:
+        doc_store = current_app.document_store
+        if doc_store and isinstance(doc_store, (MongoDocumentStore, InMemoryDocumentStore)):
+            for collection_name in ["assessments", "materials", "questions", "submissions"]:
+                if hasattr(doc_store, 'database'):  # MongoDB
+                    doc_store.database[collection_name].delete_many({})
+                elif hasattr(doc_store, 'collections'):  # InMemory
+                    doc_store.collections[collection_name] = {}
+            logging.getLogger(__name__).info("✓ MongoDB collections cleared")
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"MongoDB cleanup skipped: {e}")
 
 
 def _name(index: int):
@@ -172,6 +243,10 @@ def _name(index: int):
 
 
 def _create_user(email: str, title: str, first_name: str, last_name: str, password: str, roles: tuple[Role, ...], phone: str):
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        return existing_user
+    
     user = User(email=email, title=title, first_name=first_name, last_name=last_name)
     user.set_password(password)
     attach_roles(user, *roles)
@@ -190,81 +265,101 @@ def seed_database(force: bool = False):
     roles = ensure_roles()
     users: dict[str, User] = {}
 
-    users["admin"] = _create_user(
-        "dheerajkumarvishwakarma5@gmail.com",
-        "Administration Staff",
-        "Asha",
-        "Admin",
-        "admin123",
-        (roles["admin"], roles["administration"]),
-        "+91 99999 99999",
-    )
+    # Director - Institute head
     users["director"] = _create_user(
-        "director@example.com",
+        "director@example.in",
         "Director",
-        "Diya",
-        "Kapoor",
-        "director123",
+        "Rajesh",
+        "Kumar",
+        "admin123",
         (roles["director"], roles["administration"]),
-        "+91 66666 66666",
+        "+91 98765 43210",
     )
 
+    # Principal/Administrator
+    users["admin"] = _create_user(
+        "admin@example.in",
+        "Principal",
+        "Priya",
+        "Sharma",
+        "admin123",
+        (roles["admin"], roles["administration"]),
+        "+91 98765 43211",
+    )
+
+    # Administration Staff
     admin_staff_users: list[User] = []
+    admin_departments = [
+        ("Operations", "Head of Operations", "+91 98765 4320"),
+        ("Finance & Accounts", "Accounts Manager", "+91 98765 4321"),
+        ("Admissions", "Admissions Coordinator", "+91 98765 4322"),
+        ("HR & Compliance", "HR Manager", "+91 98765 4323"),
+        ("Support Services", "Support Manager", "+91 98765 4324"),
+        ("Academics", "Academic Coordinator", "+91 98765 4325"),
+        ("Student Services", "Student Services Officer", "+91 98765 4326"),
+        ("Technology", "IT Administrator", "+91 98765 4327"),
+    ]
+    
     for index in range(STAFF_COUNT):
+        dept_name, designation, base_phone = admin_departments[index % len(admin_departments)]
         first_name, last_name = _name(index + 50)
         admin_staff_users.append(
             _create_user(
-                f"staff{index + 1:02d}@example.com",
-                "Administration Staff",
+                f"staff{index + 1:03d}.{first_name.lower()}@example.in",
+                designation,
                 first_name,
                 last_name,
-                "staff123",
+                "admin123",
                 (roles["admin"], roles["administration"]),
-                f"+91 90000 20{index + 1:03d}",
+                f"{base_phone}{index + 1:02d}",
             )
         )
 
+    # Faculty members - High quality teachers
     faculty_users: list[User] = []
     for index in range(FACULTY_COUNT):
         first_name, last_name = _name(index + 100)
         specialization = FACULTY_SPECIALIZATIONS[index]
         faculty_users.append(
             _create_user(
-                f"faculty{index + 1:02d}@example.com",
-                f"{specialization} Faculty",
+                f"faculty{index + 1:03d}.{first_name.lower()}@example.in",
+                f"{specialization} Teacher",
                 first_name,
                 last_name,
                 "faculty123",
                 (roles["faculty"],),
-                f"+91 91000 30{index + 1:03d}",
+                f"+91 97000 3{index + 1:04d}",
             )
         )
 
+    # Students and Parents
     student_users: list[User] = []
     parent_users: list[User] = []
     for index in range(STUDENT_COUNT):
         first_name, last_name = _name(index)
         student_users.append(
             _create_user(
-                f"student{index + 1:03d}@example.com",
+                f"student{index + 1:04d}.{first_name.lower()}@example.in",
                 "Student",
                 first_name,
                 last_name,
                 "student123",
                 (roles["student"],),
-                f"+91 92000 40{index + 1:03d}",
+                f"+91 92000 4{index + 1:04d}",
             )
         )
+        # Parents with different relationships (Mother/Father/Guardian)
+        parent_relation = ["Mother", "Father", "Guardian"][(index + index // 3) % 3]
         guardian_first, guardian_last = _name(index + 300)
         parent_users.append(
             _create_user(
-                f"parent{index + 1:03d}@example.com",
-                "Parent",
+                f"parent{index + 1:04d}.{guardian_first.lower()}@example.in",
+                parent_relation,
                 guardian_first,
                 guardian_last,
                 "parent123",
                 (roles["parent"],),
-                f"+91 93000 50{index + 1:03d}",
+                f"+91 93000 5{index + 1:04d}",
             )
         )
 
@@ -272,8 +367,8 @@ def seed_database(force: bool = False):
         [
             AdministrationStaff(
                 user_id=user.id,
-                department=["Operations", "Finance", "Admissions", "HR", "Compliance"][index % 5],
-                designation=["Administration Officer", "Accountant", "Admissions Coordinator", "HR Executive", "Operations Lead"][index % 5],
+                department=admin_departments[index % len(admin_departments)][0],
+                designation=admin_departments[index % len(admin_departments)][1],
                 employee_code=f"ADM-{index + 1:03d}",
             )
             for index, user in enumerate(admin_staff_users)
@@ -310,8 +405,8 @@ def seed_database(force: bool = False):
         students.append(
             Student(
                 user_id=user.id,
-                admission_date=date(2024, 4, 1) + timedelta(days=index % 30),
-                roll_number=f"STU-{index + 1:04d}",
+                admission_date=date(2024, 6, 1) + timedelta(days=index % 30),
+                roll_number=f"APX{date.today().year}-{index + 1:04d}",
             )
         )
     db.session.add_all(students)
@@ -322,7 +417,7 @@ def seed_database(force: bool = False):
             Parent(
                 user_id=parent_users[index].id,
                 student_id=students[index].id,
-                relation="Mother" if index % 2 == 0 else "Father",
+                relation=["Mother", "Father", "Guardian"][(index + index // 3) % 3],
                 is_primary=True,
             )
             for index in range(PARENT_COUNT)
@@ -338,13 +433,14 @@ def seed_database(force: bool = False):
                 section=section,
                 academic_year="2025-2026",
                 class_faculty_id=faculties[index].id,
-                room_number=f"{101 + index}",
+                room_number=f"{201 + index}",
                 max_strength=40,
             )
         )
     db.session.add_all(classes)
     db.session.flush()
 
+    # Enroll students across classes evenly
     db.session.add_all(
         [
             ClassEnrollment(
@@ -540,26 +636,35 @@ def seed_database(force: bool = False):
     db.session.add_all(submissions)
 
     program_courses: list[Subject] = []
+    program_names = {
+        "8": "Class 8 Comprehensive Review",
+        "9": "Class 9 Intensive Coaching",
+        "10": "Class 10 Board Preparation",
+        "11": "Class 11 Competitive Exam Prep",
+        "12": "Class 12 Final Revision",
+    }
+    
     for index, institute_class in enumerate(classes):
+        program_name = program_names.get(institute_class.grade, f"Class {institute_class.grade} Program")
         program_courses.append(
             Subject(
-                name=f"{institute_class.name} {institute_class.section} Revision Program",
-                code=f"PRG-{institute_class.grade}-{institute_class.section}",
-                description=f"Guided support program for {institute_class.name} Section {institute_class.section}.",
+                name=f"{program_name} - Section {institute_class.section}",
+                code=f"PRG-{institute_class.grade}-{institute_class.section}-{index + 1}",
+                description=f"Intensive coaching and revision program for {institute_class.name} Section {institute_class.section}. Covers all key topics with practice tests and assignments.",
                 class_id=institute_class.id,
                 start_date=utc_today_plus(5 + index),
-                end_date=utc_today_plus(20 + index),
+                end_date=utc_today_plus(60 + index),
                 instructor=f"{faculties[index].user.first_name} {faculties[index].user.last_name}",
                 mode=["Offline", "Online", "Hybrid"][index % 3],
-                seats=30 + (index % 3) * 5,
+                seats=35,
                 created_by=users["admin"].id if index % 2 == 0 else users["director"].id,
                 status="upcoming" if index % 3 == 0 else "active",
                 course_type="program",
                 level=institute_class.grade,
-                credits=2,
-                fee_amount=4000 + (index % 4) * 750,
+                credits=3,
+                fee_amount=4500 + (index % 5) * 1000,
                 installment_available=True,
-                max_installments=3,
+                max_installments=3 if index % 2 == 0 else 1,
                 is_active=True,
             )
         )
@@ -625,11 +730,11 @@ def seed_database(force: bool = False):
                 created_by=created_by,
             )
             for batch_type, title, message, created_by in [
-                ("schedule", "Weekly Timetable Updated", "Updated schedules are available for all classes.", users["admin"].id),
-                ("assessment", "Assessments Published", "New assessments have been published for multiple classes.", users["director"].id),
-                ("inventory", "Inventory Status Review", "Inventory review meeting is scheduled for Friday.", admin_staff_users[0].id),
-                ("attendance", "Attendance Follow-up", "Attendance below threshold requires review.", admin_staff_users[1].id),
-                ("academics", "Upcoming Course Releases", "New revision programs have been published.", users["admin"].id),
+                ("schedule", "Weekly Timetable Published", "Dear Students and Parents, the updated class schedule for this week has been published. Please refer to the class portal for details.", users["admin"].id),
+                ("assessment", "Assessments Released", "New semester assessments have been released for Class 8-12. Students must complete all assessments by the given due dates.", users["director"].id),
+                ("inventory", "Lab Equipment Status", "Inventory audit completed. New equipment has been procured for science and computer labs.", admin_staff_users[0].id),
+                ("attendance", "Monthly Attendance Report", "Attendance below 75% detected for some students. Parents are requested to ensure regular attendance.", admin_staff_users[1].id),
+                ("academics", "Revision Programs Available", "Enroll now for intensive revision programs to prepare for board exams. Limited seats available.", users["admin"].id),
             ]
         ]
     )
@@ -661,28 +766,38 @@ def seed_database(force: bool = False):
     )
 
     inventory_items = [
-        InventoryItem(name="White Board Marker", category="stationery", quantity=150, available=120, reserved=30, unit="piece", min_stock=20, price=25, supplier="Stationery Co", location="Store Room A"),
-        InventoryItem(name="A4 Paper Ream", category="stationery", quantity=200, available=180, reserved=20, unit="ream", min_stock=30, price=350, supplier="Paper Mart", location="Store Room B"),
-        InventoryItem(name="Projector", category="electronics", quantity=10, available=8, reserved=2, unit="piece", min_stock=2, price=15000, supplier="Tech Solutions", location="Equipment Room"),
-        InventoryItem(name="Lab Microscope", category="laboratory", quantity=12, available=9, reserved=3, unit="piece", min_stock=2, price=9000, supplier="Lab Equip", location="Lab 1"),
-        InventoryItem(name="Printer Cartridge", category="electronics", quantity=25, available=20, reserved=5, unit="piece", min_stock=5, price=1800, supplier="Office Supply Hub", location="Store Room C"),
-        InventoryItem(name="Chemistry Kit", category="laboratory", quantity=18, available=14, reserved=4, unit="set", min_stock=3, price=2500, supplier="Science Traders", location="Lab 2"),
-        InventoryItem(name="Library Register", category="stationery", quantity=40, available=35, reserved=5, unit="piece", min_stock=8, price=120, supplier="Stationery Co", location="Library Storage"),
-        InventoryItem(name="Extension Cord", category="electronics", quantity=20, available=16, reserved=4, unit="piece", min_stock=4, price=450, supplier="Tech Solutions", location="Equipment Room"),
+        InventoryItem(name="Blue Ballpoint Pen (Box of 50)", category="stationery", quantity=200, available=160, reserved=40, unit="box", min_stock=50, price=180, supplier="Apex Stationery Supplies", location="Store Room A"),
+        InventoryItem(name="A4 Paper Ream (500 sheets)", category="stationery", quantity=250, available=210, reserved=40, unit="ream", min_stock=50, price=320, supplier="Apex Stationery Supplies", location="Store Room B"),
+        InventoryItem(name="Interactive LED Projector", category="electronics", quantity=12, available=10, reserved=2, unit="piece", min_stock=3, price=18000, supplier="Tech Education Solutions", location="Equipment Room"),
+        InventoryItem(name="Compound Microscope (40x)", category="laboratory", quantity=15, available=12, reserved=3, unit="piece", min_stock=3, price=8500, supplier="Science Lab Equipment Co.", location="Biology Lab"),
+        InventoryItem(name="Laser Printer Cartridge (Black)", category="electronics", quantity=30, available=24, reserved=6, unit="piece", min_stock=8, price=1600, supplier="Tech Education Solutions", location="Office Store"),
+        InventoryItem(name="Chemistry Lab Kit (Reagents Bundle)", category="laboratory", quantity=20, available=16, reserved=4, unit="set", min_stock=5, price=3200, supplier="Science Lab Equipment Co.", location="Chemistry Lab"),
+        InventoryItem(name="Register Notebook (100 pages)", category="stationery", quantity=500, available=420, reserved=80, unit="piece", min_stock=100, price=45, supplier="Apex Stationery Supplies", location="Library Storage"),
+        InventoryItem(name="Extension Power Cord (10m)", category="electronics", quantity=25, available=20, reserved=5, unit="piece", min_stock=5, price=480, supplier="Tech Education Solutions", location="Equipment Room"),
+        InventoryItem(name="Physics Apparatus Set (Mechanics)", category="laboratory", quantity=10, available=8, reserved=2, unit="set", min_stock=2, price=4500, supplier="Science Lab Equipment Co.", location="Physics Lab"),
+        InventoryItem(name="Reference Book Bundle (Class 10)", category="library", quantity=50, available=45, reserved=5, unit="set", min_stock=10, price=2800, supplier="Scholar's Library Services", location="Library"),
     ]
     db.session.add_all(inventory_items)
     db.session.flush()
 
     material_requests: list[MaterialRequest] = []
+    request_statuses = ["pending", "approved", "rejected"]
+    review_comments = [
+        "Awaiting approval from head of department",
+        "Approved for procurement. Forwarding to vendor.",
+        "Please reduce quantity to fit budget allocation",
+    ]
+    
     for index, faculty in enumerate(faculties):
         reviewer = users["admin"].id if index % 2 == 0 else users["director"].id
+        request_status = request_statuses[index % 3]
         material_requests.append(
             MaterialRequest(
                 faculty_id=faculty.id,
                 department=faculty.subject_specialization or "Academics",
-                status=["pending", "approved", "rejected"][index % 3],
-                review_notes=["Awaiting review", "Approved for dispatch", "Please reduce quantity"][index % 3],
-                reviewed_by=reviewer if index % 3 != 0 else None,
+                status=request_status,
+                review_notes=review_comments[index % 3],
+                reviewed_by=reviewer if request_status != "pending" else None,
             )
         )
     db.session.add_all(material_requests)
@@ -915,8 +1030,42 @@ def seed_database(force: bool = False):
     )
 
     vendors = [
-        Vendor(name="Scholars Supply House", contact_person="Rakesh Jain", email="sales@scholars.example.com", phone="+91 90000 11223", gst_number="29ABCDE1234F1Z5", address="Market Road, Bengaluru", notes="Stationery and general supplies"),
-        Vendor(name="Campus Tech Traders", contact_person="Neha Kapoor", email="orders@campustech.example.com", phone="+91 90000 44556", gst_number="29ABCDE5678F1Z9", address="Electronic City, Bengaluru", notes="Electronics and projectors"),
+        Vendor(
+            name="Apex Stationery Supplies", 
+            contact_person="Mr. Suresh Kumar", 
+            email="orders@apexstationery.in", 
+            phone="+91 98765 10001", 
+            gst_number="29ABCDE1234F1Z5", 
+            address="Rajajinagar, Bengaluru - 560010", 
+            notes="Primary stationery supplier for all classes and offices"
+        ),
+        Vendor(
+            name="Tech Education Solutions", 
+            contact_person="Ms. Neha Kapoor", 
+            email="sales@techedu.in", 
+            phone="+91 98765 20001", 
+            gst_number="29FGHIJ5678F1Z9", 
+            address="Electronic City, Bengaluru - 560100", 
+            notes="Laboratory equipment, projectors, and educational technology"
+        ),
+        Vendor(
+            name="Scholar's Library Services", 
+            contact_person="Mr. Vikas Sharma", 
+            email="library@scholars.in", 
+            phone="+91 98765 30001", 
+            gst_number="29KLMNO9012F1Z3", 
+            address="Whitefield, Bengaluru - 560066", 
+            notes="Reference books, study materials, and library subscriptions"
+        ),
+        Vendor(
+            name="Science Lab Equipment Co.", 
+            contact_person="Dr. Rajesh Patel", 
+            email="lab@scienceequip.in", 
+            phone="+91 98765 40001", 
+            gst_number="29PQRST3456F1Z7", 
+            address="Marathahalli, Bengaluru - 560037", 
+            notes="Laboratory apparatus, chemicals, and experiment kits"
+        ),
     ]
     db.session.add_all(vendors)
     db.session.flush()
@@ -925,32 +1074,47 @@ def seed_database(force: bool = False):
         InventoryProcurement(
             inventory_item_id=inventory_items[0].id,
             vendor_id=vendors[0].id,
-            quantity=40,
-            unit_price=24,
-            tax_amount=96,
-            shipping_cost=50,
-            total_amount=1106,
-            invoice_number="INV-SS-2401",
+            quantity=60,
+            unit_price=170,
+            tax_amount=1836,
+            shipping_cost=100,
+            total_amount=12336,
+            invoice_number="APX-SS-2603-001",
             purchase_date=date(2026, 4, 2),
             payment_status="completed",
             received_status="received",
-            notes="Restocked markers for classrooms",
+            notes="Restocked ballpoint pens for classrooms and offices",
             created_by=users["admin"].id,
         ),
         InventoryProcurement(
             inventory_item_id=inventory_items[2].id,
             vendor_id=vendors[1].id,
             quantity=2,
-            unit_price=15200,
-            tax_amount=5472,
-            shipping_cost=0,
-            total_amount=35872,
-            invoice_number="INV-CT-7781",
+            unit_price=17500,
+            tax_amount=6300,
+            shipping_cost=500,
+            total_amount=41800,
+            invoice_number="TES-EQ-2603-156",
             purchase_date=date(2026, 4, 5),
             payment_status="completed",
             received_status="received",
-            notes="Two new projectors for senior classrooms",
+            notes="Two interactive LED projectors for senior classes and lecture halls",
             created_by=users["director"].id,
+        ),
+        InventoryProcurement(
+            inventory_item_id=inventory_items[5].id,
+            vendor_id=vendors[3].id,
+            quantity=8,
+            unit_price=3100,
+            tax_amount=2976,
+            shipping_cost=300,
+            total_amount=28076,
+            invoice_number="SLEC-CH-2603-089",
+            purchase_date=date(2026, 4, 10),
+            payment_status="pending",
+            received_status="pending",
+            notes="Chemistry lab reagent kits for practical sessions",
+            created_by=admin_staff_users[0].id,
         ),
     ]
     db.session.add_all(procurements)
@@ -1012,3 +1176,8 @@ def seed_database(force: bool = False):
     )
 
     db.session.commit()
+    
+    # Seed MongoDB documents
+    _seed_mongodb()
+    
+    logging.getLogger(__name__).info(f"✓ Database seeding completed: {STUDENT_COUNT} students, {FACULTY_COUNT} faculty, {STAFF_COUNT} staff")
